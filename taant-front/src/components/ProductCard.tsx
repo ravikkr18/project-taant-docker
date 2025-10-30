@@ -16,8 +16,47 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
-    // TODO: Implement cart functionality
-    console.log('Added to cart:', product.name);
+    // Add to cart functionality with localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const existingItem = cart.find((item: any) =>
+          item.id === product.id &&
+          item.variant === (product.variants?.[0]?.name || 'default') &&
+          item.size === (product.variants?.[0]?.name || 'default')
+        );
+
+        if (existingItem) {
+          existingItem.quantity += 1;
+        } else {
+          cart.push({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            slug: product.slug,
+            quantity: 1,
+            variant: product.variants?.[0]?.name || 'default',
+            size: product.variants?.[0]?.name || 'default',
+            color: product.variants?.[0]?.color || '#000000',
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        localStorage.setItem('cart', JSON.stringify(cart));
+        window.dispatchEvent(new CustomEvent('cartUpdate'));
+
+        // Show success message
+        const message = document.createElement('div');
+        message.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+        message.textContent = `${product.name} added to cart!`;
+        document.body.appendChild(message);
+        setTimeout(() => message.remove(), 3000);
+
+      } catch (error) {
+        console.error('Error adding to cart:', error);
+      }
+    }
   };
 
   const handleWishlist = (e: React.MouseEvent) => {
@@ -130,11 +169,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Price */}
         <div className="flex items-center gap-3 mb-4">
           <span className="text-2xl font-bold text-gray-900">
-            ${product.price.toFixed(2)}
+            ₹{Math.round(product.price * 83).toLocaleString('en-IN')}
           </span>
           {product.originalPrice && (
             <span className="text-lg text-gray-500 line-through">
-              ${product.originalPrice.toFixed(2)}
+              ₹{Math.round(product.originalPrice * 83).toLocaleString('en-IN')}
             </span>
           )}
         </div>

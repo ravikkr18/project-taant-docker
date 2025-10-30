@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, X, Search } from 'lucide-react';
+import { MapPin, X } from 'lucide-react';
 
 interface PincodeModalProps {
   isOpen: boolean;
@@ -44,14 +44,7 @@ const popularPincodes = [
 
 const PincodeModal: React.FC<PincodeModalProps> = ({ isOpen, onClose, onPincodeSelect }) => {
   const [pincode, setPincode] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  const filteredPincodes = popularPincodes.filter(
-    (item) =>
-      item.pincode.includes(searchTerm) ||
-      item.city.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const handleSubmit = () => {
     if (pincode.length === 6) {
@@ -67,15 +60,8 @@ const PincodeModal: React.FC<PincodeModalProps> = ({ isOpen, onClose, onPincodeS
         }
         setIsLoading(false);
         setPincode('');
-        setSearchTerm('');
       }, 500);
     }
-  };
-
-  const handlePopularPincodeSelect = (pincodeValue: string, city: string) => {
-    setPincode(pincodeValue);
-    onPincodeSelect(pincodeValue, city);
-    setSearchTerm('');
   };
 
   if (!isOpen) return null;
@@ -133,40 +119,14 @@ const PincodeModal: React.FC<PincodeModalProps> = ({ isOpen, onClose, onPincodeS
             )}
           </div>
 
-          {/* Popular Pincodes */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Popular Pincodes</h3>
-
-            {/* Search Filter */}
-            <div className="relative mb-4">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search pincode or city..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          {/* Instructions */}
+          <div className="text-center py-4">
+            <div className="flex items-center justify-center mb-3">
+              <MapPin className="w-8 h-8 text-orange-500" />
             </div>
-
-            {/* Popular Pincodes Grid */}
-            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-              {filteredPincodes.slice(0, 20).map((item) => (
-                <button
-                  key={item.pincode}
-                  onClick={() => handlePopularPincodeSelect(item.pincode, item.city)}
-                  className="p-3 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all text-left group"
-                >
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-gray-400 group-hover:text-orange-500" />
-                    <div>
-                      <div className="font-medium text-gray-900 text-sm">{item.pincode}</div>
-                      <div className="text-xs text-gray-600">{item.city}</div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
+            <p className="text-gray-600 text-sm">
+              Enter your 6-digit pincode above to see accurate delivery information for your area.
+            </p>
           </div>
         </div>
 

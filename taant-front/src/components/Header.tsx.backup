@@ -63,6 +63,21 @@ const Header = () => {
     };
   }, []);
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      const categoryParam = selectedCategory !== 'All' ? `&category=${selectedCategory}` : '';
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}${categoryParam}`);
+      setIsCategoryDropdownOpen(false);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setSearchQuery(suggestion);
+    router.push(`/search?q=${encodeURIComponent(suggestion)}`);
+    setIsCategoryDropdownOpen(false);
+  };
+
   const categories = [
     { id: 'all', name: 'All', icon: '🛍️' },
     { id: 'electronics', name: 'Electronics', icon: '📱' },
@@ -166,7 +181,7 @@ const Header = () => {
             </div>
 
             {/* Mobile Search Bar */}
-            <div className="relative">
+            <form onSubmit={handleSearch} className="relative">
               <div className="flex items-center border border-gray-300 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                 {/* Category Dropdown - Mobile */}
                 <div className="relative">
@@ -216,7 +231,7 @@ const Header = () => {
                 />
 
                 {/* Search Button - Mobile */}
-                <button className="px-3 sm:px-7 py-2 sm:py-3 bg-orange-500 hover:bg-orange-600 text-white font-medium transition-all duration-200 rounded-r-lg">
+                <button type="submit" className="px-3 sm:px-7 py-2 sm:py-3 bg-orange-500 hover:bg-orange-600 text-white font-medium transition-all duration-200 rounded-r-lg">
                   <Search className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
@@ -227,15 +242,30 @@ const Header = () => {
                   <div className="p-3 sm:p-4">
                     <div className="text-sm text-gray-500 mb-2">Popular suggestions</div>
                     <div className="space-y-2">
-                      <div className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer">iPhone 15 Pro Max</div>
-                      <div className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer">Nike Air Max</div>
-                      <div className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer">Sony Headphones</div>
+                      <div
+                        onClick={() => handleSuggestionClick('iPhone 15 Pro Max')}
+                        className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer"
+                      >
+                        iPhone 15 Pro Max
+                      </div>
+                      <div
+                        onClick={() => handleSuggestionClick('Nike Air Max')}
+                        className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer"
+                      >
+                        Nike Air Max
+                      </div>
+                      <div
+                        onClick={() => handleSuggestionClick('Sony Headphones')}
+                        className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer"
+                      >
+                        Sony Headphones
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
             </div>
-          </div>
+          </form>
 
           {/* Desktop Layout - Horizontal */}
           <div className="hidden lg:flex items-center gap-6 lg:gap-8">
@@ -249,7 +279,7 @@ const Header = () => {
 
             {/* Search Bar with Category Dropdown - Desktop */}
             <div className="flex-1 min-w-0 max-w-3xl xl:max-w-5xl">
-              <div className="relative">
+              <form onSubmit={handleSearch} className="relative">
                 <div className="flex items-center border border-gray-300 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                   {/* Category Dropdown */}
                   <div className="relative">
@@ -299,7 +329,7 @@ const Header = () => {
                   />
 
                   {/* Search Button */}
-                  <button className="px-7 py-3 bg-orange-500 hover:bg-orange-600 text-white font-medium transition-all duration-200 rounded-r-lg">
+                  <button type="submit" className="px-7 py-3 bg-orange-500 hover:bg-orange-600 text-white font-medium transition-all duration-200 rounded-r-lg">
                     <Search className="w-5 h-5" />
                   </button>
                 </div>
@@ -310,14 +340,30 @@ const Header = () => {
                     <div className="p-4">
                       <div className="text-sm text-gray-500 mb-2">Popular suggestions</div>
                       <div className="space-y-2">
-                        <div className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer">iPhone 15 Pro Max</div>
-                        <div className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer">Nike Air Max</div>
-                        <div className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer">Sony Headphones</div>
+                        <div
+                          onClick={() => handleSuggestionClick('iPhone 15 Pro Max')}
+                          className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer"
+                        >
+                          iPhone 15 Pro Max
+                        </div>
+                        <div
+                          onClick={() => handleSuggestionClick('Nike Air Max')}
+                          className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer"
+                        >
+                          Nike Air Max
+                        </div>
+                        <div
+                          onClick={() => handleSuggestionClick('Sony Headphones')}
+                          className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer"
+                        >
+                          Sony Headphones
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
+              </form>
             </div>
 
             {/* Right Actions */}
