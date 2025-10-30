@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Star, Heart, ShoppingBag, Truck, Shield, RefreshCw, Minus, Plus, ChevronLeft, ChevronRight, Search, X, ZoomIn, Check, AlertCircle, Zap, Share2 } from 'lucide-react';
 import { Product, ProductVariant } from '@/types';
 import { getProductBySlug, getRelatedProducts } from '@/data/products';
+import { useLocation } from '@/contexts/LocationContext';
 
 
 interface Review {
@@ -99,6 +100,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const [buyNowAnimation, setBuyNowAnimation] = useState(false);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const addToCartRef = useRef<HTMLDivElement>(null);
+  const { pincode, city } = useLocation();
 
   // Unwrap params promise
   useEffect(() => {
@@ -718,6 +720,19 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
               <span className="text-orange-600 text-xs">• Only {stockCount} left</span>
             </div>
 
+            {/* Estimated Delivery Time */}
+            {pincode && (
+              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <Truck className="w-5 h-5 text-blue-600" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    Estimated Delivery: Tomorrow - {new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+                  </p>
+                  <p className="text-xs text-gray-600">to {city} ({pincode})</p>
+                </div>
+              </div>
+            )}
+
             {/* Add to Cart Button */}
             <div ref={addToCartRef}>
               <button
@@ -749,15 +764,15 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                   <p className="text-xs text-gray-600">Within 3-5 days</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 p-2 bg-orange-500-light rounded-lg">
-                <Shield className="w-4 h-4 text-orange-800-muted" />
+              <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                <Shield className="w-4 h-4 text-blue-600" />
                 <div>
                   <p className="font-medium text-gray-900 text-xs">Secure Payment</p>
                   <p className="text-xs text-gray-600">100% Secure</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 p-2 bg-orange-500-light rounded-lg">
-                <RefreshCw className="w-4 h-4 text-orange-800-muted" />
+              <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                <RefreshCw className="w-4 h-4 text-blue-600" />
                 <div>
                   <p className="font-medium text-gray-900 text-xs">Easy Returns</p>
                   <p className="text-xs text-gray-600">7 days policy</p>
