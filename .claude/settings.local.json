@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone:*)",
+      "Bash(mkdir:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(git push:*)",
+      "Bash(git init:*)",
+      "Bash(git branch:*)",
+      "Bash(git remote add:*)",
+      "Bash(tree:*)",
+      "Bash(docker:*)",
+      "Bash(docker-compose:*)",
+      "Bash(where:*)",
+      "Bash(Get-Command docker -ErrorAction SilentlyContinue)",
+      "Bash(powershell:*)",
+      "Bash(systeminfo:*)",
+      "Bash(findstr:*)",
+      "Bash(curl:*)",
+      "Bash(start /B npm run dev)",
+      "Read(//d//**)",
+      "Bash(find:*)",
+      "Bash(rsync:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
