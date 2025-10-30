@@ -22,7 +22,13 @@
       "Bash(start /B npm run dev)",
       "Read(//d//**)",
       "Bash(find:*)",
-      "Bash(rsync:*)"
+      "Bash(rsync:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "Bash(cat:*)",
+      "Bash(npx next lint:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
