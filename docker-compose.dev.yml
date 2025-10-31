@@ -39,6 +39,26 @@ services:
     networks:
       - taant-network
 
+  taant-admin:
+    build:
+      context: ./taant-admin
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3009:3007"
+    volumes:
+      - ./taant-admin:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - PORT=3007
+    depends_on:
+      - taant-backend
+    networks:
+      - taant-network
+
   taant-backend:
     build:
       context: ./taant-backend

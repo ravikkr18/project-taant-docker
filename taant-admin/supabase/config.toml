@@ -1,0 +1,31 @@
+[project]
+ref = "lyteoxnqkjrpilrfcimc"
+
+[api]
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+port = 54323
+
+[functions]
+verify_jwt = false
+
+[storage]
+file_size_limit = "50MiB"
+image_render_size_limit = "0MiB"
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = "3600s"
+
+[analytics]
+enabled = false
