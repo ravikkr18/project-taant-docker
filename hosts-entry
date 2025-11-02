@@ -1,0 +1,9 @@
+127.0.0.1   taant.in
+127.0.0.1   admin.taant.in
+127.0.0.1   supplier.taant.in
+127.0.0.1   backend.taant.in
+
+::1         taant.in
+::1         admin.taant.in
+::1         supplier.taant.in
+::1         backend.taant.in

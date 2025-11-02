@@ -1,24 +1,20 @@
-import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import { cache } from 'react'
 
 export function createClient() {
   const cookieStore = cookies()
 
-  return createSupabaseServerClient(
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
-          const allCookies = cookieStore.getAll()
-          console.log('Server client: Cookies found:', allCookies.map(c => c.name))
-          return allCookies
+          return cookieStore.getAll()
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: any[]) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
+            cookiesToSet.forEach(({ name, value, options }: any) =>
               cookieStore.set(name, value, options)
             )
           } catch {
@@ -28,19 +24,6 @@ export function createClient() {
           }
         },
       },
-    }
-  )
-}
-
-export function createServiceClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false
-      }
     }
   )
 }

@@ -1,38 +1,50 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+'use client'
 
-export default async function Home() {
-  const supabase = createClient()
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '../lib/supabase/client'
 
-  try {
-    // Check if database is set up
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('count')
-      .limit(1)
+export default function Home() {
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
-    const { data: roles, error: rolesError } = await supabase
-      .from('admin_roles')
-      .select('count')
-      .limit(1)
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          // Check if user is admin
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
 
-    const tablesExist = !profilesError && !rolesError && profiles && roles
-
-    // If tables don't exist, go to setup
-    if (!tablesExist) {
-      redirect('/setup')
+          if (profile?.role === 'admin') {
+            router.push('/dashboard')
+          } else {
+            router.push('/login')
+          }
+        } else {
+          router.push('/login')
+        }
+      } catch (error) {
+        router.push('/login')
+      } finally {
+        setLoading(false)
+      }
     }
 
-    // Check if user is authenticated
-    const { data: { user } } = await supabase.auth.getUser()
+    checkAuth()
+  }, [router])
 
-    if (user) {
-      redirect('/dashboard')
-    } else {
-      redirect('/login')
-    }
-  } catch (error) {
-    // If any error occurs, assume database is not set up
-    redirect('/setup')
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    )
   }
+
+  return null
 }

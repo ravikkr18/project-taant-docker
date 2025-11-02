@@ -1,0 +1,33 @@
+# Traefik 2 Configuration
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: "websecure"
+          scheme: "https"
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: taant-network
+
+certificatesResolvers:
+  myresolver:
+    acme:
+      email: "admin@taant.in"
+      storage: "/acme/acme.json"
+      httpChallenge:
+        entryPoint: "web"
+
+log:
+  level: INFO
+
+accessLog: true

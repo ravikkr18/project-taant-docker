@@ -1,0 +1,136 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: "traefik:v2.10"
+    container_name: "traefik-mkcert"
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--log.level=INFO"
+      - "--accesslog=true"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik/dynamic:/etc/traefik/dynamic:ro"
+      - "./traefik/ssl:/etc/traefik/ssl:ro"
+    networks:
+      - taant-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.taant.in`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+
+  taant-front:
+    build:
+      context: ./taant-front
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./taant-front:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_API_URL=https://backend.taant.in
+      - PORT=3000
+    depends_on:
+      - taant-backend
+    networks:
+      - taant-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.taant-front.rule=Host(`taant.in`, `www.taant.in`)"
+      - "traefik.http.routers.taant-front.entrypoints=websecure"
+      - "traefik.http.routers.taant-front.tls=true"
+      - "traefik.http.services.taant-front.loadbalancer.server.port=3000"
+
+  taant-supplier:
+    build:
+      context: ./taant-supplier
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./taant-supplier:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_API_URL=https://backend.taant.in
+      - PORT=3000
+    depends_on:
+      - taant-backend
+    networks:
+      - taant-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.taant-supplier.rule=Host(`supplier.taant.in`)"
+      - "traefik.http.routers.taant-supplier.entrypoints=websecure"
+      - "traefik.http.routers.taant-supplier.tls=true"
+      - "traefik.http.services.taant-supplier.loadbalancer.server.port=3000"
+
+  taant-admin:
+    build:
+      context: ./taant-admin
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./taant-admin:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_SUPABASE_URL=https://lyteoxnqkjrpilrfcimc.supabase.co
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5dGVveG5xa2pycGlscmZjaW1jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4MDcyNjUsImV4cCI6MjA3NzM4MzI2NX0.BoELmC4cEqnL3TjRWfrmpIJdorG4lmvps-qZiohobmw
+      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5dGVveG5xa2pycGlscmZjaW1jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTgwNzI2NSwiZXhwIjoyMDc3MzgzMjY1fQ.TTy-fS8I4dIgCvxkfQSxCGmAldoUz2PGi59ya8bx10M
+      - NEXT_PUBLIC_API_URL=https://backend.taant.in
+      - NEXT_PUBLIC_APP_URL=https://admin.taant.in
+      - NEXT_PUBLIC_SITE_NAME=Taant Admin Panel
+      - PORT=3000
+    depends_on:
+      - taant-backend
+    networks:
+      - taant-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.taant-admin.rule=Host(`admin.taant.in`)"
+      - "traefik.http.routers.taant-admin.entrypoints=websecure"
+      - "traefik.http.routers.taant-admin.tls=true"
+      - "traefik.http.services.taant-admin.loadbalancer.server.port=3000"
+
+  taant-backend:
+    build:
+      context: ./taant-backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./taant-backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - PORT=4000
+      - CORS_ORIGIN=https://taant.in,https://admin.taant.in,https://supplier.taant.in
+    networks:
+      - taant-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.taant-backend.rule=Host(`backend.taant.in`)"
+      - "traefik.http.routers.taant-backend.entrypoints=websecure"
+      - "traefik.http.routers.taant-backend.tls=true"
+      - "traefik.http.services.taant-backend.loadbalancer.server.port=4000"
+
+networks:
+  taant-network:
+    driver: bridge

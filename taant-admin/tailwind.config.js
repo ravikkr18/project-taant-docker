@@ -6,6 +6,8 @@ module.exports = {
     './components/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
     './src/**/*.{ts,tsx}',
+    './node_modules/@refinedev/**/*.{js,ts,jsx,tsx}',
+    './node_modules/antd/**/*.{js,ts,jsx,tsx}',
   ],
   prefix: "",
   theme: {
@@ -73,5 +75,5 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [],
 }

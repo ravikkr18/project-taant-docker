@@ -1,118 +1,198 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+// Admin client with service role key for admin operations
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+})
+
 export async function GET(request: NextRequest) {
   try {
-    // Use service role key for admin operations
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const pageSize = parseInt(searchParams.get('pageSize') || '10')
+    const search = searchParams.get('search') || ''
+    const role = searchParams.get('role') || ''
 
-    // Get all users with profiles
-    const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers()
-
-    if (usersError) {
-      return NextResponse.json(
-        { error: 'Failed to get users: ' + usersError.message },
-        { status: 500 }
-      )
-    }
-
-    // Get profiles data
-    const { data: profiles, error: profilesError } = await supabase
+    let query = supabaseAdmin
       .from('profiles')
-      .select('*')
+      .select('*', { count: 'exact' })
 
-    if (profilesError) {
-      console.error('Profiles error:', profilesError)
+    // Apply filters
+    if (search) {
+      query = query.or(`email.ilike.%${search}%,full_name.ilike.%${search}%`)
+    }
+    if (role && role !== 'all') {
+      query = query.eq('role', role)
     }
 
-    // Combine user data with profile data
-    const usersWithProfiles = users.map(user => {
-      const profile = profiles?.find(p => p.id === user.id)
-      return {
-        id: user.id,
-        email: user.email,
-        email_confirmed_at: user.email_confirmed_at,
-        created_at: user.created_at,
-        last_sign_in_at: user.last_sign_in_at,
-        role: profile?.role || 'customer',
-        full_name: profile?.full_name,
-        phone: profile?.phone,
-        avatar_url: profile?.avatar_url
+    // Apply pagination
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+    query = query.range(from, to).order('created_at', { ascending: false })
+
+    const { data, error, count } = await query
+
+    if (error) {
+      console.error('Database error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // Transform profiles to match expected user structure
+    const users = data?.map((profile: any) => ({
+      id: profile.id,
+      email: profile.email,
+      created_at: profile.created_at,
+      updated_at: profile.updated_at,
+      last_sign_in_at: null,
+      user_metadata: {
+        full_name: profile.full_name
+      },
+      profile: {
+        id: profile.id,
+        role: profile.role,
+        full_name: profile.full_name
       }
-    })
+    })) || []
 
     return NextResponse.json({
-      success: true,
-      users: usersWithProfiles
+      data: users,
+      total: count || 0,
+      page,
+      pageSize
     })
-
-  } catch (error) {
-    console.error('Get users error:', error)
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    )
+  } catch (error: any) {
+    console.error('API error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function PUT(request: NextRequest) {
   try {
-    const { userId, role } = await request.json()
+    const { id, profile, user_metadata, email, password } = await request.json()
 
-    if (!userId || !role) {
-      return NextResponse.json(
-        { error: 'User ID and role are required' },
-        { status: 400 }
-      )
+    if (!id) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    // Use service role key for admin operations
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
+    // Update user profile
+    if (profile) {
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .upsert({
+          id: id,
+          ...profile,
+          updated_at: new Date().toISOString()
+        })
+
+      if (profileError) {
+        console.error('Profile update error:', profileError)
+        return NextResponse.json({ error: profileError.message }, { status: 500 })
+      }
+    }
+
+    // Update user metadata if provided
+    if (user_metadata) {
+      const { error: metadataError } = await supabaseAdmin.auth.admin.updateUserById(
+        id,
+        { user_metadata }
+      )
+
+      if (metadataError) {
+        console.error('Metadata update error:', metadataError)
+        return NextResponse.json({ error: metadataError.message }, { status: 500 })
+      }
+    }
+
+    // Update email if provided
+    if (email) {
+      const { error: emailError } = await supabaseAdmin.auth.admin.updateUserById(
+        id,
+        { email }
+      )
+
+      if (emailError) {
+        console.error('Email update error:', emailError)
+        return NextResponse.json({ error: emailError.message }, { status: 500 })
+      }
+    }
+
+    // Update password if provided
+    if (password) {
+      const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(
+        id,
+        { password }
+      )
+
+      if (passwordError) {
+        console.error('Password update error:', passwordError)
+        return NextResponse.json({ error: passwordError.message }, { status: 500 })
+      }
+    }
+
+    // Return updated user data
+    const { data: updatedProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (updatedProfile) {
+      const user = {
+        id: updatedProfile.id,
+        email: updatedProfile.email,
+        created_at: updatedProfile.created_at,
+        updated_at: updatedProfile.updated_at,
+        last_sign_in_at: null,
+        user_metadata: {
+          full_name: updatedProfile.full_name
+        },
+        profile: {
+          id: updatedProfile.id,
+          role: updatedProfile.role,
+          full_name: updatedProfile.full_name
         }
       }
-    )
 
-    // Update user role in profiles table
-    const { error } = await supabase
+      return NextResponse.json({ data: user })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    console.error('Update API error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('id')
+
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
+    }
+
+    // Delete user from profiles table
+    const { error } = await supabaseAdmin
       .from('profiles')
-      .update({
-        role: role,
-        updated_at: new Date().toISOString()
-      })
+      .delete()
       .eq('id', userId)
 
     if (error) {
-      return NextResponse.json(
-        { error: 'Failed to update user role: ' + error.message },
-        { status: 500 }
-      )
+      console.error('Delete error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({
-      success: true,
-      message: '✅ User role updated successfully!'
-    })
-
-  } catch (error) {
-    console.error('Update user role error:', error)
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: true, data: { id: userId } })
+  } catch (error: any) {
+    console.error('Delete API error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

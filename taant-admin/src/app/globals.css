@@ -24,6 +24,14 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-primary: 222.2 47.4% 11.2%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222.2 84% 4.9%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 221.2 83.2% 53.3%;
   }
 
   .dark {
@@ -46,6 +54,16 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 94.1%;
+    --gradient-start: #4f46e5;
+    --gradient-end: #7c3aed;
+    --sidebar-background: #1e293b;
+    --sidebar-foreground: #f1f5f9;
+    --sidebar-primary: #3b82f6;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #1e3a8a;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #334155;
+    --sidebar-ring: #3b82f6;
   }
 }
 
@@ -55,5 +73,25 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  }
+
+  .card-gradient {
+    @apply bg-card border-border;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-200;
+    @apply hover:shadow-md hover:border-border/80;
+  }
+
+  .glass {
+    @apply bg-background/95 backdrop-blur-sm border-border;
   }
 }

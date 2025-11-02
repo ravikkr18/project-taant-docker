@@ -4,7 +4,116 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ProductCard from '@/components/ProductCard';
 import { products, searchProducts } from '@/data/products';
-import { Search, Filter, Grid, List, ChevronDown, X, Star } from 'lucide-react';
+import { Search, Filter, Grid, List, ChevronDown, X, Star, Heart } from 'lucide-react';
+import ImageWithFallback from '@/components/ImageWithFallback';
+
+// Compact Product Card Component (matching home page style)
+const CompactProductCard = ({ product }: { product: any }) => {
+  const [wishlistItems, setWishlistItems] = useState<Set<string>>(new Set());
+
+  const toggleWishlist = (productId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setWishlistItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(productId)) {
+        newSet.delete(productId);
+      } else {
+        newSet.add(productId);
+      }
+      return newSet;
+    });
+  };
+
+  return (
+    <div className="group relative bg-white rounded-lg border border-gray-200 hover:shadow-xl transition-all duration-300 overflow-hidden hover:border-orange-300">
+      {/* Wishlist Button */}
+      <button
+        onClick={(e) => toggleWishlist(product.id, e)}
+        className="absolute top-2 right-2 z-10 p-2 bg-white/90 hover:bg-white rounded-full shadow-sm transition-all duration-200 backdrop-blur-sm"
+      >
+        <Heart
+          className={`w-4 h-4 transition-colors ${
+            wishlistItems.has(product.id)
+              ? 'fill-red-500 text-red-500'
+              : 'text-gray-600 hover:text-red-500'
+          }`}
+        />
+      </button>
+
+      {/* Badge */}
+      {product.badge && (
+        <div className="absolute top-2 left-2 z-10">
+          <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+            {product.badge}
+          </span>
+        </div>
+      )}
+
+      {/* Product Image */}
+      <a href={`/products/${product.slug}`}>
+        <div className="aspect-square bg-gray-50 overflow-hidden">
+          <ImageWithFallback
+            src={product.image}
+            alt={product.name}
+            width={200}
+            height={200}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        </div>
+      </a>
+
+      {/* Product Info */}
+      <div className="p-2 sm:p-3">
+        <a href={`/products/${product.slug}`}>
+          <h3 className="text-xs sm:text-sm font-medium text-gray-900 mb-1 line-clamp-2 hover:text-orange-600 transition-colors min-h-[2rem] sm:min-h-[2.5rem] leading-4 sm:leading-5">
+            {product.name}
+          </h3>
+        </a>
+
+        {/* Brand */}
+        {product.brand && (
+          <p className="text-xs text-gray-500 mb-1 truncate">{product.brand}</p>
+        )}
+
+        {/* Rating - Hide on very small screens */}
+        <div className="hidden sm:flex items-center gap-1 mb-2">
+          {product.rating && (
+            <>
+              <div className="flex items-center">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`w-3 h-3 ${
+                      i < Math.floor(product.rating!)
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : 'text-gray-300'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-gray-600">
+                {product.rating} ({product.reviews || 0})
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Price in INR */}
+        <div className="flex items-center gap-1 sm:gap-2 mb-2">
+          <span className="text-xs sm:text-sm font-bold text-gray-900">
+            ₹{Math.round(product.price * 83).toLocaleString('en-IN')}
+          </span>
+          {product.originalPrice && product.originalPrice > product.price && (
+            <span className="text-xs text-gray-500 line-through">
+              ₹{Math.round(product.originalPrice * 83).toLocaleString('en-IN')}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const SearchPage = () => {
   const searchParams = useSearchParams();
@@ -308,13 +417,13 @@ const SearchPage = () => {
 
             {/* Products Grid */}
             {searchResults.length > 0 ? (
-              <div className={`grid gap-6 ${
+              <div className={`gap-2 sm:gap-3 md:gap-4 ${
                 viewMode === 'grid'
-                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                  ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
                   : 'grid-cols-1'
               }`}>
                 {searchResults.map(product => (
-                  <ProductCard key={product.id} product={product} />
+                  <CompactProductCard key={product.id} product={product} />
                 ))}
               </div>
             ) : (

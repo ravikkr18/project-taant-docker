@@ -28,7 +28,18 @@
       "Bash(cat:*)",
       "Bash(npx next lint:*)",
       "Bash(npx tsc:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(mkcert:*)",
+      "Bash(choco install:*)",
+      "Bash(dir:*)",
+      "Bash(openssl:*)",
+      "Bash(jq:*)",
+      "Bash(node:*)",
+      "Bash(timeout:*)",
+      "Bash(npm run dev)",
+      "Bash(npx next:*)",
+      "WebFetch(domain:refine.dev)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []
