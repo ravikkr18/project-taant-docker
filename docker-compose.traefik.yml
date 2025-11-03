@@ -17,9 +17,9 @@ services:
       - "--certificatesresolvers.myresolver.acme.email=admin@taant.in"
       - "--certificatesresolvers.myresolver.acme.storage=/acme/acme.json"
     ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"  # Traefik dashboard
+      - "8880:80"
+      - "8443:443"
+      - "9090:8080"  # Traefik dashboard
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./traefik/acme:/acme"
@@ -44,7 +44,7 @@ services:
       - NODE_ENV=development
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      - NEXT_PUBLIC_API_URL=https://backend.taant.in
+      - NEXT_PUBLIC_API_URL=https://backend.akasakiimpexindia.in
       - PORT=3000
     depends_on:
       - taant-backend
@@ -52,7 +52,7 @@ services:
       - taant-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.taant-front.rule=Host(`taant.in`, `www.taant.in`)"
+      - "traefik.http.routers.taant-front.rule=Host(`taant.in`, `www.taant.in`) || Host(`akasakiimpexindia.in`, `www.akasakiimpexindia.in`)"
       - "traefik.http.routers.taant-front.entrypoints=websecure"
       - "traefik.http.routers.taant-front.tls.certresolver=myresolver"
       - "traefik.http.services.taant-front.loadbalancer.server.port=3000"
@@ -68,7 +68,7 @@ services:
       - NODE_ENV=development
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      - NEXT_PUBLIC_API_URL=https://backend.taant.in
+      - NEXT_PUBLIC_API_URL=https://backend.akasakiimpexindia.in
       - PORT=3000
     depends_on:
       - taant-backend
@@ -76,7 +76,7 @@ services:
       - taant-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.taant-supplier.rule=Host(`supplier.taant.in`)"
+      - "traefik.http.routers.taant-supplier.rule=Host(`supplier.taant.in`) || Host(`supplier.akasakiimpexindia.in`)"
       - "traefik.http.routers.taant-supplier.entrypoints=websecure"
       - "traefik.http.routers.taant-supplier.tls.certresolver=myresolver"
       - "traefik.http.services.taant-supplier.loadbalancer.server.port=3000"
@@ -93,7 +93,7 @@ services:
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      - NEXT_PUBLIC_API_URL=https://backend.taant.in
+      - NEXT_PUBLIC_API_URL=https://backend.akasakiimpexindia.in
       - PORT=3007
     depends_on:
       - taant-backend
@@ -101,7 +101,7 @@ services:
       - taant-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.taant-admin.rule=Host(`admin.taant.in`)"
+      - "traefik.http.routers.taant-admin.rule=Host(`admin.taant.in`) || Host(`admin.akasakiimpexindia.in`)"
       - "traefik.http.routers.taant-admin.entrypoints=websecure"
       - "traefik.http.routers.taant-admin.tls.certresolver=myresolver"
       - "traefik.http.services.taant-admin.loadbalancer.server.port=3007"
@@ -119,12 +119,12 @@ services:
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - PORT=4000
-      - CORS_ORIGIN=https://taant.in,https://admin.taant.in,https://supplier.taant.in
+      - CORS_ORIGIN=https://taant.in,https://admin.taant.in,https://supplier.taant.in,https://akasakiimpexindia.in,https://admin.akasakiimpexindia.in,https://supplier.akasakiimpexindia.in,https://backend.akasakiimpexindia.in
     networks:
       - taant-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.taant-backend.rule=Host(`backend.taant.in`)"
+      - "traefik.http.routers.taant-backend.rule=Host(`backend.taant.in`) || Host(`backend.akasakiimpexindia.in`)"
       - "traefik.http.routers.taant-backend.entrypoints=websecure"
       - "traefik.http.routers.taant-backend.tls.certresolver=myresolver"
       - "traefik.http.services.taant-backend.loadbalancer.server.port=4000"

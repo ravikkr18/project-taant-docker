@@ -1,36 +1,40 @@
 import { DataProvider, CrudFilter, CrudSort } from '@refinedev/core'
 import { supabase } from '../../lib/supabase/client'
 
+// Helper function to get auth headers
+const getAuthHeaders = async () => {
+  const { data: { session } } = await supabase.auth.getSession()
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (session?.access_token) {
+    headers['Authorization'] = `Bearer ${session.access_token}`
+  }
+
+  return headers
+}
+
+// Note: We don't create supabaseAdmin here because environment variables
+// are not available on the client side. All admin operations go through API routes.
+
 const dataProviderWithUsers: DataProvider = {
   getOne: async ({ resource, id, meta }) => {
     if (resource === 'users') {
-      // Use admin client to get user profile by ID
-      const { data, error } = await supabaseAdmin
-        .from('profiles')
-        .select('*')
-        .eq('id', id)
-        .single()
+      // Use API route to get single user
+      const headers = await getAuthHeaders()
+      const response = await fetch(`/api/admin/users?id=${id}`, {
+        headers,
+        credentials: 'include'
+      })
 
-      if (error) throw error
-
-      // Transform to match expected user structure
-      const user = {
-        id: data.id,
-        email: data.email,
-        created_at: data.created_at,
-        updated_at: data.updated_at,
-        last_sign_in_at: null, // We don't have this in profiles
-        user_metadata: {
-          full_name: data.full_name
-        },
-        profile: {
-          id: data.id,
-          role: data.role,
-          full_name: data.full_name
-        }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to fetch user')
       }
 
-      return { data: user }
+      const data = await response.json()
+      return { data: data.data }
     }
 
     const { data, error } = await supabase
@@ -67,11 +71,22 @@ const dataProviderWithUsers: DataProvider = {
         })
       }
 
-      const response = await fetch(`/api/admin/users?${params.toString()}`)
+      const headers = await getAuthHeaders()
+      const response = await fetch(`/api/admin/users?${params.toString()}`, {
+        headers,
+        credentials: 'include'
+      })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch users')
+        let errorMessage = 'Failed to fetch users'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
+        } catch (e) {
+          // If error response is not JSON, use status text
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`
+        }
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
@@ -144,11 +159,11 @@ const dataProviderWithUsers: DataProvider = {
 
   update: async ({ resource, id, variables, meta }) => {
     if (resource === 'users') {
+      const headers = await getAuthHeaders()
       const response = await fetch('/api/admin/users', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           id,
           ...variables
@@ -178,8 +193,11 @@ const dataProviderWithUsers: DataProvider = {
 
   deleteOne: async ({ resource, id, variables, meta }) => {
     if (resource === 'users') {
+      const headers = await getAuthHeaders()
       const response = await fetch(`/api/admin/users?id=${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers,
+        credentials: 'include'
       })
 
       if (!response.ok) {

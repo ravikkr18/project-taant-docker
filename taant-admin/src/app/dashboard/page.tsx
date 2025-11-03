@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import { AdminLayout } from '../../components/layout/admin-layout'
+import { AdminLayoutWithLoading } from '../../components/layout/admin-layout'
 import { Users, Package, ShoppingCart, Plus } from 'lucide-react'
 import Link from 'next/link'
 import RefinedDashboard from './refined-dashboard'
@@ -49,19 +49,17 @@ export default function DashboardPage() {
   }, [router])
 
   
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-        </div>
-      </AdminLayout>
-    )
-  }
-
   return (
-    <AdminLayout>
-      <RefinedDashboard />
-    </AdminLayout>
+    <AdminLayoutWithLoading loading={loading}>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center h-96 space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+          <div className="text-lg text-gray-600">Loading dashboard...</div>
+          <div className="text-sm text-gray-400">Fetching user data and permissions</div>
+        </div>
+      ) : (
+        <RefinedDashboard />
+      )}
+    </AdminLayoutWithLoading>
   )
 }

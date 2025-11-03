@@ -27,6 +27,7 @@ interface UserEditFormProps {
     email?: string
     full_name?: string
     role?: string
+    status?: string
   }
   loading?: boolean
 }
@@ -100,6 +101,7 @@ export function UserEditForm({
             email: initialValues.email,
             full_name: initialValues.full_name,
             role: initialValues.role,
+            status: initialValues.status || 'active',
           }}
           onFinish={handleSubmit}
         >
@@ -135,6 +137,19 @@ export function UserEditForm({
               <Option value="admin">Admin</Option>
               <Option value="supplier">Supplier</Option>
               <Option value="customer">Customer</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            label="Status"
+            name="status"
+            rules={[
+              { required: true, message: 'Please select a status!' }
+            ]}
+          >
+            <Select placeholder="Select user status">
+              <Option value="active">Active</Option>
+              <Option value="inactive">Inactive</Option>
             </Select>
           </Form.Item>
 

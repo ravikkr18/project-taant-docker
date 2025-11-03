@@ -85,8 +85,10 @@ export default function RefinedDashboard() {
 
   if (usersLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading dashboard...</div>
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="text-lg text-gray-600">Loading dashboard data...</div>
+        <div className="text-sm text-gray-400">Fetching user statistics and recent activity</div>
       </div>
     )
   }

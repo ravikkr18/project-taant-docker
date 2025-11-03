@@ -1,20 +1,89 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '../../../../lib/auth-middleware'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 // Admin client with service role key for admin operations
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+const supabaseAdmin = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false
   }
-})
+}) : null
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, { user, profile }) => {
   try {
-    const { searchParams } = new URL(request.url)
+    // Debug environment variables
+    console.log('Users API - Environment check:', {
+      supabaseUrl: !!supabaseUrl,
+      supabaseServiceKey: !!supabaseServiceKey,
+      supabaseAdmin: !!supabaseAdmin,
+      nodeEnv: process.env.NODE_ENV,
+      userId: user.id
+    })
+
+    if (!supabaseAdmin) {
+      console.error('Users API - Supabase admin client not initialized')
+      return NextResponse.json(
+        {
+          error: 'Server configuration error - missing Supabase credentials',
+          debug: {
+            supabaseUrl: !!supabaseUrl,
+            supabaseServiceKey: !!supabaseServiceKey,
+            nodeEnv: process.env.NODE_ENV
+          }
+        },
+        { status: 500 }
+      )
+    }
+
+    // Safely get search params, handling potential URL parsing issues
+    let searchParams
+    try {
+      searchParams = new URL(request.url).searchParams
+    } catch (error) {
+      // Fallback for URL parsing issues - use NextRequest's built-in URL parsing
+      searchParams = request.nextUrl.searchParams
+    }
+    const userId = searchParams.get('id')
+
+    // Handle single user request
+    if (userId) {
+      const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      if (error) {
+        console.error('Single user fetch error:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      // Transform to match expected user structure
+      const userData = {
+        id: data.id,
+        email: data.email,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        last_sign_in_at: data.last_sign_in_at,
+        user_metadata: {
+          full_name: data.full_name
+        },
+        profile: {
+          id: data.id,
+          role: data.role,
+          full_name: data.full_name,
+          status: data.status || 'active'
+        }
+      }
+
+      return NextResponse.json({ data: userData })
+    }
+
+    // Handle multiple users request
     const page = parseInt(searchParams.get('page') || '1')
     const pageSize = parseInt(searchParams.get('pageSize') || '10')
     const search = searchParams.get('search') || ''
@@ -50,14 +119,15 @@ export async function GET(request: NextRequest) {
       email: profile.email,
       created_at: profile.created_at,
       updated_at: profile.updated_at,
-      last_sign_in_at: null,
+      last_sign_in_at: profile.last_sign_in_at,
       user_metadata: {
         full_name: profile.full_name
       },
       profile: {
         id: profile.id,
         role: profile.role,
-        full_name: profile.full_name
+        full_name: profile.full_name,
+        status: profile.status || 'active'
       }
     })) || []
 
@@ -71,24 +141,29 @@ export async function GET(request: NextRequest) {
     console.error('API error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-}
+})
 
-export async function PUT(request: NextRequest) {
+export const PUT = withAuth(async (request: NextRequest, { user, profile }) => {
   try {
-    const { id, profile, user_metadata, email, password } = await request.json()
+    const { id, profile: profileData, user_metadata, email, password, status } = await request.json()
 
     if (!id) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
     // Update user profile
-    if (profile) {
+    if (profileData || status !== undefined) {
+      const updateData = {
+        ...profileData,
+        ...(status !== undefined && { status }),
+        updated_at: new Date().toISOString()
+      }
+
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .upsert({
           id: id,
-          ...profile,
-          updated_at: new Date().toISOString()
+          ...updateData
         })
 
       if (profileError) {
@@ -144,23 +219,24 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (updatedProfile) {
-      const user = {
+      const userData = {
         id: updatedProfile.id,
         email: updatedProfile.email,
         created_at: updatedProfile.created_at,
         updated_at: updatedProfile.updated_at,
-        last_sign_in_at: null,
+        last_sign_in_at: updatedProfile.last_sign_in_at,
         user_metadata: {
           full_name: updatedProfile.full_name
         },
         profile: {
           id: updatedProfile.id,
           role: updatedProfile.role,
-          full_name: updatedProfile.full_name
+          full_name: updatedProfile.full_name,
+          status: updatedProfile.status || 'active'
         }
       }
 
-      return NextResponse.json({ data: user })
+      return NextResponse.json({ data: userData })
     }
 
     return NextResponse.json({ success: true })
@@ -168,11 +244,18 @@ export async function PUT(request: NextRequest) {
     console.error('Update API error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAuth(async (request: NextRequest, { user, profile }) => {
   try {
-    const { searchParams } = new URL(request.url)
+    // Safely get search params, handling potential URL parsing issues
+    let searchParams
+    try {
+      searchParams = new URL(request.url).searchParams
+    } catch (error) {
+      // Fallback for URL parsing issues - use NextRequest's built-in URL parsing
+      searchParams = request.nextUrl.searchParams
+    }
     const userId = searchParams.get('id')
 
     if (!userId) {
@@ -195,4 +278,4 @@ export async function DELETE(request: NextRequest) {
     console.error('Delete API error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-}
+})
