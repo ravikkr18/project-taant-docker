@@ -25,15 +25,15 @@ services:
       context: ./taant-supplier
       dockerfile: Dockerfile.dev
     ports:
-      - "3002:3000"
+      - "3002:3002"
     volumes:
       - ./taant-supplier:/app
       - /app/node_modules
+    env_file:
+      - ./taant-supplier/.env
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      - PORT=3000
+      - PORT=3002
     depends_on:
       - taant-backend
     networks:

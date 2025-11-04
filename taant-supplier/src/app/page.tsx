@@ -1,27 +1,50 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/auth-context'
+import { supabase } from '../lib/supabase/client'
 
-export default function HomePage() {
+export default function Home() {
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const { user, session } = useAuth()
 
   useEffect(() => {
-    if (user && session) {
-      router.push('/dashboard')
-    } else {
-      router.push('/login')
-    }
-  }, [user, session, router])
+    async function checkAuth() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          // Check if user is supplier
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Loading...</p>
+          if (profile?.role === 'supplier') {
+            router.push('/dashboard')
+          } else {
+            router.push('/login')
+          }
+        } else {
+          router.push('/login')
+        }
+      } catch (error) {
+        router.push('/login')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    checkAuth()
+  }, [router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  return null
 }

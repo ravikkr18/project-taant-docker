@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +12,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
+      )
+    }
+
+    // Check environment variables
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase environment variables:', {
+        supabaseUrl: !!supabaseUrl,
+        supabaseServiceKey: !!supabaseServiceKey
+      })
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
       )
     }
 
@@ -38,18 +50,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user is supplier
+    // Check if user is admin
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', data.user.id)
       .single()
 
-    if (profileError || !profile || profile.role !== 'supplier') {
-      // Sign out the user if not supplier
+    if (profileError || !profile || profile.role !== 'admin') {
+      // Sign out the user if not admin
       await supabase.auth.signOut()
       return NextResponse.json(
-        { error: 'Access denied. Supplier privileges required.' },
+        { error: 'Access denied. Admin privileges required.' },
         { status: 403 }
       )
     }

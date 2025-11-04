@@ -1,15 +1,13 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
-import SessionProvider from './providers/session-provider'
-import { AuthProvider } from '@/contexts/auth-context'
-import { Toaster } from '@/components/ui/toaster'
+import { Inter } from 'next/font/google'
+import { AntdRegistry } from '@ant-design/nextjs-registry'
+import { RefineProvider } from '../components/providers/refine-provider'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'Taant Supplier Panel',
-  description: 'Supplier management dashboard for Taant platform',
+  description: 'Supplier panel for managing your Taant account',
 }
 
 export default function RootLayout({
@@ -20,12 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <SessionProvider>
-          <AuthProvider>
+        <AntdRegistry>
+          <RefineProvider>
             {children}
-            <Toaster />
-          </AuthProvider>
-        </SessionProvider>
+          </RefineProvider>
+        </AntdRegistry>
       </body>
     </html>
   )

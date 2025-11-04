@@ -1,53 +1,43 @@
-import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function POST() {
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+// Admin client with service role key for admin operations
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+})
+
+export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
-    const { error } = await supabase.auth.signOut()
+    const { token } = await request.json()
 
-    if (error) {
-      console.error('Logout error:', error)
+    if (!token) {
+      return NextResponse.json({ error: 'No session token provided' }, { status: 400 })
     }
 
-    // Create response that clears all Supabase cookies
-    const response = NextResponse.json({
-      success: true,
-      message: 'Logged out successfully'
-    })
+    // Get user from session
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
 
-    // Clear all Supabase-related cookies
-    response.cookies.set('sb-access-token', '', {
-      maxAge: 0,
-      path: '/',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax'
-    })
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Invalid session token' }, { status: 401 })
+    }
 
-    response.cookies.set('sb-refresh-token', '', {
-      maxAge: 0,
-      path: '/',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax'
-    })
+    // Revoke all sessions for the user
+    const { error: revokeError } = await supabaseAdmin.auth.admin.signOut(user.id)
 
-    // Clear any other potential Supabase cookies
-    response.cookies.set('sb-lyteoxnqkjrpilrfcimc-auth-token', '', {
-      maxAge: 0,
-      path: '/',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax'
-    })
+    if (revokeError) {
+      console.error('Logout error:', revokeError)
+      return NextResponse.json({ error: revokeError.message }, { status: 500 })
+    }
 
-    return response
-  } catch (error) {
-    console.error('Logout error:', error)
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: true, message: 'Logged out successfully' })
+  } catch (error: any) {
+    console.error('Logout API error:', error)
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }
