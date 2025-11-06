@@ -47,13 +47,16 @@ interface ProductVariant {
   cost_price?: number
   inventory_quantity: number
   weight?: number
-  barcode?: string
   option1_name: string
   option1_value: string
   option2_name: string
   option2_value: string
   option3_name: string
   option3_value: string
+  option4_name: string
+  option4_value: string
+  option5_name: string
+  option5_value: string
   image_id?: string
   image_url?: string
   is_active: boolean
@@ -205,6 +208,10 @@ const VariantManager: React.FC<VariantManagerProps> = ({
       option2_value: '',
       option3_name: '',
       option3_value: '',
+      option4_name: '',
+      option4_value: '',
+      option5_name: '',
+      option5_value: '',
       is_active: true,
       position: variants.length
     }
@@ -366,6 +373,54 @@ const VariantManager: React.FC<VariantManagerProps> = ({
                   />
                 )}
                 {record.option3_name}: {record.option3_value}
+              </Tag>
+            )}
+            {record.option4_value && (
+              <Tag
+                size="small"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+              >
+                {record.option4_name?.toLowerCase() === 'color' && (
+                  <div
+                    style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      backgroundColor: record.option4_value.includes('#') ? record.option4_value :
+                        COMMON_COLORS.find(c => c.label.toLowerCase() === record.option4_value.toLowerCase())?.value || '#ccc',
+                      border: '1px solid #d9d9d9'
+                    }}
+                  />
+                )}
+                {record.option4_name}: {record.option4_value}
+              </Tag>
+            )}
+            {record.option5_value && (
+              <Tag
+                size="small"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+              >
+                {record.option5_name?.toLowerCase() === 'color' && (
+                  <div
+                    style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      backgroundColor: record.option5_value.includes('#') ? record.option5_value :
+                        COMMON_COLORS.find(c => c.label.toLowerCase() === record.option5_value.toLowerCase())?.value || '#ccc',
+                      border: '1px solid #d9d9d9'
+                    }}
+                  />
+                )}
+                {record.option5_name}: {record.option5_value}
               </Tag>
             )}
           </div>
@@ -639,9 +694,30 @@ const VariantManager: React.FC<VariantManagerProps> = ({
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="barcode" label="Barcode">
-                <Input placeholder="Optional barcode" />
+              <Form.Item name="option4_name" label="Option 4 Name">
+                <AutoComplete
+                  options={getAllOptionTypes().map(type => ({ label: type, value: type }))}
+                  placeholder="Select or type custom option"
+                  filterOption={(inputValue, option) =>
+                    option!.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
+                  }
+                  onSelect={(value) => {
+                    if (!COMMON_OPTION_TYPES.includes(value) && !customOptions.includes(value)) {
+                      handleAddCustomOption(value)
+                    }
+                  }}
+                />
               </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="Option 4 Value">
+                {renderOptionValueInput(form.getFieldValue('option4_name'), 'option4_value', 'option4_name')}
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 32 }}>
+                Optional fourth variant option
+              </Text>
             </Col>
           </Row>
 
@@ -699,6 +775,35 @@ const VariantManager: React.FC<VariantManagerProps> = ({
             <Col span={8}>
               <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 32 }}>
                 Optional third variant option
+              </Text>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="option5_name" label="Option 5 Name">
+                <AutoComplete
+                  options={getAllOptionTypes().map(type => ({ label: type, value: type }))}
+                  placeholder="Select or type custom option"
+                  filterOption={(inputValue, option) =>
+                    option!.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
+                  }
+                  onSelect={(value) => {
+                    if (!COMMON_OPTION_TYPES.includes(value) && !customOptions.includes(value)) {
+                      handleAddCustomOption(value)
+                    }
+                  }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="Option 5 Value">
+                {renderOptionValueInput(form.getFieldValue('option5_name'), 'option5_value', 'option5_name')}
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 32 }}>
+                Optional fifth variant option
               </Text>
             </Col>
           </Row>
@@ -863,6 +968,8 @@ const VariantManager: React.FC<VariantManagerProps> = ({
               <li>Use the color picker for accurate color selection when option type is "Color"</li>
               <li>Color values are displayed with visual indicators in the variant table</li>
               <li>Custom options are automatically saved and available for reuse</li>
+              <li>Now supports up to 5 different variant options per product</li>
+              <li>Options 4 and 5 are optional - use them for complex product variations</li>
               <li>Set proper inventory levels to track stock accurately</li>
               <li>Associate unique images with each variant for better visualization</li>
               <li>Enable/disable variants without deleting them</li>
