@@ -359,24 +359,7 @@ const FAQManager: React.FC<FAQManagerProps> = ({ faqs, onChange }) => {
           />
         )}
 
-        {/* Tips */}
-        <Card style={{ marginTop: 16 }} size="small">
-          <div style={{ display: 'flex', alignItems: 'start', gap: 8 }}>
-            <StarOutlined style={{ color: '#1890ff', marginTop: 2 }} />
-            <div>
-              <Text strong>FAQ Management Tips:</Text>
-              <ul style={{ margin: '8px 0 0 0', paddingLeft: 16, color: '#666', fontSize: 13 }}>
-                <li>Keep questions concise and customer-focused</li>
-                <li>Provide clear, helpful answers</li>
-                <li>Drag to reorder FAQs by importance</li>
-                <li>Hide inactive FAQs without deleting them</li>
-                <li>Maximum {MAX_FAQS} FAQs allowed per product</li>
-                <li>Both question and answer must be filled to be complete</li>
-              </ul>
-            </div>
           </div>
-        </Card>
-      </div>
     </DndProvider>
   )
 }

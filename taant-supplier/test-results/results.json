@@ -1,0 +1,1758 @@
+{
+  "config": {
+    "configFile": "/www/ravi/project-taant-docker/taant-supplier/playwright.config.ts",
+    "rootDir": "/www/ravi/project-taant-docker/taant-supplier/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/www/ravi/project-taant-docker/taant-supplier/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/www/ravi/project-taant-docker/taant-supplier/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/www/ravi/project-taant-docker/taant-supplier/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/www/ravi/project-taant-docker/taant-supplier/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/www/ravi/project-taant-docker/taant-supplier/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/www/ravi/project-taant-docker/taant-supplier/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/www/ravi/project-taant-docker/taant-supplier/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "Mobile Chrome",
+        "name": "Mobile Chrome",
+        "testDir": "/www/ravi/project-taant-docker/taant-supplier/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/www/ravi/project-taant-docker/taant-supplier/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "Mobile Safari",
+        "name": "Mobile Safari",
+        "testDir": "/www/ravi/project-taant-docker/taant-supplier/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.56.1",
+    "workers": 3,
+    "webServer": {
+      "command": "npm run dev",
+      "url": "http://localhost:3002",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "product-form-e2e.spec.ts",
+      "file": "product-form-e2e.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Product Form E2E Tests",
+          "file": "product-form-e2e.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should display product management page correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-40fc853caccf8a9b1f55",
+              "file": "product-form-e2e.spec.ts",
+              "line": 15,
+              "column": 7
+            },
+            {
+              "title": "should open product creation modal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-84a84a8e1fd822c20a2b",
+              "file": "product-form-e2e.spec.ts",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should validate required fields in basic information tab",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-d7d468b30a82234fa537",
+              "file": "product-form-e2e.spec.ts",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "should fill and validate basic information form",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-3665bf8b76d93d40e6a8",
+              "file": "product-form-e2e.spec.ts",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "should navigate through all form tabs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-e223de079ac9f9db4ae5",
+              "file": "product-form-e2e.spec.ts",
+              "line": 91,
+              "column": 7
+            },
+            {
+              "title": "should handle product details form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-db1583096f2e1040cddd",
+              "file": "product-form-e2e.spec.ts",
+              "line": 139,
+              "column": 7
+            },
+            {
+              "title": "should handle product information form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-b1acf48c27a2bf68fb92",
+              "file": "product-form-e2e.spec.ts",
+              "line": 178,
+              "column": 7
+            },
+            {
+              "title": "should handle SEO form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-f72e9e4e0c53e2b51b0f",
+              "file": "product-form-e2e.spec.ts",
+              "line": 226,
+              "column": 7
+            },
+            {
+              "title": "should validate form submission with all required data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-f3f8c6caa47e7f8be804",
+              "file": "product-form-e2e.spec.ts",
+              "line": 260,
+              "column": 7
+            },
+            {
+              "title": "should handle form cancellation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-b18b585cd63fa2a953fb",
+              "file": "product-form-e2e.spec.ts",
+              "line": 312,
+              "column": 7
+            },
+            {
+              "title": "should handle help tooltips correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-b6831b7a567dba8ab1af",
+              "file": "product-form-e2e.spec.ts",
+              "line": 331,
+              "column": 7
+            },
+            {
+              "title": "should be responsive on mobile devices",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-f5ff124e067abc79da81",
+              "file": "product-form-e2e.spec.ts",
+              "line": 355,
+              "column": 7
+            },
+            {
+              "title": "should handle keyboard navigation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-555786cc0477bfd91e0d",
+              "file": "product-form-e2e.spec.ts",
+              "line": 390,
+              "column": 7
+            },
+            {
+              "title": "should handle accessibility requirements",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-ea82ef023372cdda2308",
+              "file": "product-form-e2e.spec.ts",
+              "line": 417,
+              "column": 7
+            },
+            {
+              "title": "should display product management page correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-1dc4023c21d8f14b1ec7",
+              "file": "product-form-e2e.spec.ts",
+              "line": 15,
+              "column": 7
+            },
+            {
+              "title": "should open product creation modal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-509907dfe24342598cd3",
+              "file": "product-form-e2e.spec.ts",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should validate required fields in basic information tab",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-3f7fcf74cf1063877d77",
+              "file": "product-form-e2e.spec.ts",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "should fill and validate basic information form",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-fb0fc519e3665c150113",
+              "file": "product-form-e2e.spec.ts",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "should navigate through all form tabs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-ae1b4c0ae14e81260ed5",
+              "file": "product-form-e2e.spec.ts",
+              "line": 91,
+              "column": 7
+            },
+            {
+              "title": "should handle product details form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-c7244ebf4a6e8cdbdade",
+              "file": "product-form-e2e.spec.ts",
+              "line": 139,
+              "column": 7
+            },
+            {
+              "title": "should handle product information form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-bc32f9714df768eab237",
+              "file": "product-form-e2e.spec.ts",
+              "line": 178,
+              "column": 7
+            },
+            {
+              "title": "should handle SEO form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-d3da4ecf21c0d03021a4",
+              "file": "product-form-e2e.spec.ts",
+              "line": 226,
+              "column": 7
+            },
+            {
+              "title": "should validate form submission with all required data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-b1d54a5e4a16811971ba",
+              "file": "product-form-e2e.spec.ts",
+              "line": 260,
+              "column": 7
+            },
+            {
+              "title": "should handle form cancellation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-01df136ee00ccff22a56",
+              "file": "product-form-e2e.spec.ts",
+              "line": 312,
+              "column": 7
+            },
+            {
+              "title": "should handle help tooltips correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-c4e8eaca3d7231746f09",
+              "file": "product-form-e2e.spec.ts",
+              "line": 331,
+              "column": 7
+            },
+            {
+              "title": "should be responsive on mobile devices",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-65f9dc330136de7d201f",
+              "file": "product-form-e2e.spec.ts",
+              "line": 355,
+              "column": 7
+            },
+            {
+              "title": "should handle keyboard navigation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-c51639decebbed564a0e",
+              "file": "product-form-e2e.spec.ts",
+              "line": 390,
+              "column": 7
+            },
+            {
+              "title": "should handle accessibility requirements",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-72cef507263e63198985",
+              "file": "product-form-e2e.spec.ts",
+              "line": 417,
+              "column": 7
+            },
+            {
+              "title": "should display product management page correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-188dacdd1e363239fb2d",
+              "file": "product-form-e2e.spec.ts",
+              "line": 15,
+              "column": 7
+            },
+            {
+              "title": "should open product creation modal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-0fb3ecfb5432d8570360",
+              "file": "product-form-e2e.spec.ts",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should validate required fields in basic information tab",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-5e6fee18df2b05747e10",
+              "file": "product-form-e2e.spec.ts",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "should fill and validate basic information form",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-47732a710d4f1147c5eb",
+              "file": "product-form-e2e.spec.ts",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "should navigate through all form tabs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-89cbcd6d0a9e3ead8718",
+              "file": "product-form-e2e.spec.ts",
+              "line": 91,
+              "column": 7
+            },
+            {
+              "title": "should handle product details form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-10052f50faf650fd09b2",
+              "file": "product-form-e2e.spec.ts",
+              "line": 139,
+              "column": 7
+            },
+            {
+              "title": "should handle product information form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-7ce35bf7b0fe40fd22e9",
+              "file": "product-form-e2e.spec.ts",
+              "line": 178,
+              "column": 7
+            },
+            {
+              "title": "should handle SEO form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-73f5eaa6c447d891d5e5",
+              "file": "product-form-e2e.spec.ts",
+              "line": 226,
+              "column": 7
+            },
+            {
+              "title": "should validate form submission with all required data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-da281b7f3e30d73a38e1",
+              "file": "product-form-e2e.spec.ts",
+              "line": 260,
+              "column": 7
+            },
+            {
+              "title": "should handle form cancellation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-f51e25bc02557ca40a2b",
+              "file": "product-form-e2e.spec.ts",
+              "line": 312,
+              "column": 7
+            },
+            {
+              "title": "should handle help tooltips correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-7b8bd81310f5f6b74e18",
+              "file": "product-form-e2e.spec.ts",
+              "line": 331,
+              "column": 7
+            },
+            {
+              "title": "should be responsive on mobile devices",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-12d8eb245714c930145f",
+              "file": "product-form-e2e.spec.ts",
+              "line": 355,
+              "column": 7
+            },
+            {
+              "title": "should handle keyboard navigation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-9db4619c0e826a3c66ea",
+              "file": "product-form-e2e.spec.ts",
+              "line": 390,
+              "column": 7
+            },
+            {
+              "title": "should handle accessibility requirements",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-85de92263c22162ca2ed",
+              "file": "product-form-e2e.spec.ts",
+              "line": 417,
+              "column": 7
+            },
+            {
+              "title": "should display product management page correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-4c19d0b1daed375732e2",
+              "file": "product-form-e2e.spec.ts",
+              "line": 15,
+              "column": 7
+            },
+            {
+              "title": "should open product creation modal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-a377e8beb0fe5991f8a4",
+              "file": "product-form-e2e.spec.ts",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should validate required fields in basic information tab",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-7af40f0f6656f5fab23b",
+              "file": "product-form-e2e.spec.ts",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "should fill and validate basic information form",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-6a329a2194a0686d9434",
+              "file": "product-form-e2e.spec.ts",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "should navigate through all form tabs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-7419a4bf61f67c0c51ef",
+              "file": "product-form-e2e.spec.ts",
+              "line": 91,
+              "column": 7
+            },
+            {
+              "title": "should handle product details form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-10f33da26db1b20451af",
+              "file": "product-form-e2e.spec.ts",
+              "line": 139,
+              "column": 7
+            },
+            {
+              "title": "should handle product information form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-506bf3198cf89797b3ca",
+              "file": "product-form-e2e.spec.ts",
+              "line": 178,
+              "column": 7
+            },
+            {
+              "title": "should handle SEO form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-4a68b4faf7f8403ca976",
+              "file": "product-form-e2e.spec.ts",
+              "line": 226,
+              "column": 7
+            },
+            {
+              "title": "should validate form submission with all required data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-fb0cb23a2e8561ffa903",
+              "file": "product-form-e2e.spec.ts",
+              "line": 260,
+              "column": 7
+            },
+            {
+              "title": "should handle form cancellation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-0a266324fc9b94ad9d35",
+              "file": "product-form-e2e.spec.ts",
+              "line": 312,
+              "column": 7
+            },
+            {
+              "title": "should handle help tooltips correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-f2956173e040e38f232b",
+              "file": "product-form-e2e.spec.ts",
+              "line": 331,
+              "column": 7
+            },
+            {
+              "title": "should be responsive on mobile devices",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-3ccdacea6be8199fbbfb",
+              "file": "product-form-e2e.spec.ts",
+              "line": 355,
+              "column": 7
+            },
+            {
+              "title": "should handle keyboard navigation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-663ce04b15c45ae72797",
+              "file": "product-form-e2e.spec.ts",
+              "line": 390,
+              "column": 7
+            },
+            {
+              "title": "should handle accessibility requirements",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-c80e2ac8152da2a76e29",
+              "file": "product-form-e2e.spec.ts",
+              "line": 417,
+              "column": 7
+            },
+            {
+              "title": "should display product management page correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-93e724ad04759d4e6eef",
+              "file": "product-form-e2e.spec.ts",
+              "line": 15,
+              "column": 7
+            },
+            {
+              "title": "should open product creation modal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-43e16e4cc2aa7e3e4a55",
+              "file": "product-form-e2e.spec.ts",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should validate required fields in basic information tab",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-0a13cd1f8fa729b05e06",
+              "file": "product-form-e2e.spec.ts",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "should fill and validate basic information form",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-79485f8fb8cb9ce90d07",
+              "file": "product-form-e2e.spec.ts",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "should navigate through all form tabs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-c9cd92c98662889d159f",
+              "file": "product-form-e2e.spec.ts",
+              "line": 91,
+              "column": 7
+            },
+            {
+              "title": "should handle product details form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-9cf4ca64f492f3667552",
+              "file": "product-form-e2e.spec.ts",
+              "line": 139,
+              "column": 7
+            },
+            {
+              "title": "should handle product information form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-19948b0cc5eeaff75c34",
+              "file": "product-form-e2e.spec.ts",
+              "line": 178,
+              "column": 7
+            },
+            {
+              "title": "should handle SEO form correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-313bb01ee723c455932c",
+              "file": "product-form-e2e.spec.ts",
+              "line": 226,
+              "column": 7
+            },
+            {
+              "title": "should validate form submission with all required data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-1b152b63f79d8aea8657",
+              "file": "product-form-e2e.spec.ts",
+              "line": 260,
+              "column": 7
+            },
+            {
+              "title": "should handle form cancellation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-75a1bb67ae0b7aa2bcf5",
+              "file": "product-form-e2e.spec.ts",
+              "line": 312,
+              "column": 7
+            },
+            {
+              "title": "should handle help tooltips correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-950b08791fb6a954b9be",
+              "file": "product-form-e2e.spec.ts",
+              "line": 331,
+              "column": 7
+            },
+            {
+              "title": "should be responsive on mobile devices",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-3bc6c253bb1d31051037",
+              "file": "product-form-e2e.spec.ts",
+              "line": 355,
+              "column": 7
+            },
+            {
+              "title": "should handle keyboard navigation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-86e024d2fb160638f53f",
+              "file": "product-form-e2e.spec.ts",
+              "line": 390,
+              "column": 7
+            },
+            {
+              "title": "should handle accessibility requirements",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-cd4e4f6a5a620aca809b",
+              "file": "product-form-e2e.spec.ts",
+              "line": 417,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Product Form Error Handling",
+          "file": "product-form-e2e.spec.ts",
+          "line": 444,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should handle network errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-4e821dacbb33704562b7",
+              "file": "product-form-e2e.spec.ts",
+              "line": 445,
+              "column": 7
+            },
+            {
+              "title": "should handle authentication errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-65130dc05476374a0cda",
+              "file": "product-form-e2e.spec.ts",
+              "line": 467,
+              "column": 7
+            },
+            {
+              "title": "should handle network errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-85252a9ed3d3f5235767",
+              "file": "product-form-e2e.spec.ts",
+              "line": 445,
+              "column": 7
+            },
+            {
+              "title": "should handle authentication errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-2864864805f4f1137f8a",
+              "file": "product-form-e2e.spec.ts",
+              "line": 467,
+              "column": 7
+            },
+            {
+              "title": "should handle network errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-4ece4ad18bd1eba66104",
+              "file": "product-form-e2e.spec.ts",
+              "line": 445,
+              "column": 7
+            },
+            {
+              "title": "should handle authentication errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-0f209abee03b2a8ed45c",
+              "file": "product-form-e2e.spec.ts",
+              "line": 467,
+              "column": 7
+            },
+            {
+              "title": "should handle network errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-75916908cd3c37e6baca",
+              "file": "product-form-e2e.spec.ts",
+              "line": 445,
+              "column": 7
+            },
+            {
+              "title": "should handle authentication errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-d36d8bd1d8e6f3f65407",
+              "file": "product-form-e2e.spec.ts",
+              "line": 467,
+              "column": 7
+            },
+            {
+              "title": "should handle network errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-389f13c131768da0fd47",
+              "file": "product-form-e2e.spec.ts",
+              "line": 445,
+              "column": 7
+            },
+            {
+              "title": "should handle authentication errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b23caf8db544e03a3f44-3ba1e557736deefa6d5f",
+              "file": "product-form-e2e.spec.ts",
+              "line": 467,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-11-06T15:39:08.958Z",
+    "duration": 192.00700000000006,
+    "expected": 0,
+    "skipped": 80,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

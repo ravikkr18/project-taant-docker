@@ -192,12 +192,13 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
                         colors: COMMON_COLORS.map(c => c.value),
                       },
                     ]}
-                    onChange={(color) => {
-                      if (color) {
-                        const colorName = COMMON_COLORS.find(c => c.value === color.toHexString())?.label || color.toHexString()
+                    onChange={(color, hex) => {
+                      if (color && hex) {
+                        const colorName = COMMON_COLORS.find(c => c.value === hex)?.label || hex
                         onChange(option.id, 'value', colorName)
                       }
                     }}
+                    format="hex"
                   />
                 </div>
               ) : (
@@ -269,13 +270,11 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
     }
     setEditingVariant(updatedVariant)
     form.setFieldsValue(updatedVariant)
-    message.success('New option added')
   }
 
   // Remove option from variant
   const removeVariantOption = (optionId: string) => {
     if (!editingVariant || editingVariant.options.length <= 1) {
-      message.warning('At least one option is required')
       return
     }
 
@@ -285,7 +284,6 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
     }
     setEditingVariant(updatedVariant)
     form.setFieldsValue(updatedVariant)
-    message.success('Option removed')
   }
 
   // Update variant option
@@ -760,7 +758,23 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="inventory_quantity" label="Stock Quantity" rules={[{ required: true }]}>
-                <InputNumber style={{ width: '100%' }} placeholder="0" min={0} />
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="0"
+                  min={0}
+                  precision={0}
+                  controls={true}
+                  keyboard={true}
+                  parser={(value: string) => {
+                    // Only allow digits
+                    const digitsOnly = value.replace(/[^\d]/g, '')
+                    return parseInt(digitsOnly) || 0
+                  }}
+                  formatter={(value: number | string | undefined) => {
+                    if (value === undefined || value === null) return ''
+                    return Math.floor(Number(value)).toString()
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -871,29 +885,7 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
         </Form>
       </Modal>
 
-      {/* Tips */}
-      <Card style={{ marginTop: 16 }} size="small">
-        <div style={{ display: 'flex', alignItems: 'start', gap: 8 }}>
-          <StarOutlined style={{ color: '#1890ff', marginTop: 2 }} />
-          <div>
-            <Text strong>Dynamic Variant Management Tips:</Text>
-            <ul style={{ margin: '8px 0 0 0', paddingLeft: 16, color: '#666', fontSize: 13 }}>
-              <li>Add or remove variant options dynamically with + and - buttons</li>
-              <li>Create custom option types beyond the standard Size, Color, Material, etc.</li>
-              <li>Use the color picker for accurate color selection when option type is "Color"</li>
-              <li>Color values are displayed with visual indicators in the variant table</li>
-              <li>Custom options are automatically saved and available for reuse</li>
-              <li>Add as many options as you need - no fixed limit</li>
-              <li>At least one option is required for each variant</li>
-              <li>Set proper inventory levels to track stock accurately</li>
-              <li>Associate unique images with each variant for better visualization</li>
-              <li>Enable/disable variants without deleting them</li>
-              <li>Use duplicate feature to quickly create similar variants</li>
-            </ul>
-          </div>
-        </div>
-      </Card>
-    </div>
+      </div>
   )
 }
 

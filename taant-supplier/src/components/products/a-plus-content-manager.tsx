@@ -34,6 +34,7 @@ import {
   OrderedListOutlined,
 } from '@ant-design/icons'
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface'
+import TiptapEditor from '../ui/tiptap-editor'
 
 interface APlusSection {
   id: string
@@ -381,20 +382,11 @@ const APlusContentManager: React.FC<APlusContentManagerProps> = ({ sections, onC
                     onChange={(e) => updateSection(section.id, 'title', e.target.value)}
                     style={{ marginBottom: 8 }}
                   />
-                  <FormattingToolbar sectionId={section.id} formatting={section.formatting} />
-                  <Input.TextArea
-                    data-section-id={section.id}
-                    placeholder="Content for this section... (Tip: Select text and click formatting buttons or use bullet/number buttons for lists)"
+                  <TiptapEditor
                     value={section.content}
-                    onChange={(e) => updateSection(section.id, 'content', e.target.value)}
-                    rows={4}
-                    style={{
-                      resize: 'none',
-                      fontWeight: section.formatting?.bold ? 'bold' : 'normal',
-                      fontStyle: section.formatting?.italic ? 'italic' : 'normal',
-                      textDecoration: section.formatting?.underline ? 'underline' : 'none',
-                      textAlign: section.formatting?.align || 'left'
-                    }}
+                    onChange={(value) => updateSection(section.id, 'content', value)}
+                    placeholder="Content for this section... (Use the editor toolbar for text formatting and lists)"
+                    height={120}
                   />
                 </div>
               </Col>
@@ -478,27 +470,7 @@ const APlusContentManager: React.FC<APlusContentManagerProps> = ({ sections, onC
         <img src={previewImage} style={{ width: '100%' }} alt="Preview" />
       </Modal>
 
-      {/* Tips */}
-      <Card style={{ marginTop: 16 }} size="small">
-        <div style={{ display: 'flex', alignItems: 'start', gap: 8 }}>
-          <EditOutlined style={{ color: '#1890ff', marginTop: 2 }} />
-          <div>
-            <Typography.Text strong>A+ Content Tips:</Typography.Text>
-            <ul style={{ margin: '8px 0 0 0', paddingLeft: 16, color: '#666', fontSize: 13 }}>
-              <li>Use text sections for paragraphs without images</li>
-              <li>Use Image + Text for images with text on the right</li>
-              <li>Use Text + Image for text with images on the right</li>
-              <li>Format text with bold, italic, underline, and alignment options</li>
-              <li>Create bullet points and numbered lists for better organization</li>
-              <li>Select specific text and apply formatting, or format entire content</li>
-              <li>Formatting is now visible in the textarea as you type</li>
-              <li>Add optional titles to organize your content</li>
-              <li>Upload high-quality images (max 5MB each)</li>
-            </ul>
-          </div>
-        </div>
-      </Card>
-    </div>
+      </div>
   )
 }
 

@@ -38,19 +38,12 @@ import AdvancedProductManager from './advanced-products-manager'
 
 export default function ProductsPage() {
   const [user, setUser] = useState<any>(null)
-  // Development bypass - start with loading = false in dev mode
-  const [loading, setLoading] = useState(process.env.NODE_ENV === 'development' ? false : true)
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
     async function checkUser() {
       try {
-        // Development bypass - remove this in production
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Development mode: bypassing authentication')
-          return
-        }
-
         const { data: { user } } = await supabase.auth.getUser()
 
         if (!user) {

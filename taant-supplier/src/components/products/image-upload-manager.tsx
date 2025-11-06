@@ -398,23 +398,7 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
           <img src={previewImage} style={{ width: '100%' }} alt="Preview" />
         </Modal>
 
-        {/* Tips */}
-        <Card style={{ marginTop: 16 }} size="small">
-          <div style={{ display: 'flex', alignItems: 'start', gap: 8 }}>
-            <InfoCircleOutlined style={{ color: '#1890ff', marginTop: 2 }} />
-            <div>
-              <Text strong>Pro Tips:</Text>
-              <ul style={{ margin: '8px 0 0 0', paddingLeft: 16, color: '#666', fontSize: 13 }}>
-                <li>Use high-quality images (minimum 1000x1000 pixels)</li>
-                <li>First image will be automatically set as primary</li>
-                <li>Drag and drop images to reorder them</li>
-                <li>Add descriptive alt text for better SEO</li>
-                <li>Include multiple angles and lifestyle shots</li>
-              </ul>
-            </div>
-          </div>
-        </Card>
-      </div>
+        </div>
     </DndProvider>
   )
 }
