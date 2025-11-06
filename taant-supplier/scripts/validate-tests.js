@@ -15,8 +15,8 @@ console.log('🧪 Validating Test Infrastructure...\n')
 
 // Check if test files exist
 const testFiles = [
-  'tests/unit/product-form-validation.test.tsx',
-  'tests/integration/product-form-workflow.test.tsx',
+  'tests/unit/form-validation.test.tsx',
+  'tests/integration/product-workflow.test.tsx',
   'tests/e2e/product-form-e2e.spec.ts',
   'jest.config.js',
   'jest.setup.js',
