@@ -21,6 +21,8 @@ import {
   Image,
   message,
   Divider,
+  ColorPicker,
+  AutoComplete,
 } from 'antd'
 import {
   PlusOutlined,
@@ -64,6 +66,45 @@ interface VariantManagerProps {
   onChange: (variants: ProductVariant[]) => void
 }
 
+// Common option types
+const COMMON_OPTION_TYPES = [
+  'Size',
+  'Color',
+  'Material',
+  'Style',
+  'Fit',
+  'Length',
+  'Pattern',
+  'Weight',
+  'Gender',
+  'Age Group',
+  'Season',
+  'Occasion',
+  'Brand',
+  'Model',
+  'Finish',
+  'Warranty'
+]
+
+// Common colors for quick selection
+const COMMON_COLORS = [
+  { label: 'Red', value: '#FF0000' },
+  { label: 'Blue', value: '#0000FF' },
+  { label: 'Green', value: '#00FF00' },
+  { label: 'Yellow', value: '#FFFF00' },
+  { label: 'Orange', value: '#FFA500' },
+  { label: 'Purple', value: '#800080' },
+  { label: 'Pink', value: '#FFC0CB' },
+  { label: 'Brown', value: '#964B00' },
+  { label: 'Black', value: '#000000' },
+  { label: 'White', value: '#FFFFFF' },
+  { label: 'Gray', value: '#808080' },
+  { label: 'Navy', value: '#000080' },
+  { label: 'Teal', value: '#008080' },
+  { label: 'Gold', value: '#FFD700' },
+  { label: 'Silver', value: '#C0C0C0' },
+]
+
 const VariantManager: React.FC<VariantManagerProps> = ({
   variants,
   productImages,
@@ -72,6 +113,83 @@ const VariantManager: React.FC<VariantManagerProps> = ({
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [form] = Form.useForm()
+  const [customOptions, setCustomOptions] = useState<string[]>([])
+
+  // Get all option types (common + custom)
+  const getAllOptionTypes = () => {
+    const allTypes = [...COMMON_OPTION_TYPES]
+    // Add existing options from variants
+    variants.forEach(variant => {
+      [variant.option1_name, variant.option2_name, variant.option3_name].forEach(option => {
+        if (option && !allTypes.includes(option)) {
+          allTypes.push(option)
+        }
+      })
+    })
+    // Add custom options
+    customOptions.forEach(option => {
+      if (!allTypes.includes(option)) {
+        allTypes.push(option)
+      }
+    })
+    return [...new Set(allTypes)] // Remove duplicates
+  }
+
+  // Add custom option
+  const handleAddCustomOption = (optionName: string) => {
+    if (optionName && !COMMON_OPTION_TYPES.includes(optionName) && !customOptions.includes(optionName)) {
+      setCustomOptions([...customOptions, optionName])
+    }
+  }
+
+  // Render option value input based on option type
+  const renderOptionValueInput = (optionName: string, fieldName: string, optionNameField: string) => {
+    return (
+      <Form.Item
+        shouldUpdate={(prevValues, currentValues) =>
+          prevValues[optionNameField] !== currentValues[optionNameField]
+        }
+        style={{ margin: 0 }}
+      >
+        {({ getFieldValue }) => {
+          const currentOptionName = getFieldValue(optionNameField)
+          if (currentOptionName?.toLowerCase() === 'color') {
+            return (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <Form.Item name={fieldName} style={{ flex: 1, margin: 0 }}>
+                  <Input placeholder="e.g., Blue" />
+                </Form.Item>
+                <Form.Item name={`${fieldName}_color`} style={{ margin: 0 }}>
+                  <ColorPicker
+                    showText
+                    allowClear
+                    presets={[
+                      {
+                        label: 'Common Colors',
+                        colors: COMMON_COLORS.map(c => c.value),
+                      },
+                    ]}
+                    onChange={(color) => {
+                      if (color) {
+                        const colorName = COMMON_COLORS.find(c => c.value === color.toHexString())?.label || color.toHexString()
+                        form.setFieldValue(fieldName, colorName)
+                        form.setFieldValue(`${fieldName}_color`, color.toHexString())
+                      }
+                    }}
+                  />
+                </Form.Item>
+              </div>
+            )
+          }
+          return (
+            <Form.Item name={fieldName} style={{ margin: 0 }}>
+              <Input placeholder="e.g., Small" />
+            </Form.Item>
+          )
+        }}
+      </Form.Item>
+    )
+  }
 
   // Add new variant
   const handleAdd = () => {
@@ -177,10 +295,79 @@ const VariantManager: React.FC<VariantManagerProps> = ({
         <div>
           <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{record.title || 'Untitled Variant'}</div>
           <div style={{ fontSize: '12px', color: '#666' }}>SKU: {record.sku}</div>
-          <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-            {record.option1_value && <Tag size="small">{record.option1_name}: {record.option1_value}</Tag>}
-            {record.option2_value && <Tag size="small">{record.option2_name}: {record.option2_value}</Tag>}
-            {record.option3_value && <Tag size="small">{record.option3_name}: {record.option3_value}</Tag>}
+          <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+            {record.option1_value && (
+              <Tag
+                size="small"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+              >
+                {record.option1_name?.toLowerCase() === 'color' && (
+                  <div
+                    style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      backgroundColor: record.option1_value.includes('#') ? record.option1_value :
+                        COMMON_COLORS.find(c => c.label.toLowerCase() === record.option1_value.toLowerCase())?.value || '#ccc',
+                      border: '1px solid #d9d9d9'
+                    }}
+                  />
+                )}
+                {record.option1_name}: {record.option1_value}
+              </Tag>
+            )}
+            {record.option2_value && (
+              <Tag
+                size="small"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+              >
+                {record.option2_name?.toLowerCase() === 'color' && (
+                  <div
+                    style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      backgroundColor: record.option2_value.includes('#') ? record.option2_value :
+                        COMMON_COLORS.find(c => c.label.toLowerCase() === record.option2_value.toLowerCase())?.value || '#ccc',
+                      border: '1px solid #d9d9d9'
+                    }}
+                  />
+                )}
+                {record.option2_name}: {record.option2_value}
+              </Tag>
+            )}
+            {record.option3_value && (
+              <Tag
+                size="small"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+              >
+                {record.option3_name?.toLowerCase() === 'color' && (
+                  <div
+                    style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      backgroundColor: record.option3_value.includes('#') ? record.option3_value :
+                        COMMON_COLORS.find(c => c.label.toLowerCase() === record.option3_value.toLowerCase())?.value || '#ccc',
+                      border: '1px solid #d9d9d9'
+                    }}
+                  />
+                )}
+                {record.option3_name}: {record.option3_value}
+              </Tag>
+            )}
           </div>
         </div>
       ),
@@ -432,17 +619,23 @@ const VariantManager: React.FC<VariantManagerProps> = ({
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item name="option1_name" label="Option 1 Name" initialValue="Size">
-                <Select>
-                  <Option value="Size">Size</Option>
-                  <Option value="Color">Color</Option>
-                  <Option value="Material">Material</Option>
-                  <Option value="Style">Style</Option>
-                </Select>
+                <AutoComplete
+                  options={getAllOptionTypes().map(type => ({ label: type, value: type }))}
+                  placeholder="Select or type custom option"
+                  filterOption={(inputValue, option) =>
+                    option!.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
+                  }
+                  onSelect={(value) => {
+                    if (!COMMON_OPTION_TYPES.includes(value) && !customOptions.includes(value)) {
+                      handleAddCustomOption(value)
+                    }
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="option1_value" label="Option 1 Value">
-                <Input placeholder="e.g., Small" />
+              <Form.Item label="Option 1 Value">
+                {renderOptionValueInput(form.getFieldValue('option1_name'), 'option1_value', 'option1_name')}
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -455,23 +648,58 @@ const VariantManager: React.FC<VariantManagerProps> = ({
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item name="option2_name" label="Option 2 Name" initialValue="Color">
-                <Select>
-                  <Option value="Size">Size</Option>
-                  <Option value="Color">Color</Option>
-                  <Option value="Material">Material</Option>
-                  <Option value="Style">Style</Option>
-                </Select>
+                <AutoComplete
+                  options={getAllOptionTypes().map(type => ({ label: type, value: type }))}
+                  placeholder="Select or type custom option"
+                  filterOption={(inputValue, option) =>
+                    option!.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
+                  }
+                  onSelect={(value) => {
+                    if (!COMMON_OPTION_TYPES.includes(value) && !customOptions.includes(value)) {
+                      handleAddCustomOption(value)
+                    }
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="option2_value" label="Option 2 Value">
-                <Input placeholder="e.g., Blue" />
+              <Form.Item label="Option 2 Value">
+                {renderOptionValueInput(form.getFieldValue('option2_name'), 'option2_value', 'option2_name')}
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="weight" label="Weight (kg)">
                 <InputNumber style={{ width: '100%' }} placeholder="0.00" step="0.01" />
               </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="option3_name" label="Option 3 Name">
+                <AutoComplete
+                  options={getAllOptionTypes().map(type => ({ label: type, value: type }))}
+                  placeholder="Select or type custom option"
+                  filterOption={(inputValue, option) =>
+                    option!.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
+                  }
+                  onSelect={(value) => {
+                    if (!COMMON_OPTION_TYPES.includes(value) && !customOptions.includes(value)) {
+                      handleAddCustomOption(value)
+                    }
+                  }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="Option 3 Value">
+                {renderOptionValueInput(form.getFieldValue('option3_name'), 'option3_value', 'option3_name')}
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 32 }}>
+                Optional third variant option
+              </Text>
             </Col>
           </Row>
 
@@ -629,9 +857,12 @@ const VariantManager: React.FC<VariantManagerProps> = ({
         <div style={{ display: 'flex', alignItems: 'start', gap: 8 }}>
           <StarOutlined style={{ color: '#1890ff', marginTop: 2 }} />
           <div>
-            <Text strong>Variant Management Tips:</Text>
+            <Text strong>Enhanced Variant Management Tips:</Text>
             <ul style={{ margin: '8px 0 0 0', paddingLeft: 16, color: '#666', fontSize: 13 }}>
-              <li>Use consistent option names (Size, Color, etc.) across all variants</li>
+              <li>Create custom option types beyond the standard Size, Color, Material, etc.</li>
+              <li>Use the color picker for accurate color selection when option type is "Color"</li>
+              <li>Color values are displayed with visual indicators in the variant table</li>
+              <li>Custom options are automatically saved and available for reuse</li>
               <li>Set proper inventory levels to track stock accurately</li>
               <li>Associate unique images with each variant for better visualization</li>
               <li>Enable/disable variants without deleting them</li>
