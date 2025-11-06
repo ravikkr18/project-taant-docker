@@ -47,16 +47,7 @@ interface ProductVariant {
   cost_price?: number
   inventory_quantity: number
   weight?: number
-  option1_name: string
-  option1_value: string
-  option2_name: string
-  option2_value: string
-  option3_name: string
-  option3_value: string
-  option4_name: string
-  option4_value: string
-  option5_name: string
-  option5_value: string
+  options: Array<{ id: string; name: string; value: string }> // Dynamic options with IDs
   image_id?: string
   image_url?: string
   is_active: boolean
@@ -145,24 +136,53 @@ const VariantManager: React.FC<VariantManagerProps> = ({
     }
   }
 
-  // Render option value input based on option type
-  const renderOptionValueInput = (optionName: string, fieldName: string, optionNameField: string) => {
-    return (
-      <Form.Item
-        shouldUpdate={(prevValues, currentValues) =>
-          prevValues[optionNameField] !== currentValues[optionNameField]
-        }
-        style={{ margin: 0 }}
-      >
-        {({ getFieldValue }) => {
-          const currentOptionName = getFieldValue(optionNameField)
-          if (currentOptionName?.toLowerCase() === 'color') {
-            return (
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <Form.Item name={fieldName} style={{ flex: 1, margin: 0 }}>
-                  <Input placeholder="e.g., Blue" />
-                </Form.Item>
-                <Form.Item name={`${fieldName}_color`} style={{ margin: 0 }}>
+  // Dynamic Options Component
+const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
+  options: Array<{ id: string; name: string; value: string }>
+  onChange: (optionId: string, field: 'name' | 'value', value: string) => void
+  onAdd: () => void
+  onRemove: (optionId: string) => void
+}) => (
+  <div>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <Text strong>Variant Options</Text>
+      <Button size="small" icon={<PlusOutlined />} onClick={onAdd}>
+        Add Option
+      </Button>
+    </div>
+    <div style={{ display: 'grid', gap: 12 }}>
+      {options.map((option, index) => (
+        <div key={option.id} style={{
+          padding: 12,
+          border: '1px solid #d9d9d9',
+          borderRadius: 6,
+          backgroundColor: '#fafafa'
+        }}>
+          <Row gutter={8} align="middle">
+            <Col span={1}>
+              <Text strong style={{ color: '#1890ff' }}>{index + 1}</Text>
+            </Col>
+            <Col span={8}>
+              <AutoComplete
+                value={option.name}
+                placeholder="Option name (e.g., Size, Color)"
+                options={getAllOptionTypes().map(type => ({ label: type, value: type }))}
+                filterOption={(inputValue, option) =>
+                  option!.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
+                }
+                onChange={(value) => onChange(option.id, 'name', value)}
+                style={{ width: '100%' }}
+              />
+            </Col>
+            <Col span={10}>
+              {option.name?.toLowerCase() === 'color' ? (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <Input
+                    value={option.value}
+                    placeholder="Color value"
+                    onChange={(e) => onChange(option.id, 'value', e.target.value)}
+                    style={{ flex: 1 }}
+                  />
                   <ColorPicker
                     showText
                     allowClear
@@ -175,24 +195,43 @@ const VariantManager: React.FC<VariantManagerProps> = ({
                     onChange={(color) => {
                       if (color) {
                         const colorName = COMMON_COLORS.find(c => c.value === color.toHexString())?.label || color.toHexString()
-                        form.setFieldValue(fieldName, colorName)
-                        form.setFieldValue(`${fieldName}_color`, color.toHexString())
+                        onChange(option.id, 'value', colorName)
                       }
                     }}
                   />
-                </Form.Item>
-              </div>
-            )
-          }
-          return (
-            <Form.Item name={fieldName} style={{ margin: 0 }}>
-              <Input placeholder="e.g., Small" />
-            </Form.Item>
-          )
-        }}
-      </Form.Item>
-    )
-  }
+                </div>
+              ) : (
+                <Input
+                  value={option.value}
+                  placeholder="Option value (e.g., Small, Blue)"
+                  onChange={(e) => onChange(option.id, 'value', e.target.value)}
+                />
+              )}
+            </Col>
+            <Col span={3}>
+              {options.length > 1 && (
+                <Button
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => onRemove(option.id)}
+                  style={{ width: '100%' }}
+                >
+                  Remove
+                </Button>
+              )}
+            </Col>
+          </Row>
+        </div>
+      ))}
+    </div>
+    {options.length === 0 && (
+      <div style={{ textAlign: 'center', padding: 20, color: '#999' }}>
+        No options added yet. Click "Add Option" to get started.
+      </div>
+    )}
+  </div>
+)
 
   // Add new variant
   const handleAdd = () => {
@@ -202,16 +241,10 @@ const VariantManager: React.FC<VariantManagerProps> = ({
       sku: '',
       price: 0,
       inventory_quantity: 0,
-      option1_name: 'Size',
-      option1_value: '',
-      option2_name: 'Color',
-      option2_value: '',
-      option3_name: '',
-      option3_value: '',
-      option4_name: '',
-      option4_value: '',
-      option5_name: '',
-      option5_value: '',
+      options: [
+        { id: `opt-${Date.now()}-1`, name: 'Size', value: '' },
+        { id: `opt-${Date.now()}-2`, name: 'Color', value: '' }
+      ],
       is_active: true,
       position: variants.length
     }
@@ -220,10 +253,105 @@ const VariantManager: React.FC<VariantManagerProps> = ({
     setModalOpen(true)
   }
 
+  // Add option to variant
+  const addVariantOption = () => {
+    if (!editingVariant) return
+
+    const newOption = {
+      id: `opt-${Date.now()}-${editingVariant.options.length + 1}`,
+      name: '',
+      value: ''
+    }
+
+    const updatedVariant = {
+      ...editingVariant,
+      options: [...editingVariant.options, newOption]
+    }
+    setEditingVariant(updatedVariant)
+    form.setFieldsValue(updatedVariant)
+    message.success('New option added')
+  }
+
+  // Remove option from variant
+  const removeVariantOption = (optionId: string) => {
+    if (!editingVariant || editingVariant.options.length <= 1) {
+      message.warning('At least one option is required')
+      return
+    }
+
+    const updatedVariant = {
+      ...editingVariant,
+      options: editingVariant.options.filter(option => option.id !== optionId)
+    }
+    setEditingVariant(updatedVariant)
+    form.setFieldsValue(updatedVariant)
+    message.success('Option removed')
+  }
+
+  // Update variant option
+  const updateVariantOption = (optionId: string, field: 'name' | 'value', value: string) => {
+    if (!editingVariant) return
+
+    const updatedOptions = editingVariant.options.map(option =>
+      option.id === optionId ? { ...option, [field]: value } : option
+    )
+
+    const updatedVariant = {
+      ...editingVariant,
+      options: updatedOptions
+    }
+    setEditingVariant(updatedVariant)
+    form.setFieldsValue({ options: updatedOptions })
+  }
+
+  // Convert old variant format to new format (for backward compatibility)
+  const convertVariantToNewFormat = (variant: any): ProductVariant => {
+    if (variant.options && Array.isArray(variant.options)) {
+      return variant
+    }
+
+    // Convert old format to new format
+    const options: Array<{ id: string; name: string; value: string }> = []
+    const timestamp = Date.now()
+
+    if (variant.option1_name && variant.option1_value) {
+      options.push({ id: `opt-${timestamp}-1`, name: variant.option1_name, value: variant.option1_value })
+    }
+    if (variant.option2_name && variant.option2_value) {
+      options.push({ id: `opt-${timestamp}-2`, name: variant.option2_name, value: variant.option2_value })
+    }
+    if (variant.option3_name && variant.option3_value) {
+      options.push({ id: `opt-${timestamp}-3`, name: variant.option3_name, value: variant.option3_value })
+    }
+    if (variant.option4_name && variant.option4_value) {
+      options.push({ id: `opt-${timestamp}-4`, name: variant.option4_name, value: variant.option4_value })
+    }
+    if (variant.option5_name && variant.option5_value) {
+      options.push({ id: `opt-${timestamp}-5`, name: variant.option5_name, value: variant.option5_value })
+    }
+
+    return {
+      ...variant,
+      options,
+      option1_name: undefined,
+      option1_value: undefined,
+      option2_name: undefined,
+      option2_value: undefined,
+      option3_name: undefined,
+      option3_value: undefined,
+      option4_name: undefined,
+      option4_value: undefined,
+      option5_name: undefined,
+      option5_value: undefined,
+      barcode: undefined
+    }
+  }
+
   // Edit existing variant
   const handleEdit = (variant: ProductVariant) => {
-    setEditingVariant(variant)
-    form.setFieldsValue(variant)
+    const convertedVariant = convertVariantToNewFormat(variant)
+    setEditingVariant(convertedVariant)
+    form.setFieldsValue(convertedVariant)
     setModalOpen(true)
   }
 
@@ -268,11 +396,16 @@ const VariantManager: React.FC<VariantManagerProps> = ({
 
   // Duplicate variant
   const handleDuplicate = (variant: ProductVariant) => {
+    const convertedVariant = convertVariantToNewFormat(variant)
     const duplicated: ProductVariant = {
-      ...variant,
+      ...convertedVariant,
       id: `temp-${Date.now()}`,
       title: `${variant.title} (Copy)`,
       sku: '',
+      options: convertedVariant.options.map((option, index) => ({
+        ...option,
+        id: `opt-${Date.now()}-${index + 1}`
+      })),
       is_active: true
     }
     onChange([...variants, duplicated])
@@ -298,134 +431,44 @@ const VariantManager: React.FC<VariantManagerProps> = ({
     {
       title: 'Variant',
       key: 'variant',
-      render: (_: any, record: ProductVariant) => (
-        <div>
-          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{record.title || 'Untitled Variant'}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>SKU: {record.sku}</div>
-          <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
-            {record.option1_value && (
-              <Tag
-                size="small"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4
-                }}
-              >
-                {record.option1_name?.toLowerCase() === 'color' && (
-                  <div
+      render: (_: any, record: ProductVariant) => {
+        const variant = convertVariantToNewFormat(record)
+        return (
+          <div>
+            <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{variant.title || 'Untitled Variant'}</div>
+            <div style={{ fontSize: '12px', color: '#666' }}>SKU: {variant.sku}</div>
+            <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+              {variant.options?.map((option, index) => (
+                option.value && (
+                  <Tag
+                    key={option.id}
+                    size="small"
                     style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      backgroundColor: record.option1_value.includes('#') ? record.option1_value :
-                        COMMON_COLORS.find(c => c.label.toLowerCase() === record.option1_value.toLowerCase())?.value || '#ccc',
-                      border: '1px solid #d9d9d9'
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
                     }}
-                  />
-                )}
-                {record.option1_name}: {record.option1_value}
-              </Tag>
-            )}
-            {record.option2_value && (
-              <Tag
-                size="small"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4
-                }}
-              >
-                {record.option2_name?.toLowerCase() === 'color' && (
-                  <div
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      backgroundColor: record.option2_value.includes('#') ? record.option2_value :
-                        COMMON_COLORS.find(c => c.label.toLowerCase() === record.option2_value.toLowerCase())?.value || '#ccc',
-                      border: '1px solid #d9d9d9'
-                    }}
-                  />
-                )}
-                {record.option2_name}: {record.option2_value}
-              </Tag>
-            )}
-            {record.option3_value && (
-              <Tag
-                size="small"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4
-                }}
-              >
-                {record.option3_name?.toLowerCase() === 'color' && (
-                  <div
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      backgroundColor: record.option3_value.includes('#') ? record.option3_value :
-                        COMMON_COLORS.find(c => c.label.toLowerCase() === record.option3_value.toLowerCase())?.value || '#ccc',
-                      border: '1px solid #d9d9d9'
-                    }}
-                  />
-                )}
-                {record.option3_name}: {record.option3_value}
-              </Tag>
-            )}
-            {record.option4_value && (
-              <Tag
-                size="small"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4
-                }}
-              >
-                {record.option4_name?.toLowerCase() === 'color' && (
-                  <div
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      backgroundColor: record.option4_value.includes('#') ? record.option4_value :
-                        COMMON_COLORS.find(c => c.label.toLowerCase() === record.option4_value.toLowerCase())?.value || '#ccc',
-                      border: '1px solid #d9d9d9'
-                    }}
-                  />
-                )}
-                {record.option4_name}: {record.option4_value}
-              </Tag>
-            )}
-            {record.option5_value && (
-              <Tag
-                size="small"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4
-                }}
-              >
-                {record.option5_name?.toLowerCase() === 'color' && (
-                  <div
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      backgroundColor: record.option5_value.includes('#') ? record.option5_value :
-                        COMMON_COLORS.find(c => c.label.toLowerCase() === record.option5_value.toLowerCase())?.value || '#ccc',
-                      border: '1px solid #d9d9d9'
-                    }}
-                  />
-                )}
-                {record.option5_name}: {record.option5_value}
-              </Tag>
-            )}
+                  >
+                    {option.name?.toLowerCase() === 'color' && (
+                      <div
+                        style={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: '50%',
+                          backgroundColor: option.value.includes('#') ? option.value :
+                            COMMON_COLORS.find(c => c.label.toLowerCase() === option.value.toLowerCase())?.value || '#ccc',
+                          border: '1px solid #d9d9d9'
+                        }}
+                      />
+                    )}
+                    {option.name}: {option.value}
+                  </Tag>
+                )
+              ))}
+            </div>
           </div>
-        </div>
-      ),
+        )
+      },
     },
     {
       title: 'Image',
@@ -671,142 +714,13 @@ const VariantManager: React.FC<VariantManagerProps> = ({
             </Col>
           </Row>
 
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="option1_name" label="Option 1 Name" initialValue="Size">
-                <AutoComplete
-                  options={getAllOptionTypes().map(type => ({ label: type, value: type }))}
-                  placeholder="Select or type custom option"
-                  filterOption={(inputValue, option) =>
-                    option!.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
-                  }
-                  onSelect={(value) => {
-                    if (!COMMON_OPTION_TYPES.includes(value) && !customOptions.includes(value)) {
-                      handleAddCustomOption(value)
-                    }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="Option 1 Value">
-                {renderOptionValueInput(form.getFieldValue('option1_name'), 'option1_value', 'option1_name')}
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="option4_name" label="Option 4 Name">
-                <AutoComplete
-                  options={getAllOptionTypes().map(type => ({ label: type, value: type }))}
-                  placeholder="Select or type custom option"
-                  filterOption={(inputValue, option) =>
-                    option!.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
-                  }
-                  onSelect={(value) => {
-                    if (!COMMON_OPTION_TYPES.includes(value) && !customOptions.includes(value)) {
-                      handleAddCustomOption(value)
-                    }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="Option 4 Value">
-                {renderOptionValueInput(form.getFieldValue('option4_name'), 'option4_value', 'option4_name')}
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 32 }}>
-                Optional fourth variant option
-              </Text>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="option2_name" label="Option 2 Name" initialValue="Color">
-                <AutoComplete
-                  options={getAllOptionTypes().map(type => ({ label: type, value: type }))}
-                  placeholder="Select or type custom option"
-                  filterOption={(inputValue, option) =>
-                    option!.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
-                  }
-                  onSelect={(value) => {
-                    if (!COMMON_OPTION_TYPES.includes(value) && !customOptions.includes(value)) {
-                      handleAddCustomOption(value)
-                    }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="Option 2 Value">
-                {renderOptionValueInput(form.getFieldValue('option2_name'), 'option2_value', 'option2_name')}
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="weight" label="Weight (kg)">
-                <InputNumber style={{ width: '100%' }} placeholder="0.00" step="0.01" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="option3_name" label="Option 3 Name">
-                <AutoComplete
-                  options={getAllOptionTypes().map(type => ({ label: type, value: type }))}
-                  placeholder="Select or type custom option"
-                  filterOption={(inputValue, option) =>
-                    option!.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
-                  }
-                  onSelect={(value) => {
-                    if (!COMMON_OPTION_TYPES.includes(value) && !customOptions.includes(value)) {
-                      handleAddCustomOption(value)
-                    }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="Option 3 Value">
-                {renderOptionValueInput(form.getFieldValue('option3_name'), 'option3_value', 'option3_name')}
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 32 }}>
-                Optional third variant option
-              </Text>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="option5_name" label="Option 5 Name">
-                <AutoComplete
-                  options={getAllOptionTypes().map(type => ({ label: type, value: type }))}
-                  placeholder="Select or type custom option"
-                  filterOption={(inputValue, option) =>
-                    option!.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
-                  }
-                  onSelect={(value) => {
-                    if (!COMMON_OPTION_TYPES.includes(value) && !customOptions.includes(value)) {
-                      handleAddCustomOption(value)
-                    }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="Option 5 Value">
-                {renderOptionValueInput(form.getFieldValue('option5_name'), 'option5_value', 'option5_name')}
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 32 }}>
-                Optional fifth variant option
-              </Text>
-            </Col>
-          </Row>
+          {/* Dynamic Options Section */}
+          <DynamicOptions
+            options={editingVariant?.options || []}
+            onChange={updateVariantOption}
+            onAdd={addVariantOption}
+            onRemove={removeVariantOption}
+          />
 
           <Divider />
 
@@ -962,14 +876,15 @@ const VariantManager: React.FC<VariantManagerProps> = ({
         <div style={{ display: 'flex', alignItems: 'start', gap: 8 }}>
           <StarOutlined style={{ color: '#1890ff', marginTop: 2 }} />
           <div>
-            <Text strong>Enhanced Variant Management Tips:</Text>
+            <Text strong>Dynamic Variant Management Tips:</Text>
             <ul style={{ margin: '8px 0 0 0', paddingLeft: 16, color: '#666', fontSize: 13 }}>
+              <li>Add or remove variant options dynamically with + and - buttons</li>
               <li>Create custom option types beyond the standard Size, Color, Material, etc.</li>
               <li>Use the color picker for accurate color selection when option type is "Color"</li>
               <li>Color values are displayed with visual indicators in the variant table</li>
               <li>Custom options are automatically saved and available for reuse</li>
-              <li>Now supports up to 5 different variant options per product</li>
-              <li>Options 4 and 5 are optional - use them for complex product variations</li>
+              <li>Add as many options as you need - no fixed limit</li>
+              <li>At least one option is required for each variant</li>
               <li>Set proper inventory levels to track stock accurately</li>
               <li>Associate unique images with each variant for better visualization</li>
               <li>Enable/disable variants without deleting them</li>
