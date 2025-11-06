@@ -4,7 +4,7 @@ import React from 'react'
 import { Refine } from '@refinedev/core'
 import { liveProvider, dataProvider as supabaseDataProvider } from '@refinedev/supabase'
 import { authProvider } from './auth-provider'
-import { dataProviderWithUsers } from './data-provider'
+import { dataProviderWithProducts } from './data-provider'
 import { supabase } from '../../lib/supabase/client'
 import { notificationProvider } from '@refinedev/antd'
 import '@refinedev/antd/dist/reset.css'
@@ -16,7 +16,7 @@ interface RefineProviderProps {
 export function RefineProvider({ children }: RefineProviderProps) {
   return (
     <Refine
-      dataProvider={dataProviderWithUsers}
+      dataProvider={dataProviderWithProducts}
       liveProvider={liveProvider(supabase)}
       authProvider={authProvider}
       notificationProvider={notificationProvider}

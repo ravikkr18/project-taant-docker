@@ -18,19 +18,19 @@ const getAuthHeaders = async () => {
 // Note: We don't create supabaseAdmin here because environment variables
 // are not available on the client side. All supplier operations go through API routes.
 
-const dataProviderWithUsers: DataProvider = {
+const dataProvider: DataProvider = {
   getOne: async ({ resource, id, meta }) => {
-    if (resource === 'users') {
-      // Use API route to get single user
+    if (resource === 'products') {
+      // Use API route to get single product
       const headers = await getAuthHeaders()
-      const response = await fetch(`/api/supplier/users?id=${id}`, {
+      const response = await fetch(`/api/supplier/products?id=${id}`, {
         headers,
         credentials: 'include'
       })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to fetch user')
+        throw new Error(errorData.error || 'Failed to fetch product')
       }
 
       const data = await response.json()
@@ -49,68 +49,93 @@ const dataProviderWithUsers: DataProvider = {
   },
 
   getList: async ({ resource, pagination, filters, sorters, meta }) => {
-    if (resource === 'users') {
-      // Use API route to fetch users
+    if (resource === 'products') {
+      // Use API route for products
+      const headers = await getAuthHeaders()
       const params = new URLSearchParams()
 
+      // Add pagination
       if (pagination) {
-        params.set('page', pagination.current?.toString() || '1')
-        params.set('pageSize', pagination.pageSize?.toString() || '10')
+        params.append('page', String(pagination.current))
+        params.append('pageSize', String(pagination.pageSize))
       }
 
-      // Apply filters
+      // Add filters
       if (filters) {
         filters.forEach((filter: CrudFilter) => {
-          if ('field' in filter && 'operator' in filter && 'value' in filter) {
-            if (filter.field === 'email' && filter.operator === 'contains') {
-              params.set('search', filter.value as string)
-            } else if (filter.field === 'profile.role' && filter.operator === 'eq') {
-              params.set('role', filter.value as string)
-            }
+          if (filter.field && filter.operator) {
+            params.append(filter.field, filter.value.toString())
           }
         })
       }
 
-      const headers = await getAuthHeaders()
-      const response = await fetch(`/api/supplier/users?${params.toString()}`, {
+      // Add sort
+      if (sorters && sorters.length > 0) {
+        params.append('sort', sorters[0].field)
+        params.append('order', sorters[0].order)
+      }
+
+      const response = await fetch(`/api/supplier/products?${params.toString()}`, {
         headers,
         credentials: 'include'
       })
 
       if (!response.ok) {
-        let errorMessage = 'Failed to fetch users'
-        try {
-          const errorData = await response.json()
-          errorMessage = errorData.error || errorMessage
-        } catch (e) {
-          // If error response is not JSON, use status text
-          errorMessage = `HTTP ${response.status}: ${response.statusText}`
-        }
-        throw new Error(errorMessage)
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to fetch products')
       }
 
       const data = await response.json()
-
       return {
-        data: data.data || [],
-        total: data.total || 0,
+        data: data.data,
+        total: data.total,
       }
     }
 
+    // Fallback to direct Supabase for other resources
     let query = supabase.from(resource).select('*', { count: 'exact' })
 
     // Apply filters
     if (filters) {
       filters.forEach((filter: CrudFilter) => {
-        if ('field' in filter && 'operator' in filter && 'value' in filter) {
-          if (filter.operator === 'eq') {
-            query = query.eq(filter.field, filter.value)
-          } else if (filter.operator === 'ne') {
-            query = query.neq(filter.field, filter.value)
-          } else if (filter.operator === 'contains') {
-            query = query.ilike(filter.field, `%${filter.value}%`)
-          } else if (filter.operator === 'in') {
-            query = query.in(filter.field, Array.isArray(filter.value) ? filter.value : [filter.value])
+        if (filter.field && filter.operator) {
+          switch (filter.operator) {
+            case 'eq':
+              query = query.eq(filter.field, filter.value)
+              break
+            case 'ne':
+              query = query.neq(filter.field, filter.value)
+              break
+            case 'in':
+              query = query.in(filter.field, filter.value)
+              break
+            case 'nin':
+              query = query.not(filter.field, 'in', filter.value)
+              break
+            case 'contains':
+              query = query.like(filter.field, `%${filter.value}%`)
+              break
+            case 'containss':
+              query = query.ilike(filter.field, `%${filter.value}%`)
+              break
+            case 'gt':
+              query = query.gt(filter.field, filter.value)
+              break
+            case 'gte':
+              query = query.gte(filter.field, filter.value)
+              break
+            case 'lt':
+              query = query.lt(filter.field, filter.value)
+              break
+            case 'lte':
+              query = query.lte(filter.field, filter.value)
+              break
+            case 'null':
+              query = query.is(filter.field, null)
+              break
+            case 'notnull':
+              query = query.not(filter.field, 'is', null)
+              break
           }
         }
       })
@@ -118,16 +143,15 @@ const dataProviderWithUsers: DataProvider = {
 
     // Apply sorting
     if (sorters && sorters.length > 0) {
-      const sorter = sorters[0]
-      query = query.order(sorter.field, { ascending: sorter.order === 'asc' })
+      sorters.forEach((sorter: CrudSort) => {
+        query = query.order(sorter.field, { ascending: sorter.order === 'asc' })
+      })
     }
 
     // Apply pagination
     if (pagination) {
-      const current = pagination.current || 1
-      const pageSize = pagination.pageSize || 10
-      const from = (current - 1) * pageSize
-      const to = from + pageSize - 1
+      const from = (pagination.current - 1) * pagination.pageSize
+      const to = from + pagination.pageSize - 1
       query = query.range(from, to)
     }
 
@@ -142,8 +166,23 @@ const dataProviderWithUsers: DataProvider = {
   },
 
   create: async ({ resource, variables, meta }) => {
-    if (resource === 'users') {
-      throw new Error('User creation should be handled through auth endpoint')
+    if (resource === 'products') {
+      // Use API route for product creation
+      const headers = await getAuthHeaders()
+      const response = await fetch('/api/supplier/products', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify(variables)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to create product')
+      }
+
+      const data = await response.json()
+      return { data: data.data }
     }
 
     const { data, error } = await supabase
@@ -158,21 +197,19 @@ const dataProviderWithUsers: DataProvider = {
   },
 
   update: async ({ resource, id, variables, meta }) => {
-    if (resource === 'users') {
+    if (resource === 'products') {
+      // Use API route for product updates
       const headers = await getAuthHeaders()
-      const response = await fetch('/api/supplier/users', {
+      const response = await fetch(`/api/supplier/products?id=${id}`, {
         method: 'PUT',
         headers,
         credentials: 'include',
-        body: JSON.stringify({
-          id,
-          ...variables
-        })
+        body: JSON.stringify(variables)
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to update user')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to update product')
       }
 
       const data = await response.json()
@@ -192,41 +229,114 @@ const dataProviderWithUsers: DataProvider = {
   },
 
   deleteOne: async ({ resource, id, variables, meta }) => {
-    if (resource === 'users') {
+    if (resource === 'products') {
+      // Use API route for product deletion
       const headers = await getAuthHeaders()
-      const response = await fetch(`/api/supplier/users?id=${id}`, {
+      const response = await fetch(`/api/supplier/products?id=${id}`, {
         method: 'DELETE',
         headers,
         credentials: 'include'
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to delete user')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to delete product')
       }
 
-      const data = await response.json()
-      return { data: data.data as any }
+      return { data: { id } }
     }
 
-    const { error } = await supabase
-      .from(resource)
-      .delete()
-      .eq('id', id)
+    const { error } = await supabase.from(resource).delete().eq('id', id)
 
     if (error) throw error
 
-    return { data: { id } as any }
+    return { data: { id } }
   },
 
-  getApiUrl: () => {
-    return process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  // Add custom methods for bulk operations
+  bulkCreate: async ({ resource, variables }) => {
+    if (resource === 'products') {
+      const headers = await getAuthHeaders()
+      const response = await fetch('/api/supplier/products/bulk', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ products: variables })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to bulk create products')
+      }
+
+      const data = await response.json()
+      return { data: data.data }
+    }
+
+    const { data, error } = await supabase
+      .from(resource)
+      .insert(variables)
+      .select()
+
+    if (error) throw error
+
+    return { data }
   },
 
-  custom: async ({ url, method, payload, headers, meta }) => {
-    // For custom API calls
-    throw new Error('Custom API calls not implemented')
+  bulkUpdate: async ({ resource, ids, variables }) => {
+    if (resource === 'products') {
+      const headers = await getAuthHeaders()
+      const response = await fetch('/api/supplier/products/bulk', {
+        method: 'PUT',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ ids, variables })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to bulk update products')
+      }
+
+      const data = await response.json()
+      return { data: data.data }
+    }
+
+    const { data, error } = await supabase
+      .from(resource)
+      .update(variables)
+      .in('id', ids)
+      .select()
+
+    if (error) throw error
+
+    return { data }
+  },
+
+  bulkDelete: async ({ resource, ids }) => {
+    if (resource === 'products') {
+      const headers = await getAuthHeaders()
+      const response = await fetch('/api/supplier/products/bulk', {
+        method: 'DELETE',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ ids })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to bulk delete products')
+      }
+
+      return { data: { deleted: ids } }
+    }
+
+    const { error } = await supabase.from(resource).delete().in('id', ids)
+
+    if (error) throw error
+
+    return { data: { deleted: ids } }
   },
 }
 
-export { dataProviderWithUsers }
+export { dataProvider as dataProviderWithProducts }

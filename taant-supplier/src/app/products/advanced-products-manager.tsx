@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Button,
   Card,
@@ -187,6 +187,218 @@ const AdvancedProductManager: React.FC = () => {
 
   // Validation errors tracking
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+
+  // Debug: Log when validationErrors changes
+  useEffect(() => {
+    console.log('validationErrors state updated:', validationErrors)
+    console.log('Object.keys(validationErrors):', Object.keys(validationErrors))
+  }, [validationErrors])
+
+  // Memoized tab items to ensure proper re-rendering when validationErrors changes
+  const tabItems = useMemo(() => [
+    {
+      key: '1',
+      label: (
+        <span>
+          Basic Info
+          {validationErrors['1'] && (
+            <Tag color="red" size="small" style={{ marginLeft: 8 }}>
+              ⚠️ Error
+            </Tag>
+          )}
+        </span>
+      ),
+      children: (
+        <>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="title"
+                label="Product Title"
+                rules={[{ required: true, message: 'Please enter product title' }]}
+              >
+                <AntInput placeholder="Enter product title" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="sku" label="SKU">
+                <AntInput placeholder="Auto-generated if empty" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="short_description" label="Short Description">
+            <TextArea rows={2} placeholder="Brief product description for listings" />
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="category_id" label="Category" rules={[{ required: true }]}>
+                <Select placeholder="Select category">
+                  <Select.Option value="electronics">Electronics</Select.Option>
+                  <Select.Option value="clothing">Clothing</Select.Option>
+                  <Select.Option value="home">Home & Garden</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="brand_id" label="Brand">
+                <Select placeholder="Select brand" allowClear>
+                  <Select.Option value="apple">Apple</Select.Option>
+                  <Select.Option value="samsung">Samsung</Select.Option>
+                  <Select.Option value="sony">Sony</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="status" label="Status" initialValue="draft">
+                <Select>
+                  <Select.Option value="draft">Draft</Select.Option>
+                  <Select.Option value="active">Active</Select.Option>
+                  <Select.Option value="inactive">Inactive</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="base_price" label="Price" rules={[{ required: true }]}>
+                <InputNumber
+                  style={{ width: '100%' }}
+                  formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  placeholder="0.00"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="compare_price" label="Compare Price">
+                <InputNumber
+                  style={{ width: '100%' }}
+                  formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  placeholder="0.00"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="tags" label="Tags">
+                <Select
+                  mode="tags"
+                  style={{ width: '100%' }}
+                  placeholder="Add tags"
+                  tokenSeparators={[',']}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        </>
+      )
+    },
+    {
+      key: '2',
+      label: (
+        <span>
+          Images
+          {validationErrors['2'] && (
+            <Tag color="red" size="small" style={{ marginLeft: 8 }}>
+              ⚠️ Required
+            </Tag>
+          )}
+        </span>
+      ),
+      children: (
+        <ImageUploadManager
+          images={productImages}
+          onChange={setProductImages}
+          maxImages={10}
+        />
+      )
+    },
+    {
+      key: '3',
+      label: (
+        <span>
+          Variants
+          {validationErrors['3'] && (
+            <Tag color="red" size="small" style={{ marginLeft: 8 }}>
+              ⚠️ Missing Images
+            </Tag>
+          )}
+        </span>
+      ),
+      children: (
+        <VariantManager
+          variants={productVariants}
+          productImages={productImages}
+          onChange={setProductVariants}
+        />
+      )
+    },
+    {
+      key: '4',
+      label: (
+        <span>
+          A+ Content
+          {validationErrors['4'] && (
+            <Tag color="red" size="small" style={{ marginLeft: 8 }}>
+              ⚠️ Required
+            </Tag>
+          )}
+        </span>
+      ),
+      children: (
+        <APlusContentManager
+          sections={aPlusSections}
+          onChange={setAPlusSections}
+        />
+      )
+    },
+    {
+      key: '5',
+      label: (
+        <span>
+          FAQs
+          {validationErrors['5'] && (
+            <Tag color="red" size="small" style={{ marginLeft: 8 }}>
+              ⚠️ Incomplete
+            </Tag>
+          )}
+        </span>
+      ),
+      children: (
+        <FAQManager
+          faqs={productFAQs}
+          onChange={setProductFAQs}
+        />
+      )
+    },
+    {
+      key: '6',
+      label: 'SEO',
+      children: (
+        <>
+          <Form.Item name="seo_title" label="SEO Title">
+            <AntInput placeholder="SEO Title (50-60 characters recommended)" />
+          </Form.Item>
+
+          <Form.Item name="seo_description" label="SEO Description">
+            <TextArea rows={3} placeholder="SEO Description (150-160 characters recommended)" />
+          </Form.Item>
+
+          <Form.Item name="tags" label="Tags">
+            <Select
+              mode="tags"
+              style={{ width: '100%' }}
+              placeholder="Add tags for better discoverability"
+              tokenSeparators={[',']}
+            />
+          </Form.Item>
+        </>
+      )
+    }
+  ], [validationErrors, productImages, productVariants, aPlusSections, productFAQs])
 
   // Fetch products
   const fetchProducts = async () => {
@@ -410,6 +622,69 @@ const AdvancedProductManager: React.FC = () => {
     return Object.keys(errors).length === 0
   }
 
+  // Handle Create Product button click - immediate validation
+  const handleCreateProductClick = async () => {
+    setLoading(true)
+
+    // Get current form values
+    const formValues = form.getFieldsValue()
+    console.log('Create Product clicked, current form values:', formValues)
+
+    // Validate first
+    const errors = {}
+    // Basic validation
+    if (!formValues.title || formValues.title.trim() === '') {
+      errors['1'] = 'Product title is required'
+    }
+    if (!formValues.category_id) {
+      errors['1'] = 'Category is required'
+    }
+    if (!formValues.base_price || formValues.base_price <= 0) {
+      errors['1'] = 'Valid price is required'
+    }
+
+    // Images validation
+    if (productImages.length === 0) {
+      errors['2'] = 'At least one product image is required'
+    }
+
+    // Variants validation
+    const variantsWithoutImages = productVariants.filter(v => !v.image_url && v.is_active)
+    if (variantsWithoutImages.length > 0) {
+      errors['3'] = `${variantsWithoutImages.length} active variant(s) missing images`
+    }
+
+    // A+ content validation
+    if (aPlusSections.length === 0 && (!formValues.description || formValues.description.trim() === '')) {
+      errors['4'] = 'Either description or A+ content sections are required'
+    }
+
+    // FAQs validation
+    const incompleteFAQs = productFAQs.filter(faq =>
+      faq.is_active && (!faq.question.trim() || !faq.answer.trim())
+    )
+    if (incompleteFAQs.length > 0) {
+      errors['5'] = `${incompleteFAQs.length} FAQ(s) incomplete`
+    }
+
+    console.log('Validation errors found on button click:', errors)
+    setValidationErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
+      // Find first tab with errors and switch to it
+      const firstErrorTab = Object.keys(errors)[0]
+      console.log('Switching to first error tab:', firstErrorTab)
+      setActiveTab(firstErrorTab)
+      message.error('Please fix validation errors before saving')
+      setLoading(false)
+      return
+    }
+
+    // If validation passes, submit the form
+    console.log('Validation passed, submitting form')
+    form.submit()
+  }
+
   // Save Product
   const handleSaveProduct = async (values: any) => {
     try {
@@ -452,16 +727,21 @@ const AdvancedProductManager: React.FC = () => {
         errors['5'] = `${incompleteFAQs.length} FAQ(s) incomplete`
       }
 
+      console.log('Validation errors found:', errors)
       setValidationErrors(errors)
 
-      if (Object.keys(errors).length > 0) {
-        // Find first tab with errors and switch to it
-        const firstErrorTab = Object.keys(errors)[0]
-        setActiveTab(firstErrorTab)
-        message.error('Please fix validation errors before saving')
-        setLoading(false)
-        return
-      }
+      // Force a re-render by using setTimeout to ensure state is updated
+      setTimeout(() => {
+        if (Object.keys(errors).length > 0) {
+          console.log('Switching to first error tab:', Object.keys(errors)[0])
+          // Find first tab with errors and switch to it
+          const firstErrorTab = Object.keys(errors)[0]
+          setActiveTab(firstErrorTab)
+          message.error('Please fix validation errors before saving')
+          setLoading(false)
+          return
+        }
+      }, 100)
 
       // Generate SKU and slug
       const sku = `SKU-${Date.now().toString(36).toUpperCase()}`
@@ -747,6 +1027,7 @@ const AdvancedProductManager: React.FC = () => {
       <Modal
         title={editingProduct ? 'Edit Product' : 'Create New Product'}
         open={modalOpen}
+        maskClosable={false}
         onCancel={() => {
           setModalOpen(false)
           setEditingProduct(null)
@@ -775,7 +1056,7 @@ const AdvancedProductManager: React.FC = () => {
             key="submit"
             type="primary"
             loading={loading}
-            onClick={() => form.submit()}
+            onClick={handleCreateProductClick}
           >
             {editingProduct ? 'Update Product' : 'Create Product'}
           </Button>,
@@ -785,210 +1066,7 @@ const AdvancedProductManager: React.FC = () => {
           <Tabs
             activeKey={activeTab}
             onChange={setActiveTab}
-            items={[
-              {
-                key: '1',
-                label: (
-                  <span>
-                    Basic Info
-                    {validationErrors['1'] && (
-                      <Tag color="red" size="small" style={{ marginLeft: 8 }}>
-                        ⚠️ Error
-                      </Tag>
-                    )}
-                  </span>
-                ),
-                children: (
-                  <>
-                    <Row gutter={16}>
-                      <Col span={12}>
-                        <Form.Item
-                          name="title"
-                          label="Product Title"
-                          rules={[{ required: true, message: 'Please enter product title' }]}
-                        >
-                          <AntInput placeholder="Enter product title" />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item name="sku" label="SKU">
-                          <AntInput placeholder="Auto-generated if empty" />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-
-                    <Form.Item name="short_description" label="Short Description">
-                      <TextArea rows={2} placeholder="Brief product description for listings" />
-                    </Form.Item>
-
-                    <Row gutter={16}>
-                      <Col span={8}>
-                        <Form.Item name="category_id" label="Category" rules={[{ required: true }]}>
-                          <Select placeholder="Select category">
-                            <Select.Option value="electronics">Electronics</Select.Option>
-                            <Select.Option value="clothing">Clothing</Select.Option>
-                            <Select.Option value="home">Home & Garden</Select.Option>
-                          </Select>
-                        </Form.Item>
-                      </Col>
-                      <Col span={8}>
-                        <Form.Item name="brand_id" label="Brand">
-                          <Select placeholder="Select brand" allowClear>
-                            <Select.Option value="apple">Apple</Select.Option>
-                            <Select.Option value="samsung">Samsung</Select.Option>
-                            <Select.Option value="sony">Sony</Select.Option>
-                          </Select>
-                        </Form.Item>
-                      </Col>
-                      <Col span={8}>
-                        <Form.Item name="status" label="Status" initialValue="draft">
-                          <Select>
-                            <Select.Option value="draft">Draft</Select.Option>
-                            <Select.Option value="active">Active</Select.Option>
-                            <Select.Option value="inactive">Inactive</Select.Option>
-                          </Select>
-                        </Form.Item>
-                      </Col>
-                    </Row>
-
-                    <Row gutter={16}>
-                      <Col span={8}>
-                        <Form.Item name="base_price" label="Price" rules={[{ required: true }]}>
-                          <InputNumber
-                            style={{ width: '100%' }}
-                            formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                            parser={value => value!.replace(/\$\s?|(,*)/g, '')}
-                            placeholder="0.00"
-                          />
-                        </Form.Item>
-                      </Col>
-                      <Col span={8}>
-                        <Form.Item name="compare_price" label="Compare Price">
-                          <InputNumber
-                            style={{ width: '100%' }}
-                            formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                            parser={value => value!.replace(/\$\s?|(,*)/g, '')}
-                            placeholder="0.00"
-                          />
-                        </Form.Item>
-                      </Col>
-                      <Col span={8}>
-                        <Form.Item name="tags" label="Tags">
-                          <Select
-                            mode="tags"
-                            style={{ width: '100%' }}
-                            placeholder="Add tags"
-                            tokenSeparators={[',']}
-                          />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                  </>
-                )
-              },
-              {
-                key: '2',
-                label: (
-                  <span>
-                    Images
-                    {validationErrors['2'] && (
-                      <Tag color="red" size="small" style={{ marginLeft: 8 }}>
-                        ⚠️ Required
-                      </Tag>
-                    )}
-                  </span>
-                ),
-                children: (
-                  <ImageUploadManager
-                    images={productImages}
-                    onChange={setProductImages}
-                    maxImages={10}
-                  />
-                )
-              },
-              {
-                key: '3',
-                label: (
-                  <span>
-                    Variants
-                    {validationErrors['3'] && (
-                      <Tag color="red" size="small" style={{ marginLeft: 8 }}>
-                        ⚠️ Missing Images
-                      </Tag>
-                    )}
-                  </span>
-                ),
-                children: (
-                  <VariantManager
-                    variants={productVariants}
-                    productImages={productImages}
-                    onChange={setProductVariants}
-                  />
-                )
-              },
-              {
-                key: '4',
-                label: (
-                  <span>
-                    A+ Content
-                    {validationErrors['4'] && (
-                      <Tag color="red" size="small" style={{ marginLeft: 8 }}>
-                        ⚠️ Required
-                      </Tag>
-                    )}
-                  </span>
-                ),
-                children: (
-                  <APlusContentManager
-                    sections={aPlusSections}
-                    onChange={setAPlusSections}
-                  />
-                )
-              },
-              {
-                key: '5',
-                label: (
-                  <span>
-                    FAQs
-                    {validationErrors['5'] && (
-                      <Tag color="red" size="small" style={{ marginLeft: 8 }}>
-                        ⚠️ Incomplete
-                      </Tag>
-                    )}
-                  </span>
-                ),
-                children: (
-                  <FAQManager
-                    faqs={productFAQs}
-                    onChange={setProductFAQs}
-                  />
-                )
-              },
-              {
-                key: '6',
-                label: 'SEO',
-                children: (
-                  <>
-                    <Form.Item name="seo_title" label="SEO Title">
-                      <AntInput placeholder="SEO Title (50-60 characters recommended)" />
-                    </Form.Item>
-
-                    <Form.Item name="seo_description" label="SEO Description">
-                      <TextArea rows={3} placeholder="SEO Description (150-160 characters recommended)" />
-                    </Form.Item>
-
-                    <Form.Item name="tags" label="Tags">
-                      <Select
-                        mode="tags"
-                        style={{ width: '100%' }}
-                        placeholder="Add tags for better discoverability"
-                        tokenSeparators={[',']}
-                      />
-                    </Form.Item>
-                  </>
-                )
-              }
-            ]}
+            items={tabItems}
           />
         </Form>
       </Modal>
