@@ -68,11 +68,35 @@ import ImageUploadManager from '../../components/products/image-upload-manager'
 import VariantManager from '../../components/products/variant-manager'
 import APlusContentManager from '../../components/products/a-plus-content-manager'
 import FAQManager from '../../components/products/faq-manager'
+import TiptapEditor from '../../components/ui/tiptap-editor'
+import SimpleDynamicFields from '../../components/products/simple-dynamic-fields-final'
+import InformationSectionsManager from '../../components/products/information-sections-manager-final'
+import FloatingHelp from '../../components/ui/floating-help'
 
 const { Title, Text, Paragraph } = Typography
 const { Search } = Input
 const { TextArea } = AntInput
 const { Panel } = Collapse
+
+// Dynamic Field Interfaces
+interface SimpleField {
+  id: string
+  option: string
+  value: string | number | null
+}
+
+interface InfoItem {
+  id: string
+  key: string
+  value: string
+}
+
+interface InfoSection {
+  id: string
+  title: string
+  items: InfoItem[]
+  isExpanded: boolean
+}
 
 // Enhanced Product Interface
 interface Product {
@@ -99,6 +123,7 @@ interface Product {
   slug: string
   status: string
   base_price: number
+  cost_price: number
   compare_price: number
   category_id: string
   brand_id: string
@@ -112,6 +137,23 @@ interface Product {
   tags: string[]
   seo_title: string
   seo_description: string
+  // Product Details fields
+  weight?: number
+  length?: number
+  width?: number
+  height?: number
+  origin_country?: string
+  manufacturer?: string
+  model_number?: string
+  shipping_requirements?: string
+  // Product Information fields
+  included_items?: string[]
+  compatibility?: string
+  safety_warnings?: string
+  care_instructions?: string
+  // Dynamic fields and information sections
+  simple_fields?: SimpleField[]
+  information_sections?: InfoSection[]
   created_at: string
   updated_at: string
 }
@@ -184,7 +226,11 @@ const AdvancedProductManager: React.FC = () => {
       align?: 'left' | 'center' | 'right'
     }
   }>>([])
+  // New dynamic fields and information sections state
+  const [simpleFields, setSimpleFields] = useState<SimpleField[]>([])
+  const [informationSections, setInformationSections] = useState<InfoSection[]>([])
 
+  
   // Validation errors tracking
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
@@ -215,24 +261,51 @@ const AdvancedProductManager: React.FC = () => {
               <Form.Item
                 name="title"
                 label="Product Title"
-                rules={[{ required: true, message: 'Please enter product title' }]}
+                rules={[
+                  { required: true, message: 'Please enter product title' },
+                  { max: 200, message: 'Title must be less than 200 characters' },
+                  {
+                    pattern: /^[^<>]*$/,
+                    message: 'Title cannot contain HTML tags'
+                  }
+                ]}
               >
                 <AntInput placeholder="Enter product title" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="sku" label="SKU">
+              <Form.Item
+                name="sku"
+                label="SKU"
+                rules={[
+                  { max: 50, message: 'SKU must be less than 50 characters' },
+                  {
+                    pattern: /^[A-Z0-9-_]*$/i,
+                    message: 'SKU can only contain letters, numbers, hyphens, and underscores'
+                  }
+                ]}
+              >
                 <AntInput placeholder="Auto-generated if empty" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item name="short_description" label="Short Description">
+          <Form.Item
+            name="short_description"
+            label="Short Description"
+            rules={[
+              { max: 160, message: 'Short description must be less than 160 characters' },
+              {
+                pattern: /^[^<>]*$/,
+                message: 'Description cannot contain HTML tags'
+              }
+            ]}
+          >
             <TextArea rows={2} placeholder="Brief product description for listings" />
           </Form.Item>
 
           <Row gutter={16}>
-            <Col span={8}>
+            <Col span={6}>
               <Form.Item name="category_id" label="Category" rules={[{ required: true }]}>
                 <Select placeholder="Select category">
                   <Select.Option value="electronics">Electronics</Select.Option>
@@ -241,7 +314,7 @@ const AdvancedProductManager: React.FC = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
               <Form.Item name="brand_id" label="Brand">
                 <Select placeholder="Select brand" allowClear>
                   <Select.Option value="apple">Apple</Select.Option>
@@ -250,7 +323,7 @@ const AdvancedProductManager: React.FC = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
               <Form.Item name="status" label="Status" initialValue="draft">
                 <Select>
                   <Select.Option value="draft">Draft</Select.Option>
@@ -262,27 +335,43 @@ const AdvancedProductManager: React.FC = () => {
           </Row>
 
           <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="base_price" label="Price" rules={[{ required: true }]}>
+            <Col span={6}>
+              <Form.Item name="cost_price" label="Cost Price">
                 <InputNumber
                   style={{ width: '100%' }}
                   formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                   parser={value => value!.replace(/\$\s?|(,*)/g, '')}
                   placeholder="0.00"
+                  min={0}
+                  precision={2}
                 />
               </Form.Item>
             </Col>
-            <Col span={8}>
-              <Form.Item name="compare_price" label="Compare Price">
+            <Col span={6}>
+              <Form.Item name="base_price" label="Selling Price" rules={[{ required: true }]}>
                 <InputNumber
                   style={{ width: '100%' }}
                   formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                   parser={value => value!.replace(/\$\s?|(,*)/g, '')}
                   placeholder="0.00"
+                  min={0}
+                  precision={2}
                 />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
+              <Form.Item name="compare_price" label="MRP">
+                <InputNumber
+                  style={{ width: '100%' }}
+                  formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  placeholder="0.00"
+                  min={0}
+                  precision={2}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
               <Form.Item name="tags" label="Tags">
                 <Select
                   mode="tags"
@@ -293,7 +382,8 @@ const AdvancedProductManager: React.FC = () => {
               </Form.Item>
             </Col>
           </Row>
-        </>
+
+          </>
       )
     },
     {
@@ -309,11 +399,13 @@ const AdvancedProductManager: React.FC = () => {
         </span>
       ),
       children: (
-        <ImageUploadManager
-          images={productImages}
-          onChange={setProductImages}
-          maxImages={10}
-        />
+        <>
+          <ImageUploadManager
+            images={productImages}
+            onChange={setProductImages}
+            maxImages={10}
+          />
+            </>
       )
     },
     {
@@ -329,11 +421,13 @@ const AdvancedProductManager: React.FC = () => {
         </span>
       ),
       children: (
-        <VariantManager
-          variants={productVariants}
-          productImages={productImages}
-          onChange={setProductVariants}
-        />
+        <>
+          <VariantManager
+            variants={productVariants}
+            productImages={productImages}
+            onChange={setProductVariants}
+          />
+          </>
       )
     },
     {
@@ -349,10 +443,12 @@ const AdvancedProductManager: React.FC = () => {
         </span>
       ),
       children: (
-        <APlusContentManager
-          sections={aPlusSections}
-          onChange={setAPlusSections}
-        />
+        <>
+          <APlusContentManager
+            sections={aPlusSections}
+            onChange={setAPlusSections}
+          />
+            </>
       )
     },
     {
@@ -368,22 +464,311 @@ const AdvancedProductManager: React.FC = () => {
         </span>
       ),
       children: (
-        <FAQManager
-          faqs={productFAQs}
-          onChange={setProductFAQs}
-        />
+        <>
+          <FAQManager
+            faqs={productFAQs}
+            onChange={setProductFAQs}
+          />
+              </>
       )
     },
     {
       key: '6',
+      label: (
+        <span>
+          Product Details
+          {validationErrors['6'] && (
+            <Tag color="red" size="small" style={{ marginLeft: 8 }}>
+              ⚠️ Required
+            </Tag>
+          )}
+        </span>
+      ),
+      children: (
+        <>
+          <Card size="small" title="Basic Specifications" style={{ marginBottom: 16 }}>
+            <Row gutter={[12, 8]}>
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <Form.Item name="weight" label="Weight (kg)" style={{ marginBottom: 8 }}>
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    placeholder="0.00"
+                    step={0.01}
+                    min={0}
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <Form.Item name="warranty_months" label="Warranty (months)" style={{ marginBottom: 8 }}>
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    placeholder="0"
+                    min={0}
+                    size="small"
+                    precision={0}
+                    controls={true}
+                    keyboard={true}
+                    parser={(value: string) => {
+                      // Only allow digits
+                      const digitsOnly = value.replace(/[^\d]/g, '')
+                      return parseInt(digitsOnly) || 0
+                    }}
+                    formatter={(value: number | string | undefined) => {
+                      if (value === undefined || value === null) return ''
+                      return Math.floor(Number(value)).toString()
+                    }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <Form.Item name="origin_country" label="Country" style={{ marginBottom: 8 }}>
+                  <Select placeholder="Select" allowClear size="small">
+                    <Select.Option value="CN">China</Select.Option>
+                    <Select.Option value="US">United States</Select.Option>
+                    <Select.Option value="IN">India</Select.Option>
+                    <Select.Option value="JP">Japan</Select.Option>
+                    <Select.Option value="KR">South Korea</Select.Option>
+                    <Select.Option value="DE">Germany</Select.Option>
+                    <Select.Option value="GB">United Kingdom</Select.Option>
+                    <Select.Option value="VN">Vietnam</Select.Option>
+                    <Select.Option value="TW">Taiwan</Select.Option>
+                    <Select.Option value="MX">Mexico</Select.Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <Form.Item
+                  name="model_number"
+                  label="Model Number"
+                  style={{ marginBottom: 8 }}
+                  rules={[
+                    { max: 50, message: 'Model number must be less than 50 characters' },
+                    {
+                      pattern: /^[A-Z0-9-_\s]*$/i,
+                      message: 'Model number can only contain letters, numbers, hyphens, underscores, and spaces'
+                    }
+                  ]}
+                >
+                  <AntInput placeholder="Model/part number" size="small" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+
+          <Card size="small" title="Dimensions (cm)" style={{ marginBottom: 16 }}>
+            <Row gutter={[12, 8]}>
+              <Col xs={24} sm={12} md={6}>
+                <Form.Item name="length" label="Length" style={{ marginBottom: 8 }}>
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    placeholder="0.0"
+                    step={0.1}
+                    min={0}
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Form.Item name="width" label="Width" style={{ marginBottom: 8 }}>
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    placeholder="0.0"
+                    step={0.1}
+                    min={0}
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Form.Item name="height" label="Height" style={{ marginBottom: 8 }}>
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    placeholder="0.0"
+                    step={0.1}
+                    min={0}
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Form.Item label="Volume" style={{ marginBottom: 8 }}>
+                  <Input
+                    value="Auto"
+                    readOnly
+                    size="small"
+                    style={{ backgroundColor: '#f5f5f5', color: '#666' }}
+                    placeholder="Calculated automatically"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+
+          <Card size="small" title="Additional Information" style={{ marginBottom: 16 }}>
+            <Row gutter={[12, 8]}>
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  name="manufacturer"
+                  label="Manufacturer"
+                  style={{ marginBottom: 8 }}
+                  rules={[
+                    { max: 100, message: 'Manufacturer name must be less than 100 characters' },
+                    {
+                      pattern: /^[^<>]*$/,
+                      message: 'Manufacturer name cannot contain HTML tags'
+                    }
+                  ]}
+                >
+                  <AntInput placeholder="Manufacturer name" size="small" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={[12, 8]}>
+              <Col xs={24}>
+                <Form.Item name="warranty_text" label="Warranty Information" style={{ marginBottom: 8 }}>
+                  <TextArea
+                    rows={2}
+                    placeholder="Detailed warranty information and terms"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={[12, 8]}>
+              <Col xs={24}>
+                <Form.Item name="shipping_requirements" label="Shipping Requirements" style={{ marginBottom: 8 }}>
+                  <TextArea
+                    rows={2}
+                    placeholder="Special shipping instructions or requirements"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+
+          <SimpleDynamicFields
+            fields={simpleFields}
+            onChange={setSimpleFields}
+            title="Additional Product Details"
+          />
+
+          </>
+      )
+    },
+    {
+      key: '7',
+      label: (
+        <span>
+          Product Information
+          {validationErrors['7'] && (
+            <Tag color="red" size="small" style={{ marginLeft: 8 }}>
+              ⚠️ Required
+            </Tag>
+          )}
+        </span>
+      ),
+      children: (
+        <>
+          <Form.Item name="description" label="Detailed Description">
+            <TiptapEditor
+              value={form.getFieldValue('description') || ''}
+              onChange={(value) => form.setFieldValue('description', value)}
+              placeholder="Comprehensive product description with features, benefits, and use cases"
+              height={200}
+            />
+          </Form.Item>
+
+          <Form.Item name="features" label="Key Features">
+            <Select
+              mode="tags"
+              style={{ width: '100%' }}
+              placeholder="Add key features (press Enter to add each feature)"
+              tokenSeparators={[',', '\n']}
+            />
+          </Form.Item>
+
+          <InformationSectionsManager
+            sections={informationSections}
+            onChange={setInformationSections}
+            title="Product Information Sections"
+          />
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="included_items" label="What's in the Box">
+                <Select
+                  mode="tags"
+                  style={{ width: '100%' }}
+                  placeholder="List included items"
+                  tokenSeparators={[',', '\n']}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="compatibility" label="Compatibility">
+                <TiptapEditor
+                  value={form.getFieldValue('compatibility') || ''}
+                  onChange={(value) => form.setFieldValue('compatibility', value)}
+                  placeholder="Compatibility information with other products or systems"
+                  height={120}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="safety_warnings" label="Safety Warnings & Usage Instructions">
+            <TiptapEditor
+              value={form.getFieldValue('safety_warnings') || ''}
+              onChange={(value) => form.setFieldValue('safety_warnings', value)}
+              placeholder="Important safety information and usage guidelines"
+              height={120}
+            />
+          </Form.Item>
+
+          <Form.Item name="care_instructions" label="Care & Maintenance">
+            <TiptapEditor
+              value={form.getFieldValue('care_instructions') || ''}
+              onChange={(value) => form.setFieldValue('care_instructions', value)}
+              placeholder="Instructions for product care and maintenance"
+              height={100}
+            />
+          </Form.Item>
+
+          </>
+      )
+    },
+    {
+      key: '8',
       label: 'SEO',
       children: (
         <>
-          <Form.Item name="seo_title" label="SEO Title">
+          <Form.Item
+            name="seo_title"
+            label="SEO Title"
+            rules={[
+              { max: 60, message: 'SEO title should be 50-60 characters for best results' },
+              {
+                pattern: /^[^<>]*$/,
+                message: 'SEO title cannot contain HTML tags'
+              }
+            ]}
+          >
             <AntInput placeholder="SEO Title (50-60 characters recommended)" />
           </Form.Item>
 
-          <Form.Item name="seo_description" label="SEO Description">
+          <Form.Item
+            name="seo_description"
+            label="SEO Description"
+            rules={[
+              { max: 160, message: 'SEO description should be 150-160 characters for best results' },
+              {
+                pattern: /^[^<>]*$/,
+                message: 'SEO description cannot contain HTML tags'
+              }
+            ]}
+          >
             <TextArea rows={3} placeholder="SEO Description (150-160 characters recommended)" />
           </Form.Item>
 
@@ -395,7 +780,8 @@ const AdvancedProductManager: React.FC = () => {
               tokenSeparators={[',']}
             />
           </Form.Item>
-        </>
+
+                </>
       )
     }
   ], [validationErrors, productImages, productVariants, aPlusSections, productFAQs])
@@ -404,6 +790,12 @@ const AdvancedProductManager: React.FC = () => {
   const fetchProducts = async () => {
     setLoading(true)
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
+
       const { data, error } = await supabase
         .from('products')
         .select(`
@@ -414,6 +806,7 @@ const AdvancedProductManager: React.FC = () => {
           variants:product_variants(*),
           faqs:product_faqs(*)
         `)
+        .eq('supplier_id', user.id)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -605,10 +998,8 @@ const AdvancedProductManager: React.FC = () => {
       errors['3'] = `${variantsWithoutImages.length} active variant(s) missing images`
     }
 
-    // A+ content validation
-    if (aPlusSections.length === 0 && (!values.description || values.description.trim() === '')) {
-      errors['4'] = 'Either description or A+ content sections are required'
-    }
+    // A+ content validation - now optional
+    // No longer required to have A+ content
 
     // FAQs validation
     const incompleteFAQs = productFAQs.filter(faq =>
@@ -618,8 +1009,64 @@ const AdvancedProductManager: React.FC = () => {
       errors['5'] = `${incompleteFAQs.length} FAQ(s) incomplete`
     }
 
+    // Product Details validation - now required
+    if (simpleFields.length === 0) {
+      errors['6'] = 'Product details are required'
+    }
+
+    // Product Information validation - now required
+    if (!values.description || values.description.trim() === '') {
+      errors['7'] = 'Product description is required'
+    }
+
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
+  }
+
+  // Handle Add Product button click
+  const handleAddProduct = () => {
+    setEditingProduct(null)
+    form.resetFields()
+
+    // Initialize with default values for new product
+    const initialValues = {
+      status: 'draft',
+      base_price: 0,
+      cost_price: 0,
+      compare_price: 0,
+      warranty_months: 0,
+      features: [],
+      tags: [],
+      // Product Details defaults
+      weight: null,
+      length: null,
+      width: null,
+      height: null,
+      manufacturer: '',
+      model_number: '',
+      warranty_text: '',
+      shipping_requirements: '',
+      origin_country: null,
+      // Product Information defaults
+      description: '',
+      included_items: [],
+      compatibility: '',
+      safety_warnings: '',
+      care_instructions: '',
+      specifications: '',
+      seo_title: '',
+      seo_description: ''
+    }
+
+    form.setFieldsValue(initialValues)
+    setProductImages([])
+    setProductVariants([])
+    setProductFAQs([])
+    setAPlusSections([])
+    // Don't reset simpleFields and informationSections - let components initialize themselves
+    setValidationErrors({})
+    setActiveTab('1')
+    setModalOpen(true)
   }
 
   // Handle Create Product button click - immediate validation
@@ -654,10 +1101,8 @@ const AdvancedProductManager: React.FC = () => {
       errors['3'] = `${variantsWithoutImages.length} active variant(s) missing images`
     }
 
-    // A+ content validation
-    if (aPlusSections.length === 0 && (!formValues.description || formValues.description.trim() === '')) {
-      errors['4'] = 'Either description or A+ content sections are required'
-    }
+    // A+ content validation - now optional
+    // No longer required to have A+ content
 
     // FAQs validation
     const incompleteFAQs = productFAQs.filter(faq =>
@@ -665,6 +1110,16 @@ const AdvancedProductManager: React.FC = () => {
     )
     if (incompleteFAQs.length > 0) {
       errors['5'] = `${incompleteFAQs.length} FAQ(s) incomplete`
+    }
+
+    // Product Details validation - now required
+    if (simpleFields.length === 0) {
+      errors['6'] = 'Product details are required'
+    }
+
+    // Product Information validation - now required
+    if (!formValues.description || formValues.description.trim() === '') {
+      errors['7'] = 'Product description is required'
     }
 
     console.log('Validation errors found on button click:', errors)
@@ -690,6 +1145,14 @@ const AdvancedProductManager: React.FC = () => {
     try {
       setLoading(true)
 
+      // Check authentication
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        message.error('You must be logged in to save products')
+        setLoading(false)
+        return
+      }
+
       // Validate first
       const errors = {}
       // Basic validation
@@ -714,10 +1177,8 @@ const AdvancedProductManager: React.FC = () => {
         errors['3'] = `${variantsWithoutImages.length} active variant(s) missing images`
       }
 
-      // A+ content validation
-      if (aPlusSections.length === 0 && (!values.description || values.description.trim() === '')) {
-        errors['4'] = 'Either description or A+ content sections are required'
-      }
+      // A+ content validation - now optional
+      // No longer required to have A+ content
 
       // FAQs validation
       const incompleteFAQs = productFAQs.filter(faq =>
@@ -725,6 +1186,16 @@ const AdvancedProductManager: React.FC = () => {
       )
       if (incompleteFAQs.length > 0) {
         errors['5'] = `${incompleteFAQs.length} FAQ(s) incomplete`
+      }
+
+      // Product Details validation - now required
+      if (simpleFields.length === 0) {
+        errors['6'] = 'Product details are required'
+      }
+
+      // Product Information validation - now required
+      if (!values.description || values.description.trim() === '') {
+        errors['7'] = 'Product description is required'
       }
 
       console.log('Validation errors found:', errors)
@@ -752,11 +1223,30 @@ const AdvancedProductManager: React.FC = () => {
         ...values,
         sku,
         slug,
-        supplier_id: 'current-supplier-id', // This should come from auth
+        supplier_id: user.id,
         a_plus_content: values.a_plus_content || '',
         a_plus_sections: aPlusSections,
         specifications,
         features: features.filter(f => f.trim() !== ''),
+        // Ensure new fields are included
+        weight: values.weight || null,
+        length: values.length || null,
+        width: values.width || null,
+        height: values.height || null,
+        warranty_months: values.warranty_months || 0,
+        warranty_text: values.warranty_text || '',
+        origin_country: values.origin_country || null,
+        manufacturer: values.manufacturer || '',
+        model_number: values.model_number || '',
+        shipping_requirements: values.shipping_requirements || '',
+        description: values.description || '',
+        included_items: values.included_items || [],
+        compatibility: values.compatibility || '',
+        safety_warnings: values.safety_warnings || '',
+        care_instructions: values.care_instructions || '',
+        // Include dynamic fields and information sections
+        simple_fields: simpleFields,
+        information_sections: informationSections,
         images: productImages.map((img, index) => ({
           url: img.url,
           alt_text: img.alt_text,
@@ -771,11 +1261,12 @@ const AdvancedProductManager: React.FC = () => {
       }
 
       if (editingProduct) {
-        // Update existing product
+        // Update existing product - ensure user owns this product
         const { error } = await supabase
           .from('products')
           .update(productData)
           .eq('id', editingProduct.id)
+          .eq('supplier_id', user.id) // Ensure user owns this product
 
         if (error) throw error
         message.success('Product updated successfully')
@@ -797,6 +1288,7 @@ const AdvancedProductManager: React.FC = () => {
       setFeatures([''])
       setSpecifications({})
       setAPlusSections([])
+      // Don't reset simpleFields and informationSections
       setValidationErrors({})
       setModalOpen(false)
       setEditingProduct(null)
@@ -814,12 +1306,44 @@ const AdvancedProductManager: React.FC = () => {
   // Load product for editing
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product)
-    form.setFieldsValue(product)
+
+    // Set all fields including the new ones
+    const formValues = {
+      ...product,
+      features: product.features || [],
+      tags: product.tags || [],
+      // Product Details fields with defaults
+      weight: product.weight || null,
+      length: product.length || null,
+      width: product.width || null,
+      height: product.height || null,
+      manufacturer: product.manufacturer || '',
+      model_number: product.model_number || '',
+      warranty_text: product.warranty_text || '',
+      shipping_requirements: product.shipping_requirements || '',
+      origin_country: product.origin_country || null,
+      // Pricing fields with defaults
+      cost_price: product.cost_price || 0,
+      // Product Information fields with defaults
+      description: product.description || '',
+      included_items: product.included_items || [],
+      compatibility: product.compatibility || '',
+      safety_warnings: product.safety_warnings || '',
+      care_instructions: product.care_instructions || '',
+      specifications: product.specifications || '',
+      seo_title: product.seo_title || '',
+      seo_description: product.seo_description || ''
+    }
+
+    form.setFieldsValue(formValues)
     setProductImages(product.images || [])
     setProductVariants(product.variants || [])
     setProductFAQs(product.faqs || [])
+    setAPlusSections(product.a_plus_sections || [])
     setFeatures(product.features?.length > 0 ? product.features : [''])
     setSpecifications(product.specifications || {})
+    setSimpleFields(product.simple_fields || [])
+    setInformationSections(product.information_sections || [])
     setModalOpen(true)
   }
 
@@ -955,7 +1479,7 @@ const AdvancedProductManager: React.FC = () => {
           <Button icon={<ReloadOutlined />} onClick={fetchProducts}>
             Refresh
           </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddProduct}>
             Add Product
           </Button>
         </Space>
@@ -964,7 +1488,7 @@ const AdvancedProductManager: React.FC = () => {
       {/* Filters and Search */}
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={16}>
-          <Col span={8}>
+          <Col span={6}>
             <Search
               placeholder="Search products..."
               value={searchValue}
@@ -1037,6 +1561,7 @@ const AdvancedProductManager: React.FC = () => {
           setProductFAQs([])
           setFeatures([''])
           setSpecifications({})
+          // Don't reset simpleFields and informationSections
         }}
         width={1200}
         footer={[
@@ -1068,6 +1593,7 @@ const AdvancedProductManager: React.FC = () => {
             onChange={setActiveTab}
             items={tabItems}
           />
+          {modalOpen && <FloatingHelp tabId={activeTab} />}
         </Form>
       </Modal>
     </div>
