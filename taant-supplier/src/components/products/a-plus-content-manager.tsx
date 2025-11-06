@@ -30,6 +30,8 @@ import {
   BoldOutlined,
   ItalicOutlined,
   UnderlineOutlined,
+  UnorderedListOutlined,
+  OrderedListOutlined,
 } from '@ant-design/icons'
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface'
 
@@ -45,6 +47,7 @@ interface APlusSection {
     italic?: boolean
     underline?: boolean
     align?: 'left' | 'center' | 'right'
+    listType?: 'none' | 'bullet' | 'number'
   }
 }
 
@@ -70,7 +73,8 @@ const APlusContentManager: React.FC<APlusContentManagerProps> = ({ sections, onC
         bold: false,
         italic: false,
         underline: false,
-        align: 'left'
+        align: 'left',
+        listType: 'none'
       }
     }
     onChange([...sections, newSection])
@@ -97,6 +101,43 @@ const APlusContentManager: React.FC<APlusContentManagerProps> = ({ sections, onC
     ))
   }
 
+  // Format text selection with list
+  const formatSelectionAsList = (sectionId: string, listType: 'bullet' | 'number') => {
+    const section = sections.find(s => s.id === sectionId)
+    if (!section) return
+
+    const textarea = document.querySelector(`textarea[data-section-id="${sectionId}"]`) as HTMLTextAreaElement
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selectedText = section.content.substring(start, end)
+
+    if (selectedText) {
+      let formattedText: string
+      if (listType === 'bullet') {
+        formattedText = selectedText.split('\n').map(line => `• ${line}`).join('\n')
+      } else {
+        formattedText = selectedText.split('\n').map((line, index) => `${index + 1}. ${line}`).join('\n')
+      }
+
+      const newContent = section.content.substring(0, start) + formattedText + section.content.substring(end)
+      updateSection(sectionId, 'content', newContent)
+
+      // Update formatting
+      updateFormatting(sectionId, { ...section.formatting, listType })
+
+      // Restore cursor position
+      setTimeout(() => {
+        textarea.focus()
+        textarea.setSelectionRange(start, start + formattedText.length)
+      }, 100)
+    } else {
+      // Apply list formatting to entire content
+      updateFormatting(sectionId, { ...section.formatting, listType })
+    }
+  }
+
   // Handle image upload for sections
   const handleImageUpload = (sectionId: string) => (file: any) => {
     const isImage = file.type.startsWith('image/')
@@ -121,24 +162,27 @@ const APlusContentManager: React.FC<APlusContentManagerProps> = ({ sections, onC
 
   // Text formatting toolbar
   const FormattingToolbar = ({ sectionId, formatting }: { sectionId: string; formatting: APlusSection['formatting'] }) => (
-    <Space size="small" style={{ marginBottom: 8, padding: 8, background: '#f5f5f5', borderRadius: 4 }}>
+    <Space size="small" style={{ marginBottom: 8, padding: 8, background: '#f5f5f5', borderRadius: 4, flexWrap: 'wrap' }}>
       <Button
         size="small"
         type={formatting?.bold ? 'primary' : 'default'}
         icon={<BoldOutlined />}
         onClick={() => updateFormatting(sectionId, { ...formatting, bold: !formatting?.bold })}
+        title="Bold"
       />
       <Button
         size="small"
         type={formatting?.italic ? 'primary' : 'default'}
         icon={<ItalicOutlined />}
         onClick={() => updateFormatting(sectionId, { ...formatting, italic: !formatting?.italic })}
+        title="Italic"
       />
       <Button
         size="small"
         type={formatting?.underline ? 'primary' : 'default'}
         icon={<UnderlineOutlined />}
         onClick={() => updateFormatting(sectionId, { ...formatting, underline: !formatting?.underline })}
+        title="Underline"
       />
       <Divider type="vertical" />
       <Button
@@ -146,18 +190,36 @@ const APlusContentManager: React.FC<APlusContentManagerProps> = ({ sections, onC
         type={formatting?.align === 'left' ? 'primary' : 'default'}
         icon={<AlignLeftOutlined />}
         onClick={() => updateFormatting(sectionId, { ...formatting, align: 'left' })}
+        title="Align Left"
       />
       <Button
         size="small"
         type={formatting?.align === 'center' ? 'primary' : 'default'}
         icon={<AlignCenterOutlined />}
         onClick={() => updateFormatting(sectionId, { ...formatting, align: 'center' })}
+        title="Align Center"
       />
       <Button
         size="small"
         type={formatting?.align === 'right' ? 'primary' : 'default'}
         icon={<AlignRightOutlined />}
         onClick={() => updateFormatting(sectionId, { ...formatting, align: 'right' })}
+        title="Align Right"
+      />
+      <Divider type="vertical" />
+      <Button
+        size="small"
+        type={formatting?.listType === 'bullet' ? 'primary' : 'default'}
+        icon={<UnorderedListOutlined />}
+        onClick={() => formatSelectionAsList(sectionId, 'bullet')}
+        title="Bullet List"
+      />
+      <Button
+        size="small"
+        type={formatting?.listType === 'number' ? 'primary' : 'default'}
+        icon={<OrderedListOutlined />}
+        onClick={() => formatSelectionAsList(sectionId, 'number')}
+        title="Numbered List"
       />
     </Space>
   )
@@ -172,9 +234,52 @@ const APlusContentManager: React.FC<APlusContentManagerProps> = ({ sections, onC
     if (formatting?.underline) style.textDecoration = 'underline'
     if (formatting?.align) style.textAlign = formatting.align
 
+    // Process list formatting
+    const processContent = (text: string) => {
+      const lines = text.split('\n')
+      return lines.map((line, index) => {
+        // Check for bullet points
+        if (line.trim().startsWith('• ')) {
+          return (
+            <li key={index} style={{ marginLeft: '20px', listStyle: 'disc' }}>
+              {line.trim().substring(2)}
+            </li>
+          )
+        }
+        // Check for numbered lists
+        const numberedMatch = line.trim().match(/^\d+\.\s+(.*)/)
+        if (numberedMatch) {
+          return (
+            <li key={index} style={{ marginLeft: '20px', listStyle: 'decimal' }}>
+              {numberedMatch[1]}
+            </li>
+          )
+        }
+        // Regular line
+        return line ? (
+          <div key={index} style={{ marginBottom: '4px' }}>
+            {line}
+          </div>
+        ) : <div key={index} style={{ height: '1em' }} />
+      })
+    }
+
+    // Determine if content is a list
+    const isList = formatting?.listType && formatting.listType !== 'none'
+
+    if (isList) {
+      return (
+        <div style={style}>
+          <ul style={{ margin: 0, paddingLeft: '20px', listStyle: formatting.listType === 'bullet' ? 'disc' : 'decimal' }}>
+            {processContent(content)}
+          </ul>
+        </div>
+      )
+    }
+
     return (
       <div style={style} className="whitespace-pre-wrap">
-        {content}
+        {processContent(content)}
       </div>
     )
   }
@@ -278,11 +383,18 @@ const APlusContentManager: React.FC<APlusContentManagerProps> = ({ sections, onC
                   />
                   <FormattingToolbar sectionId={section.id} formatting={section.formatting} />
                   <Input.TextArea
-                    placeholder="Content for this section..."
+                    data-section-id={section.id}
+                    placeholder="Content for this section... (Tip: Select text and click formatting buttons or use bullet/number buttons for lists)"
                     value={section.content}
                     onChange={(e) => updateSection(section.id, 'content', e.target.value)}
                     rows={4}
-                    style={{ resize: 'none' }}
+                    style={{
+                      resize: 'none',
+                      fontWeight: section.formatting?.bold ? 'bold' : 'normal',
+                      fontStyle: section.formatting?.italic ? 'italic' : 'normal',
+                      textDecoration: section.formatting?.underline ? 'underline' : 'none',
+                      textAlign: section.formatting?.align || 'left'
+                    }}
                   />
                 </div>
               </Col>
@@ -377,6 +489,9 @@ const APlusContentManager: React.FC<APlusContentManagerProps> = ({ sections, onC
               <li>Use Image + Text for images with text on the right</li>
               <li>Use Text + Image for text with images on the right</li>
               <li>Format text with bold, italic, underline, and alignment options</li>
+              <li>Create bullet points and numbered lists for better organization</li>
+              <li>Select specific text and apply formatting, or format entire content</li>
+              <li>Formatting is now visible in the textarea as you type</li>
               <li>Add optional titles to organize your content</li>
               <li>Upload high-quality images (max 5MB each)</li>
             </ul>
