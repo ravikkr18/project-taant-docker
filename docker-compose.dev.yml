@@ -1,18 +1,17 @@
 services:
-  taant-front:
+  taant-admin:
     build:
-      context: ./taant-front
+      context: ./taant-admin
       dockerfile: Dockerfile.dev
     ports:
       - "3000:3000"
     volumes:
-      - ./taant-front:/app
+      - ./taant-admin:/app
       - /app/node_modules
+    env_file:
+      - ./taant-admin/.env
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      - NEXT_PUBLIC_API_URL=http://localhost:4000
       - PORT=3000
     depends_on:
       - taant-backend
@@ -40,19 +39,20 @@ services:
       - taant-network
     restart: unless-stopped
 
-  taant-admin:
+  taant-front:
     build:
-      context: ./taant-admin
+      context: ./taant-front
       dockerfile: Dockerfile.dev
     ports:
       - "3007:3007"
     volumes:
-      - ./taant-admin:/app
+      - ./taant-front:/app
       - /app/node_modules
-    env_file:
-      - ./taant-admin/.env
     environment:
       - NODE_ENV=development
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_API_URL=http://94.136.187.1:4000
       - PORT=3007
     depends_on:
       - taant-backend
@@ -69,6 +69,8 @@ services:
     volumes:
       - ./taant-backend:/app
       - /app/node_modules
+    env_file:
+      - .env
     environment:
       - NODE_ENV=development
       - SUPABASE_URL=${SUPABASE_URL}
