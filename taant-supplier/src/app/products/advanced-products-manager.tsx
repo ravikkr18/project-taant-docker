@@ -1359,7 +1359,7 @@ const AdvancedProductManager: React.FC = () => {
       }
 
       // Variants validation
-      const variantsWithoutImages = productVariants.filter(v => !v.image_url && v.is_active)
+      const variantsWithoutImages = productVariants.filter(v => !v.image_url && !v.image_id && v.is_active)
       if (variantsWithoutImages.length > 0) {
         errors['3'] = `${variantsWithoutImages.length} active variant(s) missing images`
       }

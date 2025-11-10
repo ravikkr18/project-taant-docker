@@ -106,9 +106,11 @@ const VariantManager: React.FC<VariantManagerProps> = ({
 }) => {
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [isEditingMode, setIsEditingMode] = useState(false)
   const [form] = Form.useForm()
   const [customOptions, setCustomOptions] = useState<string[]>([])
   const [selectedImageUrl, setSelectedImageUrl] = useState<string>('')
+  const [uploadedImagePreview, setUploadedImagePreview] = useState<string>('')
 
   // Get all option types (common + custom)
   const getAllOptionTypes = () => {
@@ -251,8 +253,10 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
       position: variants.length
     }
     setEditingVariant(newVariant)
+    setIsEditingMode(false)
     form.setFieldsValue(newVariant)
-    setSelectedImageUrl('') // Reset selected image for new variant
+    setSelectedImageUrl('')
+    setUploadedImagePreview('')
     setModalOpen(true)
   }
 
@@ -305,7 +309,7 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
   }
 
   // Convert old variant format to new format (for backward compatibility)
-  const convertVariantToNewFormat = (variant: any): ProductVariant => {
+  const convertVariantToNewFormat = (variant: any, preserveIds: boolean = false): ProductVariant => {
     if (variant.options && Array.isArray(variant.options)) {
       return variant
     }
@@ -315,19 +319,39 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
     const timestamp = Date.now()
 
     if (variant.option1_name && variant.option1_value) {
-      options.push({ id: `opt-${timestamp}-1`, name: variant.option1_name, value: variant.option1_value })
+      options.push({
+        id: preserveIds && variant.id ? `${variant.id}-opt-1` : `opt-${timestamp}-1`,
+        name: variant.option1_name,
+        value: variant.option1_value
+      })
     }
     if (variant.option2_name && variant.option2_value) {
-      options.push({ id: `opt-${timestamp}-2`, name: variant.option2_name, value: variant.option2_value })
+      options.push({
+        id: preserveIds && variant.id ? `${variant.id}-opt-2` : `opt-${timestamp}-2`,
+        name: variant.option2_name,
+        value: variant.option2_value
+      })
     }
     if (variant.option3_name && variant.option3_value) {
-      options.push({ id: `opt-${timestamp}-3`, name: variant.option3_name, value: variant.option3_value })
+      options.push({
+        id: preserveIds && variant.id ? `${variant.id}-opt-3` : `opt-${timestamp}-3`,
+        name: variant.option3_name,
+        value: variant.option3_value
+      })
     }
     if (variant.option4_name && variant.option4_value) {
-      options.push({ id: `opt-${timestamp}-4`, name: variant.option4_name, value: variant.option4_value })
+      options.push({
+        id: preserveIds && variant.id ? `${variant.id}-opt-4` : `opt-${timestamp}-4`,
+        name: variant.option4_name,
+        value: variant.option4_value
+      })
     }
     if (variant.option5_name && variant.option5_value) {
-      options.push({ id: `opt-${timestamp}-5`, name: variant.option5_name, value: variant.option5_value })
+      options.push({
+        id: preserveIds && variant.id ? `${variant.id}-opt-5` : `opt-${timestamp}-5`,
+        name: variant.option5_name,
+        value: variant.option5_value
+      })
     }
 
     return {
@@ -350,10 +374,15 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
   
   // Edit existing variant
   const handleEdit = (variant: ProductVariant) => {
-    const convertedVariant = convertVariantToNewFormat(variant)
+    const convertedVariant = convertVariantToNewFormat(variant, true) // Preserve IDs when editing
+    // Preserve existing image_id for edited variants
+    const existingImageId = variant.image_id
+    const existingImageUrl = productImages.find(img => img.id === existingImageId)?.url
+
     setEditingVariant(convertedVariant)
+    setIsEditingMode(true)
     form.setFieldsValue(convertedVariant)
-    setSelectedImageUrl('') // Reset selected image URL since DB doesn't store image_url
+    setSelectedImageUrl(existingImageUrl || '') // Set existing image URL if found
     setModalOpen(true)
   }
 
@@ -366,25 +395,44 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
           values.sku = `VAR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
         }
 
+        let finalImageId = values.image_id
+        let finalImageUrl = values.image_url
+
+        if (selectedImageUrl) {
+          if (selectedImageUrl.startsWith('blob:')) {
+            // For uploaded images (blob URLs), keep the existing image_id but set the image_url to the blob
+            finalImageId = editingVariant?.image_id || null
+            finalImageUrl = selectedImageUrl
+          } else {
+            // For existing product images, get both the image_id and image_url
+            const selectedImage = productImages.find(img => img.url === selectedImageUrl)
+            finalImageId = selectedImage?.id || null
+            finalImageUrl = selectedImage?.url || selectedImageUrl
+          }
+        }
+
         const updatedVariant = {
           ...editingVariant,
           ...values,
-          image_id: selectedImageUrl ? productImages.find(img => img.url === selectedImageUrl)?.id : values.image_id // Store image_id instead of image_url
+          image_id: finalImageId,
+          image_url: finalImageUrl
         }
 
-        if (editingVariant.id.startsWith('temp-')) {
+        if (isEditingMode) {
+          // Existing variant - update it
+          onChange(variants.map(v => v.id === editingVariant.id ? updatedVariant : v))
+          message.success('Variant updated successfully')
+        } else {
           // New variant
           onChange([...variants, updatedVariant])
           message.success('Variant created successfully')
-        } else {
-          // Existing variant
-          onChange(variants.map(v => v.id === editingVariant.id ? updatedVariant : v))
-          message.success('Variant updated successfully')
         }
 
         setModalOpen(false)
         setEditingVariant(null)
-        setSelectedImageUrl('') // Reset selected image URL
+        setIsEditingMode(false)
+        setSelectedImageUrl('')
+        setUploadedImagePreview('')
         form.resetFields()
       }
     } catch (error) {
@@ -401,11 +449,11 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
 
   // Duplicate variant
   const handleDuplicate = (variant: ProductVariant) => {
-    const convertedVariant = convertVariantToNewFormat(variant)
+    const convertedVariant = convertVariantToNewFormat(variant, false) // Don't preserve IDs for duplicate
     const duplicated: ProductVariant = {
       ...convertedVariant,
       id: `temp-${Date.now()}`,
-      title: `${variant.title} (Copy)`,
+      title: `${variant.title || 'Untitled Variant'} (Copy)`,
       sku: '',
       options: convertedVariant.options.map((option, index) => ({
         ...option,
@@ -478,41 +526,50 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
     {
       title: 'Image',
       key: 'image',
-      render: (_: any, record: ProductVariant) => (
-        <div style={{ textAlign: 'center' }}>
-          {record.image_id ? (
+      render: (_: any, record: ProductVariant) => {
+        // Try to get image URL from multiple sources
+        const imageUrl = record.image_url ||
+          (record.image_data && record.image_data.url) ||
+          (record.image_id && productImages.find(img => img.id === record.image_id)?.url);
+
+        return (
+          <div style={{ textAlign: 'center' }}>
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={record.title || 'Variant image'}
+                style={{
+                  width: 50,
+                  height: 50,
+                  objectFit: 'cover',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: 4
+                }}
+                onError={(e) => {
+                  // Fallback to checkmark if image fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const fallback = target.nextElementSibling as HTMLDivElement;
+                  if (fallback) fallback.style.display = 'flex';
+                }}
+              />
+            ) : null}
             <div style={{
               width: 50,
               height: 50,
-              border: '1px solid #d9d9d9',
+              border: record.image_id ? '1px solid #d9d9d9' : '2px dashed #ff4d4f',
               borderRadius: 4,
-              display: 'flex',
+              display: imageUrl ? 'none' : 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#52c41a',
-              backgroundColor: '#f6ffed'
+              color: record.image_id ? '#52c41a' : '#ff4d4f',
+              backgroundColor: record.image_id ? '#f6ffed' : '#fff2f0'
             }}>
-              <CheckOutlined />
+              {record.image_id ? <CheckOutlined /> : <CameraOutlined />}
             </div>
-          ) : (
-            <Tooltip title="Each variant should have at least one image">
-              <div style={{
-                width: 50,
-                height: 50,
-                border: '2px dashed #ff4d4f',
-                borderRadius: 4,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#ff4d4f',
-                backgroundColor: '#fff2f0'
-              }}>
-                <CameraOutlined />
-              </div>
-            </Tooltip>
-          )}
-        </div>
-      ),
+          </div>
+        );
+      },
     },
     {
       title: 'Pricing',
@@ -690,12 +747,14 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
 
       {/* Edit/Create Modal */}
       <Modal
-        title={editingVariant?.id.startsWith('temp-') ? 'Create Variant' : 'Edit Variant'}
+        title={isEditingMode ? 'Edit Variant' : 'Create Variant'}
         open={modalOpen}
         onCancel={() => {
           setModalOpen(false)
           setEditingVariant(null)
-          setSelectedImageUrl('') // Reset selected image URL
+          setIsEditingMode(false)
+          setSelectedImageUrl('')
+          setUploadedImagePreview('')
           form.resetFields()
         }}
         width={800}
@@ -703,13 +762,15 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
           <Button key="cancel" onClick={() => {
             setModalOpen(false)
             setEditingVariant(null)
-            setSelectedImageUrl('') // Reset selected image URL
+            setIsEditingMode(false)
+            setSelectedImageUrl('')
+            setUploadedImagePreview('')
             form.resetFields()
           }}>
             Cancel
           </Button>,
           <Button key="submit" type="primary" onClick={() => form.submit()}>
-            {editingVariant?.id.startsWith('temp-') ? 'Create Variant' : 'Update Variant'}
+            {isEditingMode ? 'Update Variant' : 'Create Variant'}
           </Button>,
         ]}
       >
@@ -819,7 +880,8 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
                   if (file) {
                     const previewUrl = URL.createObjectURL(file)
                     form.setFieldsValue({ image_url: previewUrl })
-                    setSelectedImageUrl(previewUrl) // Update selected image URL
+                    setSelectedImageUrl(previewUrl)
+                    setUploadedImagePreview(previewUrl)
                     message.success('Variant image uploaded')
                   }
                 }}
@@ -849,6 +911,59 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
               >
                 <CameraOutlined style={{ fontSize: 20 }} />
               </div>
+              {/* Show uploaded image preview */}
+              {uploadedImagePreview && (
+                <div
+                  onClick={() => {
+                    form.setFieldsValue({ image_url: uploadedImagePreview })
+                    setSelectedImageUrl(uploadedImagePreview)
+                    message.success('Selected uploaded image')
+                  }}
+                  style={{
+                    width: 80,
+                    height: 80,
+                    border: selectedImageUrl === uploadedImagePreview ? '2px solid #1890ff' : '1px solid #d9d9d9',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                    overflow: 'hidden',
+                    transition: 'all 0.2s',
+                    position: 'relative'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#1890ff'
+                    e.currentTarget.style.transform = 'scale(1.05)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = selectedImageUrl === uploadedImagePreview ? '#1890ff' : '#d9d9d9'
+                    e.currentTarget.style.transform = 'scale(1)'
+                  }}
+                >
+                  <Image
+                    src={uploadedImagePreview}
+                    alt="Uploaded variant image"
+                    width={80}
+                    height={80}
+                    style={{ objectFit: 'cover' }}
+                    preview={false}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    top: 2,
+                    right: 2,
+                    background: '#52c41a',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: 16,
+                    height: 16,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '10px'
+                  }}>
+                    ✓
+                  </div>
+                </div>
+              )}
               {productImages.map(image => (
                 <div
                   key={image.id}
