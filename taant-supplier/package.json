@@ -15,7 +15,11 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
-    "test:all": "npm run test && npm run test:e2e"
+    "test:all": "npm run test && npm run test:e2e",
+    "seed:products": "node scripts/seed-products.js",
+    "seed:supplier": "node scripts/create-supplier.js",
+    "seed:setup": "npm run seed:supplier && npm run seed:products",
+    "seed:all": "npm run seed:products"
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
@@ -34,7 +38,7 @@
     "@refinedev/react-hook-form": "^4.8.18",
     "@refinedev/supabase": "^5.9.8",
     "@supabase/ssr": "^0.0.10",
-    "@supabase/supabase-js": "^2.39.7",
+    "@supabase/supabase-js": "^2.80.0",
     "@tanstack/react-query": "^5.90.7",
     "@tiptap/extension-bold": "^3.10.2",
     "@tiptap/extension-bullet-list": "^3.10.2",
@@ -50,8 +54,10 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "dayjs": "^1.11.10",
+    "dotenv": "^17.2.3",
     "lucide-react": "^0.323.0",
     "next": "14.1.0",
+    "pg": "^8.16.3",
     "react": "^18.2.0",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
@@ -63,6 +69,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.1.0",
     "@playwright/test": "^1.56.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",

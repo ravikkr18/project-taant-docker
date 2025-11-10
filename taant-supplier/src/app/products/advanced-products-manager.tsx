@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   Button,
   Card,
@@ -253,6 +253,8 @@ const AdvancedProductManager: React.FC = () => {
   // Validation errors tracking
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const hasInitialized = useRef(false)
 
   // Debug: Log when validationErrors changes
   useEffect(() => {
@@ -910,26 +912,83 @@ const AdvancedProductManager: React.FC = () => {
   }
 
   // Fetch products
-  const fetchProducts = async () => {
+  const fetchProducts = async (page = pagination.current, pageSize = pagination.pageSize) => {
     setLoading(true)
     try {
       const supplierId = await getSupplierId()
 
-      const data = await apiClient.getProducts(supplierId)
+      const response = await apiClient.getProducts(
+        supplierId,
+        categoryFilter,
+        page,
+        pageSize,
+        searchValue,
+        statusFilter
+      )
 
-      setProducts(data || [])
-      setPagination(prev => ({ ...prev, total: data?.length || 0 }))
+      // Check if response has the expected structure
+      if (response && response.data) {
+        setProducts(response.data || [])
+        setPagination(prev => ({
+          ...prev,
+          current: response.pagination?.page || page,
+          pageSize: response.pagination?.limit || pageSize,
+          total: response.pagination?.total || 0
+        }))
+      } else {
+        message.error('Invalid API response format')
+        setProducts([])
+        setPagination(prev => ({ ...prev, total: 0 }))
+      }
     } catch (error) {
-      message.error('Failed to fetch products')
-      console.error(error)
+      // Handle cache-related errors specifically
+      if (error.message?.includes('Cache expired') || error.message?.includes('304')) {
+        message.error('Cache expired, refreshing data...')
+        // Retry once after a short delay for cache issues
+        setTimeout(() => {
+          fetchProducts(page, pageSize)
+        }, 1000)
+      } else {
+        message.error(`Failed to fetch products: ${error.message || 'Unknown error'}`)
+        setProducts([])
+        setPagination(prev => ({ ...prev, total: 0 }))
+      }
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchProducts()
+    // Initial page load only - prevent double execution in strict mode
+    console.log('Products Manager useEffect triggered, hasInitialized:', hasInitialized.current)
+    if (hasInitialized.current) return
+
+    // Set ref immediately to prevent second execution
+    hasInitialized.current = true
+
+    const loadInitialData = async () => {
+      console.log('Starting initial data load...')
+      setIsInitialLoad(true)
+      await fetchProducts(1, 10) // Use hardcoded initial page size
+      setIsInitialLoad(false)
+      console.log('Initial data load completed.')
+    }
+    loadInitialData()
   }, [])
+
+  // Refetch products when filters change (but not on initial load)
+  useEffect(() => {
+    // Skip if this is the initial load
+    if (isInitialLoad) {
+      return
+    }
+
+    const debounceTimer = setTimeout(() => {
+      fetchProducts(1, pagination.pageSize)
+    }, 300) // Debounce search
+
+    return () => clearTimeout(debounceTimer)
+  }, [searchValue, statusFilter, categoryFilter])
 
   // Image Management Functions
   const handleImageUpload: AntUploadProps['onChange'] = async ({ fileList }) => {
@@ -1104,7 +1163,7 @@ const AdvancedProductManager: React.FC = () => {
     }
 
     // Variants validation
-    const variantsWithoutImages = productVariants.filter(v => !v.image_url && v.is_active)
+    const variantsWithoutImages = productVariants.filter(v => !v.image_url && !v.image_id && v.is_active)
     if (variantsWithoutImages.length > 0) {
       errors['3'] = `${variantsWithoutImages.length} active variant(s) missing images`
     }
@@ -1218,7 +1277,7 @@ const AdvancedProductManager: React.FC = () => {
     }
 
     // Variants validation
-    const variantsWithoutImages = productVariants.filter(v => !v.image_url && v.is_active)
+    const variantsWithoutImages = productVariants.filter(v => !v.image_url && !v.image_id && v.is_active)
     if (variantsWithoutImages.length > 0) {
       errors['3'] = `${variantsWithoutImages.length} active variant(s) missing images`
     }
@@ -1592,8 +1651,15 @@ const AdvancedProductManager: React.FC = () => {
       key: 'actions',
       render: (_: any, record: Product) => (
         <Space>
-          <Tooltip title="View">
-            <Button size="small" icon={<EyeOutlined />} />
+          <Tooltip title="View on Store">
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => {
+                const frontendUrl = `http://94.136.187.1:3007/products/${record.slug}`
+                window.open(frontendUrl, '_blank')
+              }}
+            />
           </Tooltip>
           <Tooltip title="Edit">
             <Button
@@ -1695,8 +1761,9 @@ const AdvancedProductManager: React.FC = () => {
             showQuickJumper: true,
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} of ${total} products`,
+            pageSizeOptions: ['10', '20', '30', '40'],
             onChange: (page, pageSize) => {
-              setPagination(prev => ({ ...prev, current: page, pageSize: pageSize || 10 }))
+              fetchProducts(page, pageSize || 10)
             },
           }}
         />

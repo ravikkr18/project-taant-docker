@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
@@ -40,10 +40,19 @@ export default function ProductsPage() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const authChecked = useRef(false)
 
   useEffect(() => {
+    // Prevent double execution in React Strict Mode
+    console.log('Page useEffect triggered, authChecked:', authChecked.current)
+    if (authChecked.current) return
+
+    // Set ref immediately to prevent second execution
+    authChecked.current = true
+
     async function checkUser() {
       try {
+        console.log('Starting authentication check...')
         const { data: { user } } = await supabase.auth.getUser()
 
         if (!user) {
@@ -69,6 +78,7 @@ export default function ProductsPage() {
         router.push('/login')
       } finally {
         setLoading(false)
+        console.log('Authentication check completed.')
       }
     }
 

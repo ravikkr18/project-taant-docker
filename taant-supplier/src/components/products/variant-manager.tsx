@@ -33,6 +33,7 @@ import {
   DollarOutlined,
   InboxOutlined,
   StarOutlined,
+  CheckOutlined,
 } from '@ant-design/icons'
 
 const { Text } = Typography
@@ -49,7 +50,6 @@ interface ProductVariant {
   weight?: number
   options: Array<{ id: string; name: string; value: string }> // Dynamic options with IDs
   image_id?: string
-  image_url?: string
   is_active: boolean
   position: number
 }
@@ -108,6 +108,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({
   const [modalOpen, setModalOpen] = useState(false)
   const [form] = Form.useForm()
   const [customOptions, setCustomOptions] = useState<string[]>([])
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string>('')
 
   // Get all option types (common + custom)
   const getAllOptionTypes = () => {
@@ -251,6 +252,7 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
     }
     setEditingVariant(newVariant)
     form.setFieldsValue(newVariant)
+    setSelectedImageUrl('') // Reset selected image for new variant
     setModalOpen(true)
   }
 
@@ -345,11 +347,13 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
     }
   }
 
+  
   // Edit existing variant
   const handleEdit = (variant: ProductVariant) => {
     const convertedVariant = convertVariantToNewFormat(variant)
     setEditingVariant(convertedVariant)
     form.setFieldsValue(convertedVariant)
+    setSelectedImageUrl('') // Reset selected image URL since DB doesn't store image_url
     setModalOpen(true)
   }
 
@@ -364,20 +368,23 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
 
         const updatedVariant = {
           ...editingVariant,
-          ...values
+          ...values,
+          image_id: selectedImageUrl ? productImages.find(img => img.url === selectedImageUrl)?.id : values.image_id // Store image_id instead of image_url
         }
 
         if (editingVariant.id.startsWith('temp-')) {
           // New variant
           onChange([...variants, updatedVariant])
+          message.success('Variant created successfully')
         } else {
           // Existing variant
           onChange(variants.map(v => v.id === editingVariant.id ? updatedVariant : v))
+          message.success('Variant updated successfully')
         }
 
-        message.success('Variant saved successfully')
         setModalOpen(false)
         setEditingVariant(null)
+        setSelectedImageUrl('') // Reset selected image URL
         form.resetFields()
       }
     } catch (error) {
@@ -473,14 +480,20 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
       key: 'image',
       render: (_: any, record: ProductVariant) => (
         <div style={{ textAlign: 'center' }}>
-          {record.image_url ? (
-            <Image
-              src={record.image_url}
-              alt={record.title}
-              width={50}
-              height={50}
-              style={{ objectFit: 'cover', borderRadius: 4 }}
-            />
+          {record.image_id ? (
+            <div style={{
+              width: 50,
+              height: 50,
+              border: '1px solid #d9d9d9',
+              borderRadius: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#52c41a',
+              backgroundColor: '#f6ffed'
+            }}>
+              <CheckOutlined />
+            </div>
           ) : (
             <Tooltip title="Each variant should have at least one image">
               <div style={{
@@ -682,6 +695,7 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
         onCancel={() => {
           setModalOpen(false)
           setEditingVariant(null)
+          setSelectedImageUrl('') // Reset selected image URL
           form.resetFields()
         }}
         width={800}
@@ -689,6 +703,7 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
           <Button key="cancel" onClick={() => {
             setModalOpen(false)
             setEditingVariant(null)
+            setSelectedImageUrl('') // Reset selected image URL
             form.resetFields()
           }}>
             Cancel
@@ -707,7 +722,14 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
             </Col>
             <Col span={12}>
               <Form.Item name="sku" label="SKU">
-                <Input placeholder="Auto-generated if empty" />
+                <Input
+                  placeholder="Auto-generated if empty"
+                  disabled={!editingVariant?.id.startsWith('temp-') && editingVariant?.sku !== ''}
+                  title={editingVariant?.id.startsWith('temp-') ?
+                    "Enter SKU or leave empty to auto-generate" :
+                    "SKU cannot be modified once generated"
+                  }
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -797,6 +819,7 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
                   if (file) {
                     const previewUrl = URL.createObjectURL(file)
                     form.setFieldsValue({ image_url: previewUrl })
+                    setSelectedImageUrl(previewUrl) // Update selected image URL
                     message.success('Variant image uploaded')
                   }
                 }}
@@ -831,12 +854,13 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
                   key={image.id}
                   onClick={() => {
                     form.setFieldsValue({ image_url: image.url })
+                    setSelectedImageUrl(image.url) // Update selected image URL state
                     message.success(`Selected image: ${image.alt_text}`)
                   }}
                   style={{
                     width: 80,
                     height: 80,
-                    border: form.getFieldValue('image_url') === image.url ? '2px solid #1890ff' : '1px solid #d9d9d9',
+                    border: selectedImageUrl === image.url ? '2px solid #1890ff' : '1px solid #d9d9d9',
                     borderRadius: 4,
                     cursor: 'pointer',
                     overflow: 'hidden',
@@ -848,7 +872,7 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
                     e.currentTarget.style.transform = 'scale(1.05)'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = form.getFieldValue('image_url') === image.url ? '#1890ff' : '#d9d9d9'
+                    e.currentTarget.style.borderColor = selectedImageUrl === image.url ? '#1890ff' : '#d9d9d9'
                     e.currentTarget.style.transform = 'scale(1)'
                   }}
                 >
@@ -860,7 +884,7 @@ const DynamicOptions = ({ options, onChange, onAdd, onRemove }: {
                     style={{ objectFit: 'cover' }}
                     preview={false}
                   />
-                  {form.getFieldValue('image_url') === image.url && (
+                  {selectedImageUrl === image.url && (
                     <div style={{
                       position: 'absolute',
                       top: 2,
