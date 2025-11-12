@@ -76,7 +76,9 @@
       "Bash(npm run preview:*)",
       "Bash(npx shadcn-svelte@latest init:*)",
       "Bash(git pull:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(PGPASSWORD=\"d$z#6W&K@8pL!qR3\" psql:*)",
+      "Bash(PGPASSWORD=\"WC8Nkm7D2SHbmMXW\" psql:*)"
     ],
     "deny": [],
     "ask": []
