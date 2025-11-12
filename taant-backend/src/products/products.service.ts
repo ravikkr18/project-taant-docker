@@ -610,4 +610,210 @@ export class ProductsService {
 
     return { success: true, message: 'Variant deleted successfully' };
   }
+
+  // A+ Content Images methods
+  async getAPlusContentImages(productId: string, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this product
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot access this product\'s content images');
+    }
+
+    const { data, error } = await supabase
+      .from('a_plus_content_images')
+      .select('*')
+      .eq('product_id', productId)
+      .eq('is_active', true)
+      .order('position', { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch content images: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  async createAPlusContentImage(productId: string, imageData: any, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this product
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this product\'s content images');
+    }
+
+    // Get next position
+    const { data: maxPosition } = await supabase
+      .from('a_plus_content_images')
+      .select('position')
+      .eq('product_id', productId)
+      .eq('is_active', true)
+      .order('position', { ascending: false })
+      .limit(1);
+
+    const nextPosition = (maxPosition?.[0]?.position || 0) + 1;
+
+    // Prepare image data
+    const newContentImage = {
+      product_id: productId,
+      url: imageData.url,
+      alt_text: imageData.alt_text || null,
+      file_name: imageData.file_name || null,
+      file_size: imageData.file_size || null,
+      file_type: imageData.file_type || null,
+      width: imageData.width || null,
+      height: imageData.height || null,
+      position: nextPosition,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('a_plus_content_images')
+      .insert([newContentImage])
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create content image: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async updateAPlusContentImage(productId: string, imageId: string, imageData: any, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this product
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this product\'s content images');
+    }
+
+    // Prepare update data
+    const updateData = {
+      url: imageData.url,
+      alt_text: imageData.alt_text || null,
+      file_name: imageData.file_name || null,
+      file_size: imageData.file_size || null,
+      file_type: imageData.file_type || null,
+      width: imageData.width || null,
+      height: imageData.height || null,
+      position: imageData.position,
+      is_active: imageData.is_active !== false,
+      updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('a_plus_content_images')
+      .update(updateData)
+      .eq('id', imageId)
+      .eq('product_id', productId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update content image: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async updateAPlusContentImagePositions(productId: string, positions: { id: string; position: number }[], userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this product
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this product\'s content images');
+    }
+
+    // Update each image position
+    const updatePromises = positions.map(({ id, position }) =>
+      supabase
+        .from('a_plus_content_images')
+        .update({ position, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('product_id', productId)
+    );
+
+    await Promise.all(updatePromises);
+
+    return { success: true, message: 'Content image positions updated successfully' };
+  }
+
+  async deleteAPlusContentImage(productId: string, imageId: string, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this product
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this product\'s content images');
+    }
+
+    const { error } = await supabase
+      .from('a_plus_content_images')
+      .delete()
+      .eq('id', imageId)
+      .eq('product_id', productId);
+
+    if (error) {
+      throw new Error(`Failed to delete content image: ${error.message}`);
+    }
+
+    return { success: true, message: 'Content image deleted successfully' };
+  }
 }

@@ -68,7 +68,7 @@ import type { UploadFile, UploadProps as AntUploadProps } from 'antd/es/upload/i
 import ImageUploadManager from '../../components/products/image-upload-manager'
 import VariantManager, { ProductVariant } from '../../components/products/variant-manager'
 import OptimizedVariantManager from '../../components/products/optimized-variant-manager'
-import APlusContentManager from '../../components/products/a-plus-content-manager'
+import APlusContentImagesManager from '../../components/products/a-plus-content-images-manager'
 // import FAQManager from '../../components/products/faq-manager' // Temporarily disabled due to react-dnd issues
 import TiptapEditor from '../../components/ui/tiptap-editor'
 import SimpleDynamicFields from '../../components/products/simple-dynamic-fields-final'
@@ -216,6 +216,7 @@ const AdvancedProductManager: React.FC = () => {
   const [productFAQs, setProductFAQs] = useState<ProductFAQ[]>([])
   const [features, setFeatures] = useState<string[]>([''])
   const [specifications, setSpecifications] = useState<Record<string, string>>({})
+  const [contentImages, setContentImages] = useState<Array<any>>([])
   const [aPlusSections, setAPlusSections] = useState<Array<{
     id: string
     type: 'text' | 'image_text' | 'text_image'
@@ -288,6 +289,22 @@ const AdvancedProductManager: React.FC = () => {
         closable
       />
     )
+  }
+
+  // Load content images for a product
+  const loadContentImages = async (productId: string) => {
+    if (!productId) {
+      setContentImages([])
+      return
+    }
+
+    try {
+      const images = await apiClient.getAPlusContentImages(productId)
+      setContentImages(images)
+    } catch (error) {
+      console.error('Failed to load content images:', error)
+      setContentImages([])
+    }
   }
 
   // Memoized tab items to ensure proper re-rendering when validationErrors changes
@@ -547,9 +564,10 @@ const AdvancedProductManager: React.FC = () => {
       ),
       children: (
         <>
-          <APlusContentManager
-            sections={aPlusSections}
-            onChange={setAPlusSections}
+          <APlusContentImagesManager
+            productId={editingProduct?.id || ''}
+            contentImages={contentImages}
+            onChange={setContentImages}
           />
             </>
       )
@@ -1229,6 +1247,7 @@ const AdvancedProductManager: React.FC = () => {
     setProductVariants([])
     setProductFAQs([])
     setAPlusSections([])
+    setContentImages([])
     // Don't reset simpleFields and informationSections - let components initialize themselves
     setValidationErrors({})
     setActiveTab('1')
@@ -1463,6 +1482,7 @@ const AdvancedProductManager: React.FC = () => {
       setFeatures([''])
       setSpecifications({})
       setAPlusSections([])
+      setContentImages([])
       // Don't reset simpleFields and informationSections
       setValidationErrors({})
       setModalOpen(false)
@@ -1515,6 +1535,10 @@ const AdvancedProductManager: React.FC = () => {
     setProductVariants(product.product_variants || product.variants || [])
     setProductFAQs(product.faqs || [])
     setAPlusSections(product.a_plus_sections || [])
+
+    // Load content images from the new table
+    loadContentImages(product.id)
+
     setFeatures(product.features?.length > 0 ? product.features : [''])
     setSpecifications(product.specifications || {})
     setSimpleFields(product.simple_fields || [])

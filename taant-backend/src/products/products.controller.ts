@@ -440,4 +440,119 @@ export class ProductsController {
       );
     }
   }
+
+  // A+ Content Images endpoints
+  @Get(':id/content-images')
+  async getAPlusContentImages(@Param('id') productId: string, @Request() req?: any) {
+    try {
+      const user = req.user;
+
+      // Get user profile to determine role and verify access
+      const profile = await this.authService.getUserProfile(user.id);
+      if (!profile) {
+        throw new HttpException('User profile not found', HttpStatus.FORBIDDEN);
+      }
+
+      const contentImages = await this.productsService.getAPlusContentImages(productId, user.id);
+      return {
+        success: true,
+        data: contentImages,
+        message: 'A+ content images retrieved successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to fetch A+ content images',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post(':id/content-images')
+  async createAPlusContentImage(
+    @Param('id') productId: string,
+    @Body() imageData: any,
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const contentImage = await this.productsService.createAPlusContentImage(productId, imageData, user.id);
+      return {
+        success: true,
+        data: contentImage,
+        message: 'A+ content image created successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to create A+ content image',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Put(':id/content-images/:imageId')
+  async updateAPlusContentImage(
+    @Param('id') productId: string,
+    @Param('imageId') imageId: string,
+    @Body() imageData: any,
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const contentImage = await this.productsService.updateAPlusContentImage(productId, imageId, imageData, user.id);
+      return {
+        success: true,
+        data: contentImage,
+        message: 'A+ content image updated successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to update A+ content image',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Put(':id/content-images/positions')
+  async updateAPlusContentImagePositions(
+    @Param('id') productId: string,
+    @Body() positionsData: { positions: { id: string; position: number }[] },
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const result = await this.productsService.updateAPlusContentImagePositions(productId, positionsData.positions, user.id);
+      return {
+        success: true,
+        data: result,
+        message: 'A+ content image positions updated successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to update A+ content image positions',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Delete(':id/content-images/:imageId')
+  async deleteAPlusContentImage(
+    @Param('id') productId: string,
+    @Param('imageId') imageId: string,
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const result = await this.productsService.deleteAPlusContentImage(productId, imageId, user.id);
+      return {
+        success: true,
+        data: result,
+        message: 'A+ content image deleted successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to delete A+ content image',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
 }

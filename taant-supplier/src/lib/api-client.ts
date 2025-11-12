@@ -282,6 +282,43 @@ class ApiClient {
     });
     return response.data;
   }
+
+  // A+ Content Images methods
+  async getAPlusContentImages(productId: string): Promise<any[]> {
+    const response = await this.request<any[]>(`/api/products/${productId}/content-images`);
+    return response.data;
+  }
+
+  async createAPlusContentImage(productId: string, imageData: any): Promise<any> {
+    const response = await this.request<any>(`/api/products/${productId}/content-images`, {
+      method: 'POST',
+      body: JSON.stringify(imageData),
+    });
+    return response.data;
+  }
+
+  async updateAPlusContentImage(productId: string, imageId: string, imageData: any): Promise<any> {
+    const response = await this.request<any>(`/api/products/${productId}/content-images/${imageId}`, {
+      method: 'PUT',
+      body: JSON.stringify(imageData),
+    });
+    return response.data;
+  }
+
+  async updateAPlusContentImagePositions(productId: string, positions: { id: string; position: number }[]): Promise<{ success: boolean; message: string }> {
+    const response = await this.request<{ success: boolean; message: string }>(`/api/products/${productId}/content-images/positions`, {
+      method: 'PUT',
+      body: JSON.stringify({ positions }),
+    });
+    return response.data;
+  }
+
+  async deleteAPlusContentImage(productId: string, imageId: string): Promise<{ success: boolean; message: string }> {
+    const response = await this.request<{ success: boolean; message: string }>(`/api/products/${productId}/content-images/${imageId}`, {
+      method: 'DELETE',
+    });
+    return response.data;
+  }
 }
 
 // Export singleton instance
