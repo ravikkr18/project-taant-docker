@@ -78,7 +78,8 @@
       "Bash(git pull:*)",
       "Bash(git checkout:*)",
       "Bash(PGPASSWORD=\"d$z#6W&K@8pL!qR3\" psql:*)",
-      "Bash(PGPASSWORD=\"WC8Nkm7D2SHbmMXW\" psql:*)"
+      "Bash(PGPASSWORD=\"WC8Nkm7D2SHbmMXW\" psql:*)",
+      "Bash(npm run start:dev:*)"
     ],
     "deny": [],
     "ask": []

@@ -816,4 +816,116 @@ export class ProductsService {
 
     return { success: true, message: 'Content image deleted successfully' };
   }
+
+  // Paginated products method
+  async getProductsPaginated(
+    supplierId?: string,
+    categoryId?: string,
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+    status?: string
+  ) {
+    const supabase = this.createServiceClient();
+
+    let query = supabase
+      .from('products')
+      .select(`
+        *,
+        categories:category_id (
+          id,
+          name,
+          slug,
+          parent_id
+        ),
+        suppliers:supplier_id (
+          id,
+          business_name,
+          slug,
+          rating,
+          is_verified,
+          status
+        ),
+        product_images (
+          id,
+          url,
+          alt_text,
+          file_name,
+          file_size,
+          file_type,
+          width,
+          height,
+          position,
+          is_primary
+        )
+      `);
+
+    if (supplierId) {
+      query = query.eq('supplier_id', supplierId);
+    }
+
+    if (categoryId) {
+      query = query.eq('category_id', categoryId);
+    }
+
+    if (search) {
+      query = query.ilike('title', `%${search}%`);
+    }
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    // Get total count for pagination
+    const { count, error: countError } = await supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true })
+      .eq(supplierId ? 'supplier_id' : 'supplier_id', supplierId || '')
+      .eq(categoryId ? 'category_id' : 'category_id', categoryId || '')
+      .ilike(search ? 'title' : 'title', search ? `%${search}%` : '')
+      .eq(status ? 'status' : 'status', status || '');
+
+    if (countError) {
+      throw new Error(`Failed to get total count: ${countError.message}`);
+    }
+
+    // Get paginated data
+    const offset = (page - 1) * limit;
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new Error(`Failed to fetch products: ${error.message}`);
+    }
+
+    // Add variant count for each product
+    const productsWithVariantCount = await Promise.all(
+      (data || []).map(async (product) => {
+        const { count: variantCount } = await supabase
+          .from('product_variants')
+          .select('*', { count: 'exact', head: true })
+          .eq('product_id', product.id);
+
+        return {
+          ...product,
+          variant_count: variantCount || 0
+        };
+      })
+    );
+
+    const totalPages = Math.ceil((count || 0) / limit);
+
+    return {
+      data: productsWithVariantCount,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: count || 0,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
+    };
+  }
 }
