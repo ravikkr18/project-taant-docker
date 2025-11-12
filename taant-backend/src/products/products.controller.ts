@@ -333,4 +333,97 @@ export class ProductsController {
       );
     }
   }
+
+  // Variant-specific endpoints
+  @Get(':id/variants')
+  async getProductVariants(@Param('id') productId: string, @Request() req?: any) {
+    try {
+      const user = req.user;
+
+      // Get user profile to determine role and verify access
+      const profile = await this.authService.getUserProfile(user.id);
+      if (!profile) {
+        throw new HttpException('User profile not found', HttpStatus.FORBIDDEN);
+      }
+
+      const variants = await this.productsService.getProductVariants(productId, user.id);
+      return {
+        success: true,
+        data: variants,
+        message: 'Product variants retrieved successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to fetch product variants',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post(':id/variants')
+  async createProductVariant(
+    @Param('id') productId: string,
+    @Body() variantData: any,
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const variant = await this.productsService.createProductVariant(productId, variantData, user.id);
+      return {
+        success: true,
+        data: variant,
+        message: 'Variant created successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to create variant',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Put(':id/variants/:variantId')
+  async updateProductVariant(
+    @Param('id') productId: string,
+    @Param('variantId') variantId: string,
+    @Body() variantData: any,
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const variant = await this.productsService.updateProductVariant(productId, variantId, variantData, user.id);
+      return {
+        success: true,
+        data: variant,
+        message: 'Variant updated successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to update variant',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Delete(':id/variants/:variantId')
+  async deleteProductVariant(
+    @Param('id') productId: string,
+    @Param('variantId') variantId: string,
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const result = await this.productsService.deleteProductVariant(productId, variantId, user.id);
+      return {
+        success: true,
+        data: result,
+        message: 'Variant deleted successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to delete variant',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
 }

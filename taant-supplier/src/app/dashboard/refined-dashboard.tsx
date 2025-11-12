@@ -219,7 +219,7 @@ export default function RefinedDashboard() {
                   </div>
                   <div className="text-right">
                     <div className="font-medium">${order.amount}</div>
-                    <Tag color={getStatusColor(order.status)} size="small">
+                    <Tag color={getStatusColor(order.status)}>
                       {order.status}
                     </Tag>
                   </div>

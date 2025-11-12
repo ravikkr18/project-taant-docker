@@ -411,7 +411,7 @@ const ProductList: React.FC = () => {
     onChange: (selectedRowKeys: React.Key[]) => {
       setSelectedIds(selectedRowKeys as string[])
     },
-    onSelectAll: (selected) => {
+    onSelectAll: (selected: boolean) => {
       if (selected) {
         const allIds = products.map((item) => item.id)
         setSelectedIds(allIds)

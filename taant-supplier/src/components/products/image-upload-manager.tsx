@@ -13,7 +13,7 @@ import {
   InfoCircleOutlined,
 } from '@ant-design/icons'
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface'
-import { DndProvider, useDrag, useDrop } from 'react-dnd'
+import { DndProvider, useDrag, useDrop } from 'react-dnd/dist/index'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 
 const { Text } = Typography

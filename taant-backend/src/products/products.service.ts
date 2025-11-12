@@ -123,6 +123,10 @@ export class ProductsService {
   async createProduct(productData: any, supplierId: string) {
     const supabase = await this.createServiceClient();
 
+    // Extract variants data for separate handling
+    const variants = productData.variants;
+    delete productData.variants;
+
     const { data, error } = await supabase
       .from('products')
       .insert({
@@ -138,12 +142,53 @@ export class ProductsService {
       throw new Error(`Failed to create product: ${error.message}`);
     }
 
+    // Handle variants separately
+    if (variants && Array.isArray(variants)) {
+      const variantsToInsert = variants.map(variant => ({
+        product_id: data.id,
+        sku: variant.sku,
+        title: variant.title,
+        barcode: variant.barcode || null,
+        price: variant.price,
+        compare_price: variant.compare_price || null,
+        cost_price: variant.cost_price || null,
+        weight: variant.weight || null,
+        inventory_quantity: variant.inventory_quantity || 0,
+        position: variant.position || 0,
+        option1_name: variant.option1_name || null,
+        option1_value: variant.option1_value || null,
+        option2_name: variant.option2_name || null,
+        option2_value: variant.option2_value || null,
+        option3_name: variant.option3_name || null,
+        option3_value: variant.option3_value || null,
+        option4_name: variant.option4_name || null,
+        option4_value: variant.option4_value || null,
+        option5_name: variant.option5_name || null,
+        option5_value: variant.option5_value || null,
+        image_id: variant.image_id || null,
+        is_active: variant.is_active !== false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+
+      if (variantsToInsert.length > 0) {
+        const { error: variantError } = await supabase
+          .from('product_variants')
+          .insert(variantsToInsert);
+
+        if (variantError) {
+          throw new Error(`Failed to create variants: ${variantError.message}`);
+        }
+      }
+    }
+
     return data;
   }
 
   async updateProduct(id: string, productData: any, supplierId: string) {
     const supabase = await this.createServiceClient();
 
+    
     // First verify the product belongs to the supplier
     const { data: existingProduct, error: fetchError } = await supabase
       .from('products')
@@ -158,6 +203,10 @@ export class ProductsService {
     if (existingProduct.supplier_id !== supplierId) {
       throw new Error('Unauthorized: Product does not belong to this supplier');
     }
+
+    // Extract variants data for separate handling
+    const variants = productData.variants;
+    delete productData.variants;
 
     // Prepare update data with timestamp
     const updateData = {
@@ -174,6 +223,7 @@ export class ProductsService {
       }
     });
 
+    // Update the main product
     const { data, error } = await supabase
       .from('products')
       .update(updateData)
@@ -183,6 +233,55 @@ export class ProductsService {
 
     if (error) {
       throw new Error(`Failed to update product: ${error.message}`);
+    }
+
+    // Handle variants separately
+    if (variants && Array.isArray(variants)) {
+      // First, delete existing variants for this product
+      await supabase
+        .from('product_variants')
+        .delete()
+        .eq('product_id', id);
+
+      // Then insert the new variants
+      const variantsToInsert = variants.map(variant => {
+        const mappedVariant = {
+          product_id: id,
+          sku: variant.sku,
+          title: variant.title,
+          barcode: variant.barcode || null,
+          price: variant.price,
+          compare_price: variant.compare_price || null,
+          cost_price: variant.cost_price || null,
+          weight: variant.weight || null,
+          inventory_quantity: variant.inventory_quantity || 0,
+          position: variant.position || 0,
+          option1_name: variant.option1_name || null,
+          option1_value: variant.option1_value || null,
+          option2_name: variant.option2_name || null,
+          option2_value: variant.option2_value || null,
+          option3_name: variant.option3_name || null,
+          option3_value: variant.option3_value || null,
+          option4_name: variant.option4_name || null,
+          option4_value: variant.option4_value || null,
+          option5_name: variant.option5_name || null,
+          option5_value: variant.option5_value || null,
+          image_id: variant.image_id || null,
+          is_active: variant.is_active !== false,
+          updated_at: new Date().toISOString()
+        };
+        return mappedVariant;
+      });
+
+      if (variantsToInsert.length > 0) {
+        const { error: variantError } = await supabase
+          .from('product_variants')
+          .insert(variantsToInsert);
+
+        if (variantError) {
+          throw new Error(`Failed to update variants: ${variantError.message}`);
+        }
+      }
     }
 
     return data;
@@ -246,5 +345,269 @@ export class ProductsService {
     }
 
     return { totalProducts: count || 0 };
+  }
+
+  // Variant-specific methods
+  async getProductVariants(productId: string, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this product's variants
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot access this product\'s variants');
+    }
+
+    // Fetch variants
+    const { data: variants, error } = await supabase
+      .from('product_variants')
+      .select('*')
+      .eq('product_id', productId)
+      .order('position', { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch variants: ${error.message}`);
+    }
+
+    // Convert to frontend format with options array
+    return variants.map(variant => {
+      const options = [];
+
+      // Convert option1-3 to options array (only 3 columns in database)
+      for (let i = 1; i <= 3; i++) {
+        const nameField = `option${i}_name`;
+        const valueField = `option${i}_value`;
+
+        if (variant[nameField] && variant[valueField]) {
+          options.push({
+            id: `opt-${variant.id}-${i}`,
+            name: variant[nameField],
+            value: variant[valueField]
+          });
+        }
+      }
+
+      return {
+        ...variant,
+        options
+      };
+    });
+  }
+
+  async createProductVariant(productId: string, variantData: any, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this product
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this product\'s variants');
+    }
+
+    // Get next position
+    const { data: maxPosition } = await supabase
+      .from('product_variants')
+      .select('position')
+      .eq('product_id', productId)
+      .order('position', { ascending: false })
+      .limit(1);
+
+    const nextPosition = (maxPosition?.[0]?.position || 0) + 1;
+
+    // Prepare variant data
+    const newVariant = {
+      product_id: productId,
+      sku: variantData.sku || `VAR-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
+      title: variantData.title,
+      barcode: variantData.barcode || null,
+      price: variantData.price,
+      compare_price: variantData.compare_price || null,
+      cost_price: variantData.cost_price || null,
+      inventory_quantity: variantData.inventory_quantity || 0,
+      inventory_policy: 'deny',
+      inventory_tracking: true,
+      low_stock_threshold: 10,
+      allow_backorder: false,
+      requires_shipping: true,
+      weight: variantData.weight || null,
+      taxable: true,
+      tax_code: null,
+      position: nextPosition,
+      image_id: variantData.image_id || null,
+      is_active: variantData.is_active !== false,
+      // Handle options array (only 3 columns in database)
+      option1_name: variantData.options?.[0]?.name || variantData.option1_name || null,
+      option1_value: variantData.options?.[0]?.value || variantData.option1_value || null,
+      option2_name: variantData.options?.[1]?.name || variantData.option2_name || null,
+      option2_value: variantData.options?.[1]?.value || variantData.option2_value || null,
+      option3_name: variantData.options?.[2]?.name || variantData.option3_name || null,
+      option3_value: variantData.options?.[2]?.value || variantData.option3_value || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('product_variants')
+      .insert([newVariant])
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create variant: ${error.message}`);
+    }
+
+    // Convert to frontend format
+    const options = [];
+    for (let i = 1; i <= 3; i++) {
+      const nameField = `option${i}_name`;
+      const valueField = `option${i}_value`;
+
+      if (data[nameField] && data[valueField]) {
+        options.push({
+          id: `opt-${data.id}-${i}`,
+          name: data[nameField],
+          value: data[valueField]
+        });
+      }
+    }
+
+    return {
+      ...data,
+      options
+    };
+  }
+
+  async updateProductVariant(productId: string, variantId: string, variantData: any, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this product
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this product\'s variants');
+    }
+
+    // Prepare update data
+    const updateData = {
+      title: variantData.title,
+      sku: variantData.sku,
+      barcode: variantData.barcode || null,
+      price: variantData.price,
+      compare_price: variantData.compare_price || null,
+      cost_price: variantData.cost_price || null,
+      inventory_quantity: variantData.inventory_quantity,
+      weight: variantData.weight || null,
+      image_id: variantData.image_id || null,
+      is_active: variantData.is_active !== false,
+      updated_at: new Date().toISOString()
+    };
+
+    // Handle options update (only 3 columns in database)
+    if (variantData.options && Array.isArray(variantData.options)) {
+      // Update first 3 options
+      for (let i = 0; i < 3; i++) {
+        const nameField = `option${i + 1}_name`;
+        const valueField = `option${i + 1}_value`;
+
+        if (variantData.options[i]) {
+          updateData[nameField] = variantData.options[i].name || null;
+          updateData[valueField] = variantData.options[i].value || null;
+        } else {
+          updateData[nameField] = null;
+          updateData[valueField] = null;
+        }
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('product_variants')
+      .update(updateData)
+      .eq('id', variantId)
+      .eq('product_id', productId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update variant: ${error.message}`);
+    }
+
+    // Convert to frontend format
+    const options = [];
+    for (let i = 1; i <= 3; i++) {
+      const nameField = `option${i}_name`;
+      const valueField = `option${i}_value`;
+
+      if (data[nameField] && data[valueField]) {
+        options.push({
+          id: `opt-${data.id}-${i}`,
+          name: data[nameField],
+          value: data[valueField]
+        });
+      }
+    }
+
+    return {
+      ...data,
+      options
+    };
+  }
+
+  async deleteProductVariant(productId: string, variantId: string, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this product
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this product\'s variants');
+    }
+
+    const { error } = await supabase
+      .from('product_variants')
+      .delete()
+      .eq('id', variantId)
+      .eq('product_id', productId);
+
+    if (error) {
+      throw new Error(`Failed to delete variant: ${error.message}`);
+    }
+
+    return { success: true, message: 'Variant deleted successfully' };
   }
 }

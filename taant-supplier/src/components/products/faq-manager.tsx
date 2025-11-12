@@ -24,7 +24,9 @@ import {
   MenuOutlined,
   StarOutlined,
 } from '@ant-design/icons'
-import { DndProvider, useDrag, useDrop } from 'react-dnd'
+// import { DndProvider } from 'react-dnd'
+// import { useDrag, useDrop } from 'react-dnd'
+import { DndProvider, useDrag, useDrop } from 'react-dnd/dist/index'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 
 const { TextArea } = Input
@@ -138,7 +140,7 @@ const DraggableFAQItem: React.FC<{
               />
             </Space>
             <Space>
-              <Tag color={faq.is_active ? 'success' : 'default'} size="small">
+              <Tag color={faq.is_active ? 'success' : 'default'}>
                 {faq.is_active ? 'Visible' : 'Hidden'}
               </Tag>
               <Button
@@ -155,7 +157,7 @@ const DraggableFAQItem: React.FC<{
           </div>
           {faq.question && faq.answer && (
             <div style={{ marginTop: 4 }}>
-              <Tag color="green" size="small" icon={<StarOutlined />}>
+              <Tag color="green" icon={<StarOutlined />}>
                 Complete
               </Tag>
             </div>

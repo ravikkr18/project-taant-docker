@@ -66,9 +66,10 @@ import { supabase } from '../../lib/supabase/client'
 import apiClient from '../../lib/api-client'
 import type { UploadFile, UploadProps as AntUploadProps } from 'antd/es/upload/interface'
 import ImageUploadManager from '../../components/products/image-upload-manager'
-import VariantManager from '../../components/products/variant-manager'
+import VariantManager, { ProductVariant } from '../../components/products/variant-manager'
+import OptimizedVariantManager from '../../components/products/optimized-variant-manager'
 import APlusContentManager from '../../components/products/a-plus-content-manager'
-import FAQManager from '../../components/products/faq-manager'
+// import FAQManager from '../../components/products/faq-manager' // Temporarily disabled due to react-dnd issues
 import TiptapEditor from '../../components/ui/tiptap-editor'
 import SimpleDynamicFields from '../../components/products/simple-dynamic-fields-final'
 import InformationSectionsManager from '../../components/products/information-sections-manager-final'
@@ -185,22 +186,6 @@ interface ProductImage {
   is_primary: boolean
 }
 
-interface ProductVariant {
-  id: string
-  title: string
-  sku: string
-  price: number
-  compare_price: number
-  inventory_quantity: number
-  option1_name: string
-  option1_value: string
-  option2_name: string
-  option2_value: string
-  option3_name: string
-  option3_value: string
-  image_id?: string
-  is_active: boolean
-}
 
 interface ProductFAQ {
   id: string
@@ -314,7 +299,7 @@ const AdvancedProductManager: React.FC = () => {
           Basic Info
           {validationErrors['1'] && (
             <Tooltip title={validationErrors['1']}>
-              <Tag color="red" size="small" style={{ marginLeft: 8 }}>
+              <Tag color="red" style={{ marginLeft: 8 }}>
                 ⚠️ {validationErrors['1']}
               </Tag>
             </Tooltip>
@@ -424,7 +409,7 @@ const AdvancedProductManager: React.FC = () => {
                 <InputNumber
                   style={{ width: '100%' }}
                   formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  parser={value => Number(value!.replace(/\$\s?|(,*)/g, '')) as any}
                   placeholder="0.00"
                   min={0}
                   precision={2}
@@ -443,7 +428,7 @@ const AdvancedProductManager: React.FC = () => {
                 <InputNumber
                   style={{ width: '100%' }}
                   formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  parser={value => Number(value!.replace(/\$\s?|(,*)/g, '')) as any}
                   placeholder="0.00"
                   min={0}
                   precision={2}
@@ -455,7 +440,7 @@ const AdvancedProductManager: React.FC = () => {
                 <InputNumber
                   style={{ width: '100%' }}
                   formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  parser={value => Number(value!.replace(/\$\s?|(,*)/g, '')) as any}
                   placeholder="0.00"
                   min={0}
                   precision={2}
@@ -484,7 +469,7 @@ const AdvancedProductManager: React.FC = () => {
           Images
           {validationErrors['2'] && (
             <Tooltip title={validationErrors['2']}>
-              <Tag color="red" size="small" style={{ marginLeft: 8 }}>
+              <Tag color="red" style={{ marginLeft: 8 }}>
                 ⚠️ {validationErrors['2']}
               </Tag>
             </Tooltip>
@@ -508,7 +493,7 @@ const AdvancedProductManager: React.FC = () => {
           Variants
           {validationErrors['3'] && (
             <Tooltip title={validationErrors['3']}>
-              <Tag color="red" size="small" style={{ marginLeft: 8 }}>
+              <Tag color="red" style={{ marginLeft: 8 }}>
                 ⚠️ {validationErrors['3']}
               </Tag>
             </Tooltip>
@@ -517,11 +502,32 @@ const AdvancedProductManager: React.FC = () => {
       ),
       children: (
         <>
-          <VariantManager
-            variants={productVariants}
-            productImages={productImages}
-            onChange={setProductVariants}
-          />
+          {editingProduct ? (
+            <OptimizedVariantManager
+              productId={editingProduct.id}
+              productImages={productImages}
+              initialVariants={productVariants}
+              onVariantCountChange={(count) => {
+                // Update the editing product with new variant count
+                setEditingProduct(prev => {
+                  if (prev) {
+                    return { ...prev, variant_count: count }
+                  }
+                  return prev
+                })
+              }}
+            />
+          ) : (
+            <VariantManager
+              variants={productVariants}
+              productImages={productImages}
+              onChange={(newVariants) => {
+                console.log('ProductVariants changed from:', productVariants)
+                console.log('ProductVariants changed to:', newVariants)
+                setProductVariants(newVariants)
+              }}
+            />
+          )}
           </>
       )
     },
@@ -532,7 +538,7 @@ const AdvancedProductManager: React.FC = () => {
           A+ Content
           {validationErrors['4'] && (
             <Tooltip title={validationErrors['4']}>
-              <Tag color="red" size="small" style={{ marginLeft: 8 }}>
+              <Tag color="red" style={{ marginLeft: 8 }}>
                 ⚠️ {validationErrors['4']}
               </Tag>
             </Tooltip>
@@ -555,7 +561,7 @@ const AdvancedProductManager: React.FC = () => {
           FAQs
           {validationErrors['5'] && (
             <Tooltip title={validationErrors['5']}>
-              <Tag color="red" size="small" style={{ marginLeft: 8 }}>
+              <Tag color="red" style={{ marginLeft: 8 }}>
                 ⚠️ {validationErrors['5']}
               </Tag>
             </Tooltip>
@@ -564,10 +570,10 @@ const AdvancedProductManager: React.FC = () => {
       ),
       children: (
         <>
-          <FAQManager
+          {/* <FAQManager
             faqs={productFAQs}
             onChange={setProductFAQs}
-          />
+          /> */}
               </>
       )
     },
@@ -578,7 +584,7 @@ const AdvancedProductManager: React.FC = () => {
           Product Details
           {validationErrors['6'] && (
             <Tooltip title={validationErrors['6']}>
-              <Tag color="red" size="small" style={{ marginLeft: 8 }}>
+              <Tag color="red" style={{ marginLeft: 8 }}>
                 ⚠️ {validationErrors['6']}
               </Tag>
             </Tooltip>
@@ -587,7 +593,7 @@ const AdvancedProductManager: React.FC = () => {
       ),
       children: (
         <>
-          <Card size="small" title="Basic Specifications" style={{ marginBottom: 16 }}>
+          <Card title="Basic Specifications" style={{ marginBottom: 16 }}>
             <Row gutter={[12, 8]}>
               <Col xs={24} sm={12} md={8} lg={6}>
                 <Form.Item name="weight" label="Weight (kg)" style={{ marginBottom: 8 }}>
@@ -596,8 +602,7 @@ const AdvancedProductManager: React.FC = () => {
                     placeholder="0.00"
                     step={0.01}
                     min={0}
-                    size="small"
-                  />
+                                      />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12} md={8} lg={6}>
@@ -606,13 +611,12 @@ const AdvancedProductManager: React.FC = () => {
                     style={{ width: '100%' }}
                     placeholder="0"
                     min={0}
-                    size="small"
-                    precision={0}
+                                        precision={0}
                     controls={true}
                     keyboard={true}
-                    parser={(value: string) => {
+                    parser={(value: string | undefined) => {
                       // Only allow digits
-                      const digitsOnly = value.replace(/[^\d]/g, '')
+                      const digitsOnly = (value || '').replace(/[^\d]/g, '')
                       return parseInt(digitsOnly) || 0
                     }}
                     formatter={(value: number | string | undefined) => {
@@ -657,13 +661,13 @@ const AdvancedProductManager: React.FC = () => {
                     }
                   ]}
                 >
-                  <AntInput placeholder="Model/part number" size="small" />
+                  <AntInput placeholder="Model/part number" />
                 </Form.Item>
               </Col>
             </Row>
           </Card>
 
-          <Card size="small" title="Dimensions (cm)" style={{ marginBottom: 16 }}>
+          <Card title="Dimensions (cm)" style={{ marginBottom: 16 }}>
             <Row gutter={[12, 8]}>
               <Col xs={24} sm={12} md={6}>
                 <Form.Item name="length" label="Length" style={{ marginBottom: 8 }}>
@@ -672,8 +676,7 @@ const AdvancedProductManager: React.FC = () => {
                     placeholder="0.0"
                     step={0.1}
                     min={0}
-                    size="small"
-                  />
+                                      />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12} md={6}>
@@ -683,8 +686,7 @@ const AdvancedProductManager: React.FC = () => {
                     placeholder="0.0"
                     step={0.1}
                     min={0}
-                    size="small"
-                  />
+                                      />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12} md={6}>
@@ -694,8 +696,7 @@ const AdvancedProductManager: React.FC = () => {
                     placeholder="0.0"
                     step={0.1}
                     min={0}
-                    size="small"
-                  />
+                                      />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12} md={6}>
@@ -703,8 +704,7 @@ const AdvancedProductManager: React.FC = () => {
                   <Input
                     value="Auto"
                     readOnly
-                    size="small"
-                    style={{ backgroundColor: '#f5f5f5', color: '#666' }}
+                                        style={{ backgroundColor: '#f5f5f5', color: '#666' }}
                     placeholder="Calculated automatically"
                   />
                 </Form.Item>
@@ -712,7 +712,7 @@ const AdvancedProductManager: React.FC = () => {
             </Row>
           </Card>
 
-          <Card size="small" title="Additional Information" style={{ marginBottom: 16 }}>
+          <Card title="Additional Information" style={{ marginBottom: 16 }}>
             <Row gutter={[12, 8]}>
               <Col xs={24} sm={12}>
                 <Form.Item
@@ -729,7 +729,7 @@ const AdvancedProductManager: React.FC = () => {
                     }
                   ]}
                 >
-                  <AntInput placeholder="Manufacturer name" size="small" />
+                  <AntInput placeholder="Manufacturer name" />
                 </Form.Item>
               </Col>
             </Row>
@@ -739,8 +739,7 @@ const AdvancedProductManager: React.FC = () => {
                   <TextArea
                     rows={2}
                     placeholder="Detailed warranty information and terms"
-                    size="small"
-                  />
+                                      />
                 </Form.Item>
               </Col>
             </Row>
@@ -750,8 +749,7 @@ const AdvancedProductManager: React.FC = () => {
                   <TextArea
                     rows={2}
                     placeholder="Special shipping instructions or requirements"
-                    size="small"
-                  />
+                                      />
                 </Form.Item>
               </Col>
             </Row>
@@ -773,7 +771,7 @@ const AdvancedProductManager: React.FC = () => {
           Product Information
           {validationErrors['7'] && (
             <Tooltip title={validationErrors['7']}>
-              <Tag color="red" size="small" style={{ marginLeft: 8 }}>
+              <Tag color="red" style={{ marginLeft: 8 }}>
                 ⚠️ {validationErrors['7']}
               </Tag>
             </Tooltip>
@@ -928,7 +926,7 @@ const AdvancedProductManager: React.FC = () => {
 
       // Check if response has the expected structure
       if (response && response.data) {
-        setProducts(response.data || [])
+        setProducts((response.data || []) as any)
         setPagination(prev => ({
           ...prev,
           current: response.pagination?.page || page,
@@ -942,14 +940,15 @@ const AdvancedProductManager: React.FC = () => {
       }
     } catch (error) {
       // Handle cache-related errors specifically
-      if (error.message?.includes('Cache expired') || error.message?.includes('304')) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      if (errorMessage.includes('Cache expired') || errorMessage.includes('304')) {
         message.error('Cache expired, refreshing data...')
         // Retry once after a short delay for cache issues
         setTimeout(() => {
           fetchProducts(page, pageSize)
         }, 1000)
       } else {
-        message.error(`Failed to fetch products: ${error.message || 'Unknown error'}`)
+        message.error(`Failed to fetch products: ${errorMessage}`)
         setProducts([])
         setPagination(prev => ({ ...prev, total: 0 }))
       }
@@ -1045,15 +1044,14 @@ const AdvancedProductManager: React.FC = () => {
       title: '',
       sku: '',
       price: 0,
-      compare_price: null,
+      compare_price: undefined,
+      cost_price: undefined,
       inventory_quantity: 0,
-      option1_name: 'Size',
-      option1_value: '',
-      option2_name: 'Color',
-      option2_value: '',
-      option3_name: '',
-      option3_value: '',
-      is_active: true
+      weight: undefined,
+      options: [],
+      image_id: undefined,
+      is_active: true,
+      position: productVariants.length
     }
     setProductVariants(prev => [...prev, newVariant])
   }
@@ -1163,7 +1161,7 @@ const AdvancedProductManager: React.FC = () => {
     }
 
     // Variants validation
-    const variantsWithoutImages = productVariants.filter(v => !v.image_url && !v.image_id && v.is_active)
+    const variantsWithoutImages = productVariants.filter(v => !v.image_id && v.is_active)
     if (variantsWithoutImages.length > 0) {
       errors['3'] = `${variantsWithoutImages.length} active variant(s) missing images`
     }
@@ -1246,8 +1244,8 @@ const AdvancedProductManager: React.FC = () => {
     console.log('Create Product clicked, current form values:', formValues)
 
     // Validate first
-    const errors = {}
-    const fieldErrors = {}
+    const errors: Record<string, string> = {}
+    const fieldErrors: Record<string, string> = {}
     // Basic validation with field-level errors
     const basicInfoErrors = []
     if (!formValues.title || formValues.title.trim() === '') {
@@ -1277,7 +1275,7 @@ const AdvancedProductManager: React.FC = () => {
     }
 
     // Variants validation
-    const variantsWithoutImages = productVariants.filter(v => !v.image_url && !v.image_id && v.is_active)
+    const variantsWithoutImages = productVariants.filter(v => !v.image_id && v.is_active)
     if (variantsWithoutImages.length > 0) {
       errors['3'] = `${variantsWithoutImages.length} active variant(s) missing images`
     }
@@ -1328,8 +1326,8 @@ const AdvancedProductManager: React.FC = () => {
       // Temporarily skipping authentication to fix immediate issues
 
       // Validate first
-      const errors = {}
-    const fieldErrors = {}
+      const errors: Record<string, string> = {}
+    const fieldErrors: Record<string, string> = {}
       // Basic validation with field-level errors
       const basicInfoErrors = []
       if (!values.title || values.title.trim() === '') {
@@ -1359,7 +1357,7 @@ const AdvancedProductManager: React.FC = () => {
       }
 
       // Variants validation
-      const variantsWithoutImages = productVariants.filter(v => !v.image_url && v.is_active)
+      const variantsWithoutImages = productVariants.filter(v => !v.image_id && v.is_active)
       if (variantsWithoutImages.length > 0) {
         errors['3'] = `${variantsWithoutImages.length} active variant(s) missing images`
       }
@@ -1531,9 +1529,9 @@ const AdvancedProductManager: React.FC = () => {
       key: 'product',
       render: (_: any, record: Product) => (
         <Space>
-          {(record.product_images || record.images) && (record.product_images || record.images).length > 0 ? (
+          {(record.product_images || record.images) && (record.product_images || record.images)!.length > 0 ? (
             <Image
-              src={(record.product_images || record.images).find(img => img.is_primary)?.url || (record.product_images || record.images)[0]?.url}
+              src={(record.product_images || record.images || []).find(img => img?.is_primary)?.url || (record.product_images || record.images || [])[0]?.url}
               alt={record.title}
               width={48}
               height={48}
@@ -1549,15 +1547,15 @@ const AdvancedProductManager: React.FC = () => {
             <div style={{ color: '#666', fontSize: '11px' }}>
               {record.suppliers?.business_name || 'Unknown Supplier'}
               {record.suppliers?.is_verified && (
-                <Tag size="small" color="success" style={{ marginLeft: 4 }}>✓</Tag>
+                <Tag color="success" style={{ marginLeft: 4 }}>✓</Tag>
               )}
             </div>
             <div style={{ marginTop: 4 }}>
-              {record.variant_count > 0 && (
-                <Tag size="small" color="blue">{record.variant_count} variants</Tag>
+              {(record.variant_count || 0) > 0 && (
+                <Tag color="blue">{record.variant_count} variants</Tag>
               )}
-              {(record.product_images || record.images) && (record.product_images || record.images).length > 0 && (
-                <Tag size="small" color="green">{(record.product_images || record.images).length} images</Tag>
+              {(record.product_images || record.images) && (record.product_images || record.images)!.length > 0 && (
+                <Tag color="green">{(record.product_images || record.images)!.length} images</Tag>
               )}
             </div>
           </div>
@@ -1609,10 +1607,10 @@ const AdvancedProductManager: React.FC = () => {
           </div>
           <div style={{ fontSize: '11px', color: '#666' }}>
             {record.suppliers?.rating && (
-              <Tag size="small" color="gold">⭐ {record.suppliers.rating}</Tag>
+              <Tag color="gold">⭐ {record.suppliers.rating}</Tag>
             )}
             {record.suppliers?.is_verified && (
-              <Tag size="small" color="success">Verified</Tag>
+              <Tag color="success">Verified</Tag>
             )}
           </div>
         </Space>
@@ -1632,15 +1630,15 @@ const AdvancedProductManager: React.FC = () => {
           </div>
           <div>
             {record.a_plus_content && (
-              <Tag size="small" color="purple" icon={<StarOutlined />}>A+ Content</Tag>
+              <Tag color="purple" icon={<StarOutlined />}>A+ Content</Tag>
             )}
             {record.faqs && record.faqs.length > 0 && (
-              <Tag size="small" color="green" icon={<QuestionCircleOutlined />}>
+              <Tag color="green" icon={<QuestionCircleOutlined />}>
                 {record.faqs.length} FAQs
               </Tag>
             )}
             {record.is_featured && (
-              <Tag size="small" color="gold" icon={<StarOutlined />}>Featured</Tag>
+              <Tag color="gold" icon={<StarOutlined />}>Featured</Tag>
             )}
           </div>
         </Space>
@@ -1653,8 +1651,7 @@ const AdvancedProductManager: React.FC = () => {
         <Space>
           <Tooltip title="View on Store">
             <Button
-              size="small"
-              icon={<EyeOutlined />}
+                            icon={<EyeOutlined />}
               onClick={() => {
                 const frontendUrl = `http://94.136.187.1:3007/products/${record.slug}`
                 window.open(frontendUrl, '_blank')
@@ -1663,8 +1660,7 @@ const AdvancedProductManager: React.FC = () => {
           </Tooltip>
           <Tooltip title="Edit">
             <Button
-              size="small"
-              icon={<EditOutlined />}
+                            icon={<EditOutlined />}
               onClick={() => handleEditProduct(record)}
             />
           </Tooltip>
@@ -1677,7 +1673,7 @@ const AdvancedProductManager: React.FC = () => {
               cancelText="Cancel"
               okType="danger"
             >
-              <Button size="small" danger icon={<DeleteOutlined />} />
+              <Button danger icon={<DeleteOutlined />} />
             </Popconfirm>
           </Tooltip>
         </Space>
@@ -1697,7 +1693,7 @@ const AdvancedProductManager: React.FC = () => {
           <Button icon={<DownloadOutlined />} onClick={() => {}}>
             Export
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={fetchProducts}>
+          <Button icon={<ReloadOutlined />} onClick={() => fetchProducts()}>
             Refresh
           </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAddProduct}>

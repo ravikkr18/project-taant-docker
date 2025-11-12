@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   Button,
   Card,
@@ -22,6 +22,7 @@ import {
   message,
   Divider,
   ColorPicker,
+  Spin,
 } from 'antd'
 import {
   PlusOutlined,
@@ -32,7 +33,9 @@ import {
   DollarOutlined,
   InboxOutlined,
   CheckOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons'
+import apiClient from '../../lib/api-client'
 
 const { Text } = Typography
 
@@ -51,10 +54,11 @@ export interface ProductVariant {
   position: number
 }
 
-interface VariantManagerProps {
-  variants: ProductVariant[]
+interface OptimizedVariantManagerProps {
+  productId: string
   productImages: Array<{ id: string; url: string; alt_text: string; is_primary: boolean }>
-  onChange: (variants: ProductVariant[]) => void
+  initialVariants?: ProductVariant[]
+  onVariantCountChange?: (count: number) => void
 }
 
 // Common colors for quick selection
@@ -76,118 +80,259 @@ const COMMON_COLORS = [
   { label: 'Silver', value: '#C0C0C0' },
 ]
 
-const VariantManager: React.FC<VariantManagerProps> = ({
-  variants,
+
+// Cache for variant data to avoid repeated API calls
+const variantCache = new Map<string, { data: ProductVariant[]; timestamp: number }>()
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+// Helper function to get color hex from color name or hex
+const getColorHex = (colorValue: string): string => {
+  if (!colorValue) return '#ccc'
+
+  const color = colorValue.trim().toLowerCase()
+
+  // If it's already a hex color (with or without #), return as-is
+  if (color.match(/^#?[0-9a-f]{3,6}$/i)) {
+    return color.startsWith('#') ? color : `#${color}`
+  }
+
+  // Handle rgb/rgba colors
+  if (color.startsWith('rgb(') || color.startsWith('rgba(')) {
+    // Convert rgb/rgba to hex (simplified)
+    const rgbMatch = color.match(/\d+/g)
+    if (rgbMatch && rgbMatch.length >= 3) {
+      const r = parseInt(rgbMatch[0]).toString(16).padStart(2, '0')
+      const g = parseInt(rgbMatch[1]).toString(16).padStart(2, '0')
+      const b = parseInt(rgbMatch[2]).toString(16).padStart(2, '0')
+      return `#${r}${g}${b}`
+    }
+  }
+
+  // Handle hsl/hsla colors (convert to rgb then hex)
+  if (color.startsWith('hsl(') || color.startsWith('hsla(')) {
+    // For simplicity, return a default color for hsl
+    return '#888'
+  }
+
+  // Try to find in common colors by label (case insensitive)
+  const colorMatch = COMMON_COLORS.find(c =>
+    c.label.toLowerCase() === color
+  )
+  if (colorMatch) {
+    return colorMatch.value
+  }
+
+  // Additional common CSS color names
+  const cssColorMap: { [key: string]: string } = {
+    'red': '#FF0000',
+    'blue': '#0000FF',
+    'green': '#008000',
+    'yellow': '#FFFF00',
+    'orange': '#FFA500',
+    'purple': '#800080',
+    'pink': '#FFC0CB',
+    'brown': '#A52A2A',
+    'black': '#000000',
+    'white': '#FFFFFF',
+    'gray': '#808080',
+    'grey': '#808080',
+    'navy': '#000080',
+    'teal': '#008080',
+    'gold': '#FFD700',
+    'silver': '#C0C0C0',
+    'lime': '#00FF00',
+    'aqua': '#00FFFF',
+    'fuchsia': '#FF00FF',
+    'maroon': '#800000',
+    'olive': '#808000',
+    'lightblue': '#ADD8E6',
+    'lightgreen': '#90EE90',
+    'lightgray': '#D3D3D3',
+    'darkgray': '#A9A9A9',
+    'darkgrey': '#A9A9A9',
+    'lightcoral': '#F08080',
+    'indianred': '#CD5C5C',
+    'mediumblue': '#0000CD',
+    'mediumseagreen': '#3CB371'
+  }
+
+  if (cssColorMap[color]) {
+    return cssColorMap[color]
+  }
+
+  // Fallback to default gray
+  return '#ccc'
+}
+
+const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
+  productId,
   productImages,
-  onChange
+  initialVariants = [],
+  onVariantCountChange
 }) => {
-  
+  const [variants, setVariants] = useState<ProductVariant[]>([]) // Start empty to force API call
+  const [loading, setLoading] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [form] = Form.useForm()
   const [selectedImageUrl, setSelectedImageUrl] = useState<string>('')
 
-  // Simple update variant function that also updates parent state
-  const updateVariantOption = (optionId: string, field: 'name' | 'value', newValue: string) => {
-    if (!editingVariant) return
+  // Load variants lazily - only when this component is first used
+  const loadVariants = useCallback(async (forceRefresh = false) => {
+    if (!productId) return
 
+    // Check if already loaded and not forcing refresh
+    if (!forceRefresh && isLoaded) return
+
+    setLoading(true)
+    try {
+      // Skip cache if forcing refresh
+      if (!forceRefresh) {
+        const cached = variantCache.get(productId)
+        if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+          setVariants(cached.data)
+          setIsLoaded(true)
+          if (onVariantCountChange) {
+            onVariantCountChange(cached.data.length)
+          }
+          setLoading(false)
+          return
+        }
+      }
+
+      const fetchedVariants = await apiClient.getProductVariants(productId)
+      setVariants(fetchedVariants)
+      setIsLoaded(true)
+
+      // Update variant count callback
+      if (onVariantCountChange) {
+        onVariantCountChange(fetchedVariants.length)
+      }
+
+      // Cache the result
+      variantCache.set(productId, {
+        data: fetchedVariants,
+        timestamp: Date.now()
+      })
+
+      // Clear old cache entries
+      const now = Date.now()
+      variantCache.forEach((value, key) => {
+        if (now - value.timestamp > CACHE_DURATION) {
+          variantCache.delete(key)
+        }
+      })
+    } catch (error) {
+      console.error('Failed to load variants:', error)
+      message.error('Failed to load variants')
+    } finally {
+      setLoading(false)
+    }
+  }, [productId, isLoaded, onVariantCountChange])
+
+  // Instant variant save/update function
+  const saveVariantInstantly = useCallback(async (variant: ProductVariant) => {
+    try {
+      let savedVariant
+      if (variant.id.startsWith('temp-')) {
+        // Create new variant
+        savedVariant = await apiClient.createProductVariant(productId, variant)
+        message.success('Variant created successfully')
+      } else {
+        // Update existing variant
+        savedVariant = await apiClient.updateProductVariant(productId, variant.id, variant)
+        message.success('Variant updated successfully')
+      }
+
+      // Update local state with the saved variant
+      setVariants(prev => {
+        if (variant.id.startsWith('temp-')) {
+          // Replace temp variant with saved one
+          return prev.map(v => v.id === variant.id ? savedVariant : v)
+        } else {
+          // Update existing variant
+          return prev.map(v => v.id === variant.id ? savedVariant : v)
+        }
+      })
+
+      // Update cache
+      const cached = variantCache.get(productId)
+      if (cached) {
+        const updatedCache = cached.data.map(v =>
+          v.id === variant.id ? savedVariant : v
+        )
+        variantCache.set(productId, {
+          data: updatedCache,
+          timestamp: Date.now()
+        })
+      }
+
+      return savedVariant
+    } catch (error) {
+      console.error('Failed to save variant:', error)
+      message.error('Failed to save variant')
+      return null
+    }
+  }, [productId])
+
+  
+  // Delete variant instantly
+  const deleteVariantInstantly = useCallback(async (variantId: string) => {
+    try {
+      await apiClient.deleteProductVariant(productId, variantId)
+      setVariants(prev => {
+        const newVariantsList = prev.filter(v => v.id !== variantId)
+        // Update variant count callback
+        if (onVariantCountChange) {
+          onVariantCountChange(newVariantsList.length)
+        }
+        return newVariantsList
+      })
+      message.success('Variant deleted successfully')
+
+      // Update cache
+      const cached = variantCache.get(productId)
+      if (cached) {
+        const updatedCache = cached.data.filter(v => v.id !== variantId)
+        variantCache.set(productId, {
+          data: updatedCache,
+          timestamp: Date.now()
+        })
+      }
+    } catch (error) {
+      console.error('Failed to delete variant:', error)
+      message.error('Failed to delete variant')
+    }
+  }, [productId, onVariantCountChange])
+
+  // Update variant option locally (no save until button click)
+  const updateVariantOption = useCallback((optionId: string, field: 'name' | 'value', newValue: string, variant: ProductVariant) => {
     const updatedVariant = {
-      ...editingVariant,
-      options: editingVariant.options.map(option =>
+      ...variant,
+      options: variant.options.map(option =>
         option.id === optionId ? { ...option, [field]: newValue } : option
       )
     }
 
+    // Only update the editing variant state, not the main variants array
     setEditingVariant(updatedVariant)
+  }, [])
 
-    // Immediately update parent state to keep it in sync
-    const updatedVariants = variants.map(v =>
-      v.id === editingVariant.id ? updatedVariant : v
-    )
-    onChange(updatedVariants)
-  }
+  // Toggle variant active status with instant save
+  const handleToggleActive = useCallback((variantId: string) => {
+    const variant = variants.find(v => v.id === variantId)
+    if (!variant) return
 
-  // Add option to current variant
-  const addVariantOption = () => {
-    if (!editingVariant) return
+    const updatedVariant = { ...variant, is_active: !variant.is_active }
+    setVariants(prev => prev.map(v => v.id === variantId ? updatedVariant : v))
 
-    const timestamp = Date.now()
-    const random = Math.random().toString(36).substr(2, 9)
-    const newOption = {
-      id: `opt-${timestamp}-${random}-${editingVariant.options.length + 1}`,
-      name: '',
-      value: ''
-    }
-
-    setEditingVariant(prev => {
-      if (!prev) return prev
-      return {
-        ...prev,
-        options: [...prev.options, newOption]
-      }
-    })
-  }
-
-  // Remove option from current variant
-  const removeVariantOption = (optionId: string) => {
-    if (!editingVariant || editingVariant.options.length <= 1) return
-
-    setEditingVariant(prev => {
-      if (!prev) return prev
-      return {
-        ...prev,
-        options: prev.options.filter(option => option.id !== optionId)
-      }
-    })
-  }
-
-  // Convert old variant format to new format
-  const convertVariantToNewFormat = (variant: any): ProductVariant => {
-    if (variant.options && Array.isArray(variant.options)) {
-      return variant // Keep the original ID - no conversion
-    }
-
-    const options: Array<{ id: string; name: string; value: string }> = []
-    const timestamp = Date.now()
-
-    // Convert old format to new format
-    const optionFields = [
-      ['option1_name', 'option1_value'],
-      ['option2_name', 'option2_value'],
-      ['option3_name', 'option3_value'],
-      ['option4_name', 'option4_value'],
-      ['option5_name', 'option5_value']
-    ]
-
-    optionFields.forEach(([nameField, valueField], index) => {
-      if (variant[nameField] && variant[valueField]) {
-        options.push({
-          id: `opt-${timestamp}-${index + 1}`,
-          name: variant[nameField],
-          value: variant[valueField]
-        })
-      }
-    })
-
-    // Keep original ID for old format variants
-    let variantId = variant.id
-
-    return {
-      ...variant,
-      id: variantId,
-      options,
-      // Clean up old fields
-      option1_name: undefined, option1_value: undefined,
-      option2_name: undefined, option2_value: undefined,
-      option3_name: undefined, option3_value: undefined,
-      option4_name: undefined, option4_value: undefined,
-      option5_name: undefined, option5_value: undefined,
-      barcode: undefined
-    }
-  }
+    // Save immediately for toggle action
+    saveVariantInstantly(updatedVariant)
+  }, [variants, saveVariantInstantly])
 
   // Add new variant
-  const handleAdd = () => {
+  const handleAdd = useCallback(() => {
     const newVariant: ProductVariant = {
       id: `temp-${Date.now()}`,
       title: '',
@@ -196,7 +341,8 @@ const VariantManager: React.FC<VariantManagerProps> = ({
       inventory_quantity: 0,
       options: [
         { id: `opt-${Date.now()}-1`, name: 'Size', value: '' },
-        { id: `opt-${Date.now()}-2`, name: 'Color', value: '' }
+        { id: `opt-${Date.now()}-2`, name: 'Color', value: '' },
+        { id: `opt-${Date.now()}-3`, name: '', value: '' } // Third option ready but empty
       ],
       is_active: true,
       position: variants.length
@@ -212,27 +358,29 @@ const VariantManager: React.FC<VariantManagerProps> = ({
     })
     setSelectedImageUrl('')
     setModalOpen(true)
-  }
+
+    // Load variants if not already loaded
+    if (!isLoaded) {
+      loadVariants()
+    }
+  }, [variants.length, isLoaded, loadVariants])
 
   // Edit existing variant
-  const handleEdit = (variant: ProductVariant) => {
-    const convertedVariant = convertVariantToNewFormat(variant)
-    setEditingVariant(convertedVariant)
-
+  const handleEdit = useCallback((variant: ProductVariant) => {
+    setEditingVariant(variant)
     form.setFieldsValue({
-      title: convertedVariant.title,
-      sku: convertedVariant.sku,
-      price: convertedVariant.price,
-      compare_price: convertedVariant.compare_price,
-      cost_price: convertedVariant.cost_price,
-      inventory_quantity: convertedVariant.inventory_quantity,
-      weight: convertedVariant.weight,
-      is_active: convertedVariant.is_active
+      title: variant.title,
+      sku: variant.sku,
+      price: variant.price,
+      compare_price: variant.compare_price,
+      cost_price: variant.cost_price,
+      inventory_quantity: variant.inventory_quantity,
+      weight: variant.weight,
+      is_active: variant.is_active
     })
 
-    // Set selected image URL from image_id
-    if (convertedVariant.image_id) {
-      const existingImage = productImages.find(img => img.id === convertedVariant.image_id)
+    if (variant.image_id) {
+      const existingImage = productImages.find(img => img.id === variant.image_id)
       if (existingImage) {
         setSelectedImageUrl(existingImage.url)
       }
@@ -241,14 +389,18 @@ const VariantManager: React.FC<VariantManagerProps> = ({
     }
 
     setModalOpen(true)
-  }
 
-  // Save variant
-  const handleSave = async (values: any) => {
+    // Load variants if not already loaded
+    if (!isLoaded) {
+      loadVariants()
+    }
+  }, [productImages, isLoaded, loadVariants])
+
+  // Save variant (from modal)
+  const handleSave = useCallback(async (values: any) => {
     try {
       if (!editingVariant) return
 
-      
       // Generate SKU if not provided
       if (!values.sku) {
         values.sku = `VAR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
@@ -263,35 +415,56 @@ const VariantManager: React.FC<VariantManagerProps> = ({
         }
       }
 
-      // Create variant in both new and old format for compatibility
       const updatedVariant = {
         ...editingVariant,
         ...values,
         image_id: imageId,
-        // Preserve the options array from editingVariant
-        options: editingVariant.options,
-        // Convert options array to old format for compatibility with parent
-        option1_name: editingVariant.options[0]?.name || '',
-        option1_value: editingVariant.options[0]?.value || '',
-        option2_name: editingVariant.options[1]?.name || '',
-        option2_value: editingVariant.options[1]?.value || '',
-        option3_name: editingVariant.options[2]?.name || '',
-        option3_value: editingVariant.options[2]?.value || '',
-        option4_name: editingVariant.options[3]?.name || '',
-        option4_value: editingVariant.options[3]?.value || '',
-        option5_name: editingVariant.options[4]?.name || '',
-        option5_value: editingVariant.options[4]?.value || '',
       }
 
-      
+      let savedVariant
+      let newVariantsList
+
       if (editingVariant.id.startsWith('temp-')) {
-        // New variant
-        onChange([...variants, updatedVariant])
+        // Create new variant
+        savedVariant = await apiClient.createProductVariant(productId, updatedVariant)
         message.success('Variant created successfully')
+
+        // Add new variant to the list
+        setVariants(prev => {
+          newVariantsList = [...prev, savedVariant]
+          // Update variant count callback
+          if (onVariantCountChange) {
+            onVariantCountChange(newVariantsList.length)
+          }
+          return newVariantsList
+        })
       } else {
-        // Existing variant - update it instead of creating new one
-        onChange(variants.map(v => v.id === editingVariant.id ? updatedVariant : v))
+        // Update existing variant
+        savedVariant = await apiClient.updateProductVariant(productId, editingVariant.id, updatedVariant)
         message.success('Variant updated successfully')
+
+        // Update existing variant in the list
+        setVariants(prev => {
+          newVariantsList = prev.map(v => v.id === editingVariant.id ? savedVariant : v)
+          // Update variant count callback (count stays same for updates)
+          if (onVariantCountChange) {
+            onVariantCountChange(newVariantsList.length)
+          }
+          return newVariantsList
+        })
+      }
+
+      // Update cache
+      const cached = variantCache.get(productId)
+      if (cached) {
+        const updatedCache = editingVariant.id.startsWith('temp-')
+          ? [...cached.data, savedVariant]
+          : cached.data.map(v => v.id === editingVariant.id ? savedVariant : v)
+
+        variantCache.set(productId, {
+          data: updatedCache,
+          timestamp: Date.now()
+        })
       }
 
       setModalOpen(false)
@@ -302,82 +475,106 @@ const VariantManager: React.FC<VariantManagerProps> = ({
       message.error('Failed to save variant')
       console.error(error)
     }
-  }
+  }, [editingVariant, selectedImageUrl, productImages, productId, onVariantCountChange])
+
+  // Refresh variants function
+  const handleRefresh = useCallback(async () => {
+    await loadVariants(true) // Force refresh by bypassing cache
+    message.success('Variants refreshed')
+  }, [loadVariants])
 
   // Delete variant
-  const handleDelete = (variantId: string) => {
-    onChange(variants.filter(v => v.id !== variantId))
-    message.success('Variant deleted')
-  }
+  const handleDelete = useCallback((variantId: string) => {
+    deleteVariantInstantly(variantId)
+  }, [deleteVariantInstantly])
 
   // Duplicate variant
-  const handleDuplicate = (variant: ProductVariant) => {
-    const convertedVariant = convertVariantToNewFormat(variant)
-    const timestamp = Date.now()
-    const duplicated: ProductVariant = {
-      ...convertedVariant,
-      id: `temp-${timestamp}`,
-      title: `${variant.title} (Copy)`,
-      sku: '',
-      options: convertedVariant.options.map((option, index) => ({
-        ...option,
-        id: `opt-${timestamp}-${index + 1}`
-      })),
-      is_active: true
+  const handleDuplicate = useCallback(async (variant: ProductVariant) => {
+    try {
+      const timestamp = Date.now()
+      const duplicated: ProductVariant = {
+        ...variant,
+        id: `temp-${timestamp}`,
+        title: `${variant.title} (Copy)`,
+        sku: '',
+        options: variant.options.map((option, index) => ({
+          ...option,
+          id: `opt-${timestamp}-${index + 1}`
+        })),
+        is_active: true
+      }
+
+      // Create the duplicated variant via API
+      const savedVariant = await apiClient.createProductVariant(productId, duplicated)
+
+      // Update local state with the saved variant
+      setVariants(prev => {
+        const newVariantsList = [...prev, savedVariant]
+        // Update variant count callback
+        if (onVariantCountChange) {
+          onVariantCountChange(newVariantsList.length)
+        }
+        return newVariantsList
+      })
+
+      // Update cache
+      const cached = variantCache.get(productId)
+      if (cached) {
+        variantCache.set(productId, {
+          data: [...cached.data, savedVariant],
+          timestamp: Date.now()
+        })
+      }
+
+      message.success('Variant duplicated')
+    } catch (error) {
+      console.error('Failed to duplicate variant:', error)
+      message.error('Failed to duplicate variant')
     }
-    onChange([...variants, duplicated])
-    message.success('Variant duplicated')
-  }
+  }, [productId, onVariantCountChange])
 
-  // Toggle variant active status
-  const handleToggleActive = (variantId: string) => {
-    onChange(variants.map(v =>
-      v.id === variantId ? { ...v, is_active: !v.is_active } : v
-    ))
-  }
-
-  // Table columns
-  const columns = [
+  // Memoized table columns to prevent re-renders
+  const columns = useMemo(() => [
     {
       title: 'Variant',
       key: 'variant',
-      render: (_: any, record: ProductVariant) => {
-        const variant = convertVariantToNewFormat(record)
-        return (
-          <div>
-            <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{variant.title || 'Untitled Variant'}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>SKU: {variant.sku}</div>
-            <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
-              {variant.options?.map((option, index) => (
-                option.value && (
-                  <Tag
-                    key={option.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4
-                    }}
-                  >
-                    {option.name?.toLowerCase() === 'color' && (
-                      <div
-                        style={{
-                          width: 12,
-                          height: 12,
-                          borderRadius: '50%',
-                          backgroundColor: option.value.includes('#') ? option.value :
-                            COMMON_COLORS.find(c => c.label.toLowerCase() === option.value.toLowerCase())?.value || '#ccc',
-                          border: '1px solid #d9d9d9'
-                        }}
-                      />
-                    )}
-                    {option.name}: {option.value}
-                  </Tag>
-                )
-              ))}
-            </div>
+      render: (_: any, record: ProductVariant) => (
+        <div>
+          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
+            {record.title || 'Untitled Variant'}
           </div>
-        )
-      },
+          <div style={{ fontSize: '12px', color: '#666' }}>SKU: {record.sku}</div>
+          <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+            {record.options?.map((option, index) => (
+              option.value && (
+                <Tag
+                  key={option.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}
+                >
+                  {option.name?.toLowerCase() === 'color' && (
+                    <div
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        backgroundColor: getColorHex(option.value),
+                        border: '1px solid #d9d9d9',
+                        display: 'inline-block',
+                        flexShrink: 0
+                      }}
+                    />
+                  )}
+                  {option.name}: {option.value}
+                </Tag>
+              )
+            ))}
+          </div>
+        </div>
+      ),
     },
     {
       title: 'Image',
@@ -498,7 +695,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({
       key: 'actions',
       render: (_: any, record: ProductVariant) => (
         <Space>
-          <Tooltip title="Edit">
+          <Tooltip title="Update Variant">
             <Button
               size="small"
               icon={<EditOutlined />}
@@ -527,7 +724,12 @@ const VariantManager: React.FC<VariantManagerProps> = ({
         </Space>
       ),
     },
-  ]
+  ], [productImages, handleToggleActive, handleEdit, handleDuplicate, handleDelete])
+
+  // Load variants immediately when component mounts
+  useEffect(() => {
+    loadVariants()
+  }, [loadVariants])
 
   return (
     <div>
@@ -539,9 +741,19 @@ const VariantManager: React.FC<VariantManagerProps> = ({
             Manage different sizes, colors, and other variations with individual pricing and inventory
           </div>
         </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-          Add Variant
-        </Button>
+        <div>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={handleRefresh}
+            loading={loading}
+            style={{ marginRight: 8 }}
+          >
+            Refresh
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            Add Variant
+          </Button>
+        </div>
       </div>
 
       {/* Quick Stats */}
@@ -580,33 +792,50 @@ const VariantManager: React.FC<VariantManagerProps> = ({
 
       {/* Variants Table */}
       <Card>
-        <Table
-          dataSource={variants}
-          columns={columns}
-          rowKey="id"
-          pagination={false}
-          size="small"
-          locale={{
-            emptyText: (
-              <div style={{ textAlign: 'center', padding: 32 }}>
-                <div style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }}>
-                  <InboxOutlined />
+        <Spin spinning={loading}>
+          <Table
+            dataSource={variants}
+            columns={columns}
+            rowKey="id"
+            pagination={false}
+            size="small"
+            locale={{
+              emptyText: loading ? (
+                // Loading skeleton
+                <div style={{ textAlign: 'center', padding: 32 }}>
+                  {[...Array(3)].map((_, index) => (
+                    <div key={index} style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div style={{ width: 60, height: 60, background: '#f0f0f0', borderRadius: 4 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ width: 150, height: 16, background: '#f0f0f0', borderRadius: 4, marginBottom: 8 }} />
+                        <div style={{ width: 100, height: 12, background: '#f0f0f0', borderRadius: 4 }} />
+                      </div>
+                      <div style={{ width: 80, height: 16, background: '#f0f0f0', borderRadius: 4 }} />
+                      <div style={{ width: 60, height: 16, background: '#f0f0f0', borderRadius: 4 }} />
+                    </div>
+                  ))}
                 </div>
-                <Text type="secondary">No variants created yet</Text>
-                <div style={{ marginTop: 8 }}>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-                    Add Your First Variant
-                  </Button>
+              ) : (
+                <div style={{ textAlign: 'center', padding: 32 }}>
+                  <div style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }}>
+                    <InboxOutlined />
+                  </div>
+                  <Text type="secondary">No variants created yet</Text>
+                  <div style={{ marginTop: 8 }}>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+                      Add Your First Variant
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )
-          }}
-        />
+              )
+            }}
+          />
+        </Spin>
       </Card>
 
-      {/* Edit/Create Modal */}
+      {/* Update Variant Modal */}
       <Modal
-        title={editingVariant?.id.startsWith('temp-') ? 'Create Variant' : 'Update Variant'}
+        title="Update Variant"
         open={modalOpen}
         onCancel={() => {
           setModalOpen(false)
@@ -625,7 +854,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({
             Cancel
           </Button>,
           <Button key="submit" type="primary" onClick={() => form.submit()}>
-            {editingVariant && !editingVariant.id.startsWith('temp-') ? 'Update Variant' : 'Create Variant'}
+            Update Variant
           </Button>,
         ]}
       >
@@ -640,10 +869,10 @@ const VariantManager: React.FC<VariantManagerProps> = ({
               <Form.Item name="sku" label="SKU">
                 <Input
                   placeholder="Auto-generated if empty"
-                  disabled={!editingVariant?.id.startsWith('temp-') && editingVariant?.sku !== ''}
-                  title={editingVariant?.id.startsWith('temp-') ?
-                    "Enter SKU or leave empty to auto-generate" :
-                    "SKU cannot be modified once generated"
+                  disabled={editingVariant && !editingVariant.id.startsWith('temp-') && editingVariant.sku !== ''}
+                  title={editingVariant && !editingVariant.id.startsWith('temp-') ?
+                    "SKU cannot be modified once generated" :
+                    "Enter SKU or leave empty to auto-generate"
                   }
                 />
               </Form.Item>
@@ -653,12 +882,27 @@ const VariantManager: React.FC<VariantManagerProps> = ({
           {/* Options Section */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text strong>{editingVariant?.id.startsWith('temp-') ? 'Create Variant Options' : 'Update Variant Options'}</Text>
-              {editingVariant?.id.startsWith('temp-') && (
-                <Button icon={<PlusOutlined />} onClick={addVariantOption}>
-                  Add Option
-                </Button>
-              )}
+              <Text strong>Update Variant Options</Text>
+              <Button
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  if (!editingVariant) return
+                  const timestamp = Date.now()
+                  const random = Math.random().toString(36).substr(2, 9)
+                  const newOption = {
+                    id: `opt-${timestamp}-${random}-${editingVariant.options.length + 1}`,
+                    name: '',
+                    value: ''
+                  }
+                  const updatedVariant = {
+                    ...editingVariant,
+                    options: [...editingVariant.options, newOption]
+                  }
+                  setEditingVariant(updatedVariant)
+                }}
+              >
+                Add Option
+              </Button>
             </div>
             <div style={{ display: 'grid', gap: 12 }}>
               {editingVariant?.options.map((option, index) => (
@@ -676,16 +920,16 @@ const VariantManager: React.FC<VariantManagerProps> = ({
                       <Input
                         value={option.name}
                         placeholder="Option name (e.g., Size, Color)"
-                        onChange={(e) => updateVariantOption(option.id, 'name', e.target.value)}
+                        onChange={(e) => updateVariantOption(option.id, 'name', e.target.value, editingVariant!)}
                       />
                     </Col>
-                    <Col span={10}>
+                    <Col span={9}>
                       {option.name?.toLowerCase() === 'color' ? (
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <Input
                             value={option.value}
                             placeholder="Color value"
-                            onChange={(e) => updateVariantOption(option.id, 'value', e.target.value)}
+                            onChange={(e) => updateVariantOption(option.id, 'value', e.target.value, editingVariant!)}
                             style={{ flex: 1 }}
                           />
                           <ColorPicker
@@ -700,7 +944,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({
                             onChange={(color, hex) => {
                               if (color && hex) {
                                 const colorName = COMMON_COLORS.find(c => c.value === hex)?.label || hex
-                                updateVariantOption(option.id, 'value', colorName)
+                                updateVariantOption(option.id, 'value', colorName, editingVariant!)
                               }
                             }}
                             format="hex"
@@ -710,17 +954,24 @@ const VariantManager: React.FC<VariantManagerProps> = ({
                         <Input
                           value={option.value}
                           placeholder="Option value (e.g., Small, Blue)"
-                          onChange={(e) => updateVariantOption(option.id, 'value', e.target.value)}
+                          onChange={(e) => updateVariantOption(option.id, 'value', e.target.value, editingVariant!)}
                         />
                       )}
                     </Col>
                     <Col span={3}>
-                      {editingVariant.options.length > 1 && editingVariant.id.startsWith('temp-') && (
+                      {editingVariant.options.length > 1 && (
                         <Button
                           size="small"
                           danger
                           icon={<DeleteOutlined />}
-                          onClick={() => removeVariantOption(option.id)}
+                          onClick={() => {
+                            if (!editingVariant) return
+                            const updatedVariant = {
+                              ...editingVariant,
+                              options: editingVariant.options.filter(opt => opt.id !== option.id)
+                            }
+                            setEditingVariant(updatedVariant)
+                          }}
                           style={{ width: '100%' }}
                         >
                           Remove
@@ -731,14 +982,6 @@ const VariantManager: React.FC<VariantManagerProps> = ({
                 </div>
               ))}
             </div>
-            {editingVariant?.options.length === 0 && (
-              <div style={{ textAlign: 'center', padding: 20, color: '#999' }}>
-                {editingVariant?.id.startsWith('temp-')
-                  ? 'No options added yet. Click "Add Option" to get started.'
-                  : 'No options configured for this variant.'
-                }
-              </div>
-            )}
           </div>
 
           <Divider />
@@ -748,8 +991,8 @@ const VariantManager: React.FC<VariantManagerProps> = ({
               <Form.Item name="price" label="Price" rules={[{ required: true }]}>
                 <InputNumber
                   style={{ width: '100%' }}
-                  formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value!.replace(/₹\s?|(,*)/g, '')}
                   placeholder="0.00"
                 />
               </Form.Item>
@@ -758,8 +1001,8 @@ const VariantManager: React.FC<VariantManagerProps> = ({
               <Form.Item name="compare_price" label="Compare Price">
                 <InputNumber
                   style={{ width: '100%' }}
-                  formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value!.replace(/₹\s?|(,*)/g, '')}
                   placeholder="0.00"
                 />
               </Form.Item>
@@ -768,8 +1011,8 @@ const VariantManager: React.FC<VariantManagerProps> = ({
               <Form.Item name="cost_price" label="Cost Price">
                 <InputNumber
                   style={{ width: '100%' }}
-                  formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value!.replace(/₹\s?|(,*)/g, '')}
                   placeholder="0.00"
                 />
               </Form.Item>
@@ -898,4 +1141,4 @@ const VariantManager: React.FC<VariantManagerProps> = ({
   )
 }
 
-export default VariantManager
+export default OptimizedVariantManager

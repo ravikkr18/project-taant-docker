@@ -26,12 +26,7 @@ import {
   Download,
   Upload
 } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '../../components/ui/dropdown-menu'
+import { Dropdown, Menu } from 'antd'
 import { Input } from '../../components/ui/input'
 import RefinedProducts from './refined-products'
 import AdvancedProductManager from './advanced-products-manager'

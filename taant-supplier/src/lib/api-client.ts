@@ -173,8 +173,8 @@ class ApiClient {
     const response = await this.request<{ success: boolean; data: Product[]; pagination: { total: number; page: number; limit: number; totalPages: number }; message: string }>(`/api/products?${params}`);
     console.log('API Client: Received products response');
     return {
-      data: response.data,
-      pagination: response.pagination
+      data: response.data as any,
+      pagination: (response as any).pagination
     };
   }
 
@@ -251,6 +251,35 @@ class ApiClient {
     });
 
     const response = await this.request<Product[]>(`/api/suppliers/products?${params}`);
+    return response.data;
+  }
+
+  // Variant API methods
+  async getProductVariants(productId: string): Promise<any[]> {
+    const response = await this.request<any[]>(`/api/products/${productId}/variants`);
+    return response.data;
+  }
+
+  async createProductVariant(productId: string, variantData: any): Promise<any> {
+    const response = await this.request<any>(`/api/products/${productId}/variants`, {
+      method: 'POST',
+      body: JSON.stringify(variantData),
+    });
+    return response.data;
+  }
+
+  async updateProductVariant(productId: string, variantId: string, variantData: any): Promise<any> {
+    const response = await this.request<any>(`/api/products/${productId}/variants/${variantId}`, {
+      method: 'PUT',
+      body: JSON.stringify(variantData),
+    });
+    return response.data;
+  }
+
+  async deleteProductVariant(productId: string, variantId: string): Promise<{ success: boolean; message: string }> {
+    const response = await this.request<{ success: boolean; message: string }>(`/api/products/${productId}/variants/${variantId}`, {
+      method: 'DELETE',
+    });
     return response.data;
   }
 }
