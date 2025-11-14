@@ -1,0 +1,160 @@
+import { Injectable } from '@nestjs/common';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+@Injectable()
+export class S3Service {
+  private readonly s3Client: S3Client;
+  private readonly bucketName: string;
+  private readonly region: string;
+
+  constructor() {
+    this.region = process.env.SUPABASE_S3_REGION || 'ap-southeast-2';
+    this.bucketName = process.env.SUPABASE_S3_BUCKET || 'taant-content';
+
+    this.s3Client = new S3Client({
+      region: this.region,
+      endpoint: process.env.SUPABASE_S3_ENDPOINT,
+      credentials: {
+        accessKeyId: process.env.SUPABASE_S3_ACCESS_KEY || '',
+        secretAccessKey: process.env.SUPABASE_S3_SECRET_KEY || '',
+      },
+      forcePathStyle: true, // Required for Supabase S3
+    });
+  }
+
+  /**
+   * Upload a file buffer to S3
+   */
+  async uploadFile(
+    fileBuffer: Buffer,
+    fileName: string,
+    contentType: string,
+    folder: string = 'a-plus-content'
+  ): Promise<{ url: string; key: string }> {
+    const key = `${folder}/${fileName}`;
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+      Body: fileBuffer,
+      ContentType: contentType,
+      ACL: 'public-read', // Make files publicly accessible
+    });
+
+    try {
+      await this.s3Client.send(command);
+
+      // Construct the public URL for Supabase S3
+      const publicUrl = `${process.env.SUPABASE_S3_ENDPOINT?.replace('/storage/v1/s3', '/storage/v1/object/public')}/${this.bucketName}/${key}`;
+
+      return {
+        url: publicUrl,
+        key,
+      };
+    } catch (error) {
+      throw new Error(`Failed to upload file to S3: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get a pre-signed URL for uploading directly from frontend
+   */
+  async getUploadSignedUrl(
+    fileName: string,
+    contentType: string,
+    folder: string = 'a-plus-content'
+  ): Promise<{ url: string; key: string; publicUrl: string }> {
+    const key = `${folder}/${Date.now()}-${fileName}`;
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+      ContentType: contentType,
+      ACL: 'public-read',
+    });
+
+    try {
+      const signedUrl = await getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
+
+      // Construct the public URL
+      const publicUrl = `${process.env.SUPABASE_S3_ENDPOINT?.replace('/storage/v1/s3', '/storage/v1/object/public')}/${this.bucketName}/${key}`;
+
+      return {
+        url: signedUrl,
+        key,
+        publicUrl,
+      };
+    } catch (error) {
+      throw new Error(`Failed to generate signed URL: ${error.message}`);
+    }
+  }
+
+  /**
+   * Convert blob URL to S3 URL by uploading the file
+   */
+  async convertBlobUrlToS3(blobUrl: string, fileName: string): Promise<string> {
+    try {
+      // Fetch the blob data
+      const response = await fetch(blobUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch blob: ${response.statusText}`);
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+
+      // Extract file extension from blob URL or generate one
+      const extension = this.getFileExtensionFromBlob(blobUrl, contentType);
+      const finalFileName = fileName.includes('.') ? fileName : `${fileName}${extension}`;
+
+      // Upload to S3
+      const result = await this.uploadFile(buffer, finalFileName, contentType);
+
+      return result.url;
+    } catch (error) {
+      throw new Error(`Failed to convert blob URL to S3: ${error.message}`);
+    }
+  }
+
+  /**
+   * Extract file extension from blob URL or content type
+   */
+  private getFileExtensionFromBlob(blobUrl: string, contentType: string): string {
+    // Try to extract from blob URL first
+    const urlMatch = blobUrl.match(/blob:.*\/.*\.([a-zA-Z0-9]+)/);
+    if (urlMatch) {
+      return `.${urlMatch[1]}`;
+    }
+
+    // Fall back to content type
+    const typeMap: { [key: string]: string } = {
+      'image/jpeg': '.jpg',
+      'image/jpg': '.jpg',
+      'image/png': '.png',
+      'image/gif': '.gif',
+      'image/webp': '.webp',
+      'image/svg+xml': '.svg',
+    };
+
+    return typeMap[contentType] || '.jpg';
+  }
+
+  /**
+   * Delete a file from S3
+   */
+  async deleteFile(key: string): Promise<void> {
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+    });
+
+    try {
+      // For Supabase, we'll need to use DELETE method
+      // This is a placeholder - actual deletion may need different implementation
+      console.log(`Delete file: ${key}`);
+    } catch (error) {
+      throw new Error(`Failed to delete file: ${error.message}`);
+    }
+  }
+}

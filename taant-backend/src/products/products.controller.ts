@@ -13,11 +13,15 @@ import {
   UseGuards,
   Headers,
   Ip,
-  Res
+  Res,
+  UploadedFile,
+  UseInterceptors
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AuthService } from '../auth/auth.service';
+import { S3Service } from '../s3/s3.service';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 interface ProductCreateDto {
   sku: string;
@@ -72,7 +76,8 @@ interface ProductUpdateDto {
 export class ProductsController {
   constructor(
     private readonly productsService: ProductsService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly s3Service: S3Service
   ) {}
 
   @Get()
@@ -551,6 +556,77 @@ export class ProductsController {
     } catch (error) {
       throw new HttpException(
         error.message || 'Failed to delete A+ content image',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post('upload-a-plus-image')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAPlusImage(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req?: any
+  ) {
+    try {
+      if (!file) {
+        throw new HttpException('No file uploaded', HttpStatus.BAD_REQUEST);
+      }
+
+      // Generate a unique filename
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 8);
+      const fileName = `a-plus-${timestamp}-${randomString}${file.originalname.substring(file.originalname.lastIndexOf('.'))}`;
+
+      // Upload to S3
+      const result = await this.s3Service.uploadFile(
+        file.buffer,
+        fileName,
+        file.mimetype,
+        'a-plus-content'
+      );
+
+      return {
+        success: true,
+        data: {
+          url: result.url,
+          key: result.key,
+          originalName: file.originalname,
+          size: file.size,
+          mimetype: file.mimetype
+        },
+        message: 'A+ content image uploaded successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to upload A+ content image',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post('convert-blob-to-s3')
+  async convertBlobToS3(@Body() body: { blobUrl: string; fileName: string }) {
+    try {
+      const { blobUrl, fileName } = body;
+
+      if (!blobUrl || !fileName) {
+        throw new HttpException('blobUrl and fileName are required', HttpStatus.BAD_REQUEST);
+      }
+
+      // Convert blob URL to S3 URL
+      const s3Url = await this.s3Service.convertBlobUrlToS3(blobUrl, fileName);
+
+      return {
+        success: true,
+        data: {
+          originalBlobUrl: blobUrl,
+          s3Url: s3Url
+        },
+        message: 'Blob URL converted to S3 URL successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to convert blob URL to S3',
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }

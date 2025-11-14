@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback } from 'react'
 import { Upload, Button, Card, Image, Input, Space, message, Modal, Tooltip, Typography } from 'antd'
+const { TextArea } = Input
 import {
   UploadOutlined,
   DeleteOutlined,
@@ -31,12 +32,41 @@ interface APlusContentImage {
   height?: number
   created_at: string
   updated_at: string
+  file?: File // Add local file storage
 }
 
 interface APlusContentImagesManagerProps {
   productId: string
   contentImages: APlusContentImage[]
   onChange: (images: APlusContentImage[]) => void
+}
+
+// Debounced alt text input hook
+const useDebouncedAltText = (initialAlt: string, onUpdateAlt: (id: string, alt: string) => void, imageId: string, delay: number = 500) => {
+  const [localAlt, setLocalAlt] = useState(initialAlt)
+  const [isTyping, setIsTyping] = useState(false)
+
+  React.useEffect(() => {
+    setLocalAlt(initialAlt)
+  }, [initialAlt])
+
+  React.useEffect(() => {
+    if (!isTyping) return
+
+    const timer = setTimeout(() => {
+      onUpdateAlt(imageId, localAlt)
+      setIsTyping(false)
+    }, delay)
+
+    return () => clearTimeout(timer)
+  }, [localAlt, isTyping, onUpdateAlt, imageId, delay])
+
+  const handleChange = (value: string) => {
+    setLocalAlt(value)
+    setIsTyping(true)
+  }
+
+  return { value: localAlt, onChange: handleChange, isTyping }
 }
 
 // Draggable Content Image Card Component
@@ -48,6 +78,13 @@ const DraggableContentImageCard: React.FC<{
   onUpdateAlt: (id: string, alt: string) => void
 }> = ({ image, index, onMove, onRemove, onUpdateAlt }) => {
   const ref = React.useRef<HTMLDivElement>(null)
+
+  // Use debounced alt text to prevent re-renders while typing
+  const { value: altText, onChange: handleAltTextChange, isTyping } = useDebouncedAltText(
+    image.alt_text || '',
+    onUpdateAlt,
+    image.id
+  )
 
   const [{ isDragging }, drag] = useDrag({
     type: 'content-image',
@@ -88,6 +125,7 @@ const DraggableContentImageCard: React.FC<{
             height={200}
             style={{ objectFit: 'cover', width: '100%' }}
             fallback="data:image/svg+xml,%3Csvg width='400' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='400' height='200' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23999'%3ENo Image%3C/text%3E%3C/svg%3E"
+            onError={(error) => console.error('Image failed to load:', { id: image.id, url: image.url, error })}
           />
 
           <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
@@ -141,14 +179,20 @@ const DraggableContentImageCard: React.FC<{
         <Text strong style={{ display: 'block', marginBottom: 8 }}>
           Alt Text / Description
         </Text>
-        <Input
-          placeholder="Enter alt text for accessibility..."
-          value={image.alt_text || ''}
-          onChange={(e) => onUpdateAlt(image.id, e.target.value)}
-          size="small"
-          maxLength={200}
+        <TextArea
+          placeholder="Enter detailed alt text or description for this image..."
+          value={altText}
+          onChange={(e) => handleAltTextChange(e.target.value)}
+          rows={3}
+          maxLength={500}
           showCount
+          style={{ fontSize: '12px' }}
         />
+        {isTyping && (
+          <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 2 }}>
+            Typing... (will auto-save)
+          </Text>
+        )}
         {image.file_size && (
           <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 4 }}>
             {image.file_name} ({(image.file_size / 1024).toFixed(1)}KB)
@@ -161,10 +205,79 @@ const DraggableContentImageCard: React.FC<{
 
 const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ productId, contentImages, onChange }) => {
   const [uploading, setUploading] = useState(false)
+  const [forceUpdate, setForceUpdate] = useState(0)
+  const [localImages, setLocalImages] = useState(contentImages)
+
+  // S3 upload function
+  const uploadToS3 = async (file: File): Promise<string> => {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const response = await apiClient.post('/api/products/upload-a-plus-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      if (response.data.success) {
+        return response.data.data.url
+      } else {
+        throw new Error(response.data.message || 'Upload failed')
+      }
+    } catch (error) {
+      console.error('S3 upload error:', error)
+      throw error
+    }
+  }
+
+  // Convert existing blob URLs to S3 URLs
+  const convertBlobToS3 = async (blobUrl: string, fileName: string): Promise<string> => {
+    try {
+      const response = await apiClient.post('/api/products/convert-blob-to-s3', {
+        blobUrl,
+        fileName,
+      })
+
+      if (response.data.success) {
+        return response.data.data.s3Url
+      } else {
+        throw new Error(response.data.message || 'Conversion failed')
+      }
+    } catch (error) {
+      console.error('Blob to S3 conversion error:', error)
+      throw error
+    }
+  }
+
+  // Debug: Log when contentImages changes
+  React.useEffect(() => {
+    console.log('APlusContentImagesManager - contentImages updated:', contentImages.length, 'images')
+    // Update local images when prop changes
+    setLocalImages(contentImages)
+  }, [contentImages])
+
+  // Force re-render when localImages change
+  React.useEffect(() => {
+    console.log('APlusContentImagesManager - localImages updated, triggering re-render')
+    setForceUpdate(prev => prev + 1)
+  }, [localImages])
+
+  // Cleanup blob URLs when component unmounts
+  React.useEffect(() => {
+    return () => {
+      // Clean up blob URLs when component unmounts
+      contentImages.forEach(image => {
+        if (image.url && image.url.startsWith('blob:')) {
+          URL.revokeObjectURL(image.url)
+        }
+      })
+    }
+  }, [contentImages, productId])
 
   // Move image (for drag and drop)
   const moveImage = useCallback((dragIndex: number, hoverIndex: number) => {
-    const newImages = [...contentImages]
+    const newImages = [...localImages]
     const draggedImage = newImages[dragIndex]
     newImages.splice(dragIndex, 1)
     newImages.splice(hoverIndex, 0, draggedImage)
@@ -175,107 +288,179 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
       position: index,
     }))
 
+    // Update local state immediately
+    setLocalImages(reorderedImages)
     onChange(reorderedImages)
 
-    // Update positions on backend
-    const positions = reorderedImages.map((image) => ({
-      id: image.id,
-      position: image.position,
-    }))
+    // Only update positions on backend for server-stored images (not temp images)
+    const serverImages = reorderedImages.filter(img => !img.id.startsWith('temp-'))
+    if (serverImages.length > 0) {
+      const positions = serverImages.map((image) => ({
+        id: image.id,
+        position: image.position,
+      }))
 
-    apiClient.updateAPlusContentImagePositions(productId, positions).catch((error) => {
-      console.error('Failed to update positions:', error)
-      message.error('Failed to update image order')
-    })
-  }, [contentImages, onChange, productId])
+      apiClient.updateAPlusContentImagePositions(productId, positions).catch((error) => {
+        console.error('Failed to update positions:', error)
+        message.error('Failed to update image order')
+      })
+    }
+  }, [localImages, onChange, productId])
 
   // Remove image
   const removeImage = useCallback(async (imageId: string) => {
+    const imageToRemove = localImages.find(img => img.id === imageId)
+
+    // If it's a local temporary image, clean up blob URL and remove it from state
+    if (imageToRemove?.id.startsWith('temp-')) {
+      // Clean up blob URL if it exists
+      if (imageToRemove.url && imageToRemove.url.startsWith('blob:')) {
+        URL.revokeObjectURL(imageToRemove.url)
+      }
+      const updatedImages = localImages.filter(img => img.id !== imageId)
+      setLocalImages(updatedImages)
+      onChange(updatedImages)
+      message.success('Content image removed successfully')
+      return
+    }
+
+    // If it's a server-stored image, call API to delete it
     try {
       await apiClient.deleteAPlusContentImage(productId, imageId)
-      onChange(contentImages.filter(img => img.id !== imageId))
+      const updatedImages = localImages.filter(img => img.id !== imageId)
+      setLocalImages(updatedImages)
+      onChange(updatedImages)
       message.success('Content image deleted successfully')
     } catch (error) {
       console.error('Failed to delete content image:', error)
       message.error('Failed to delete content image')
     }
-  }, [contentImages, onChange, productId])
+  }, [localImages, onChange, productId])
 
   // Update alt text
   const updateAltText = useCallback(async (imageId: string, altText: string) => {
-    const imageIndex = contentImages.findIndex(img => img.id === imageId)
+    const imageIndex = localImages.findIndex(img => img.id === imageId)
     if (imageIndex === -1) return
 
-    const updatedImage = { ...contentImages[imageIndex], alt_text: altText }
-    const newImages = [...contentImages]
+    const updatedImage = { ...localImages[imageIndex], alt_text: altText }
+    const newImages = [...localImages]
     newImages[imageIndex] = updatedImage
+
+    // Update local state immediately
+    setLocalImages(newImages)
     onChange(newImages)
 
-    try {
-      await apiClient.updateAPlusContentImage(productId, imageId, { alt_text: altText })
-    } catch (error) {
-      console.error('Failed to update alt text:', error)
-      message.error('Failed to update alt text')
+    // Only update on backend for server-stored images (not temp images)
+    if (!imageId.startsWith('temp-')) {
+      try {
+        await apiClient.updateAPlusContentImage(productId, imageId, { alt_text: altText })
+      } catch (error) {
+        console.error('Failed to update alt text:', error)
+        message.error('Failed to update alt text')
+      }
     }
-  }, [contentImages, onChange, productId])
+  }, [localImages, onChange, productId])
 
   // Handle image upload
-  const handleImageUpload: UploadProps['beforeUpload'] = async (file) => {
-    const isImage = file.type.startsWith('image/')
-    if (!isImage) {
-      message.error('You can only upload image files!')
-      return false
-    }
+  const handleImageUpload: UploadProps['beforeUpload'] = async (file, fileList) => {
+    console.log('A+ Content image upload started:', { file: file.name, currentImages: localImages.length })
 
-    const isLt5M = file.size / 1024 / 1024 < 5
-    if (!isLt5M) {
-      message.error('Image must be smaller than 5MB!')
-      return false
-    }
+    // Process all files at once when the first file is processed (exactly like regular images)
+    if (fileList.length > 0) {
+      // Process valid files
+      const validFiles = fileList.filter(file => {
+        const isImage = file.type.startsWith('image/')
+        const isLt5M = file.size / 1024 / 1024 < 5
+        const isDuplicate = localImages.some(img =>
+          img.file && img.file.name === file.name && img.file.size === file.size
+        )
 
-    setUploading(true)
-
-    try {
-      // Create object URL for preview
-      const previewUrl = URL.createObjectURL(file)
-
-      // Get image dimensions
-      const dimensions = await new Promise<{ width: number; height: number }>((resolve) => {
-        const img = new Image()
-        img.onload = () => {
-          resolve({ width: img.width, height: img.height })
+        if (!isImage) {
+          message.error(`${file.name} is not an image file!`)
+          return false
         }
-        img.src = previewUrl
+        if (!isLt5M) {
+          message.error(`${file.name} must be smaller than 5MB!`)
+          return false
+        }
+        if (isDuplicate) {
+          message.error(`${file.name} has already been uploaded!`)
+          return false
+        }
+        return true
       })
 
-      // Create new content image object
-      const newContentImage = {
-        url: previewUrl,
-        alt_text: '',
-        file_name: file.name,
-        file_size: file.size,
-        file_type: file.type,
-        width: dimensions.width,
-        height: dimensions.height,
-        position: contentImages.length,
+      // Create new images for all valid files and upload to S3
+      setUploading(true)
+
+      try {
+        const newImages = await Promise.all(
+          validFiles.map(async (file, index) => {
+            try {
+              // Upload to S3 first
+              const s3Url = await uploadToS3(file)
+              console.log('Uploaded to S3:', s3Url, 'for file:', file.name)
+
+              return {
+                id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                url: s3Url,
+                alt_text: file.name.split('.')[0], // Use filename as default alt text
+                file_name: file.name,
+                file_size: file.size,
+                file_type: file.type,
+                width: undefined,
+                height: undefined,
+                position: localImages.length + index,
+                is_active: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                file: file
+              }
+            } catch (error) {
+              console.error('Failed to upload file to S3:', file.name, error)
+              // Fall back to blob URL if S3 upload fails
+              const blobUrl = URL.createObjectURL(file)
+              message.warning(`${file.name} uploaded locally (will sync later)`)
+
+              return {
+                id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                url: blobUrl,
+                alt_text: file.name.split('.')[0],
+                file_name: file.name,
+                file_size: file.size,
+                file_type: file.type,
+                width: undefined,
+                height: undefined,
+                position: localImages.length + index,
+                is_active: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                file: file
+              }
+            }
+          })
+        )
+
+        if (newImages.length > 0) {
+          const updatedImages = [...localImages, ...newImages]
+          console.log('Adding', newImages.length, 'new images to total of', updatedImages.length)
+
+          // Update local state immediately for instant preview
+          setLocalImages(updatedImages)
+
+          // Call onChange to update parent state
+          onChange(updatedImages)
+        }
+      } catch (error) {
+        console.error('Error during image upload:', error)
+        message.error('Failed to upload images')
+      } finally {
+        setUploading(false)
       }
 
-      // Call API to create content image
-      const createdImage = await apiClient.createAPlusContentImage(productId, newContentImage)
-
-      // Update local state with the created image (replace object URL with server URL)
-      const updatedImage = { ...createdImage, url: previewUrl } // Keep preview URL for immediate display
-      onChange([...contentImages, updatedImage])
-
-      message.success('Content image uploaded successfully')
-      return false // Prevent default upload
-    } catch (error) {
-      console.error('Failed to upload content image:', error)
-      message.error('Failed to upload content image')
-      return false
-    } finally {
-      setUploading(false)
+      message.success(`${validFiles.length} content image${validFiles.length > 1 ? 's' : ''} added successfully`)
     }
+    return false // Prevent automatic upload for all files (exactly like regular images)
   }
 
   const uploadProps: UploadProps = {
@@ -322,10 +507,10 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
         </Card>
 
         {/* Content Images Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
-          {contentImages.map((image, index) => (
+        <div key={`content-grid-${forceUpdate}`} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+          {localImages.map((image, index) => (
             <DraggableContentImageCard
-              key={image.id}
+              key={`${image.id}-${forceUpdate}`}
               image={image}
               index={index}
               onMove={moveImage}
@@ -336,7 +521,7 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
         </div>
 
         {/* Empty State */}
-        {contentImages.length === 0 && (
+        {localImages.length === 0 && (
           <Card>
             <div style={{ textAlign: 'center', padding: 48 }}>
               <div style={{ fontSize: 64, color: '#d9d9d9', marginBottom: 16 }}>
