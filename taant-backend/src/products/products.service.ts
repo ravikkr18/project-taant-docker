@@ -236,15 +236,22 @@ export class ProductsService {
       throw new Error(`Failed to update product: ${error.message}`);
     }
 
-    // Handle variants separately
+    // Handle variants separately - only if variants are actually provided
     if (variants && Array.isArray(variants)) {
-      // First, delete existing variants for this product
-      await supabase
-        .from('product_variants')
-        .delete()
-        .eq('product_id', id);
+      // Check if variants contain actual data (not just empty placeholder)
+      const hasRealVariantData = variants.some(variant =>
+        variant && (variant.sku || variant.title || (variant.options && variant.options.length > 0))
+      );
 
-      // Then insert the new variants
+      // Only update variants if real variant data is provided
+      if (hasRealVariantData) {
+        // First, delete existing variants for this product
+        await supabase
+          .from('product_variants')
+          .delete()
+          .eq('product_id', id);
+
+        // Then insert the new variants
       const variantsToInsert = variants.map(variant => {
         // Validate options count
         const options = variant.options || [];
@@ -280,6 +287,7 @@ export class ProductsService {
         if (variantError) {
           throw new Error(`Failed to update variants: ${variantError.message}`);
         }
+      }
       }
     }
 
