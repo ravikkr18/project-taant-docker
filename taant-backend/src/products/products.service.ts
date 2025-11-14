@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service';
+import { validateOptionsCount, transformVariantsArray, transformVariantData, VariantOption } from '../utils/variant-helper';
 
 @Injectable()
 export class ProductsService {
@@ -144,32 +145,32 @@ export class ProductsService {
 
     // Handle variants separately
     if (variants && Array.isArray(variants)) {
-      const variantsToInsert = variants.map(variant => ({
-        product_id: data.id,
-        sku: variant.sku,
-        title: variant.title,
-        barcode: variant.barcode || null,
-        price: variant.price,
-        compare_price: variant.compare_price || null,
-        cost_price: variant.cost_price || null,
-        weight: variant.weight || null,
-        inventory_quantity: variant.inventory_quantity || 0,
-        position: variant.position || 0,
-        option1_name: variant.option1_name || null,
-        option1_value: variant.option1_value || null,
-        option2_name: variant.option2_name || null,
-        option2_value: variant.option2_value || null,
-        option3_name: variant.option3_name || null,
-        option3_value: variant.option3_value || null,
-        option4_name: variant.option4_name || null,
-        option4_value: variant.option4_value || null,
-        option5_name: variant.option5_name || null,
-        option5_value: variant.option5_value || null,
-        image_id: variant.image_id || null,
-        is_active: variant.is_active !== false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }));
+      const variantsToInsert = variants.map(variant => {
+        // Validate options count
+        const options = variant.options || [];
+        const validation = validateOptionsCount(options);
+        if (!validation.isValid) {
+          throw new Error(`Variant validation failed: ${validation.error}`);
+        }
+
+        return {
+          product_id: data.id,
+          sku: variant.sku,
+          title: variant.title,
+          barcode: variant.barcode || null,
+          price: variant.price,
+          compare_price: variant.compare_price || null,
+          cost_price: variant.cost_price || null,
+          weight: variant.weight || null,
+          inventory_quantity: variant.inventory_quantity || 0,
+          position: variant.position || 0,
+          options: options, // Store options directly as JSON
+          image_id: variant.image_id || null,
+          is_active: variant.is_active !== false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+      });
 
       if (variantsToInsert.length > 0) {
         const { error: variantError } = await supabase
@@ -245,6 +246,13 @@ export class ProductsService {
 
       // Then insert the new variants
       const variantsToInsert = variants.map(variant => {
+        // Validate options count
+        const options = variant.options || [];
+        const validation = validateOptionsCount(options);
+        if (!validation.isValid) {
+          throw new Error(`Variant validation failed: ${validation.error}`);
+        }
+
         const mappedVariant = {
           product_id: id,
           sku: variant.sku,
@@ -256,16 +264,7 @@ export class ProductsService {
           weight: variant.weight || null,
           inventory_quantity: variant.inventory_quantity || 0,
           position: variant.position || 0,
-          option1_name: variant.option1_name || null,
-          option1_value: variant.option1_value || null,
-          option2_name: variant.option2_name || null,
-          option2_value: variant.option2_value || null,
-          option3_name: variant.option3_name || null,
-          option3_value: variant.option3_value || null,
-          option4_name: variant.option4_name || null,
-          option4_value: variant.option4_value || null,
-          option5_name: variant.option5_name || null,
-          option5_value: variant.option5_value || null,
+          options: options, // Store options directly as JSON
           image_id: variant.image_id || null,
           is_active: variant.is_active !== false,
           updated_at: new Date().toISOString()
@@ -378,29 +377,8 @@ export class ProductsService {
       throw new Error(`Failed to fetch variants: ${error.message}`);
     }
 
-    // Convert to frontend format with options array
-    return variants.map(variant => {
-      const options = [];
-
-      // Convert option1-3 to options array (only 3 columns in database)
-      for (let i = 1; i <= 3; i++) {
-        const nameField = `option${i}_name`;
-        const valueField = `option${i}_value`;
-
-        if (variant[nameField] && variant[valueField]) {
-          options.push({
-            id: `opt-${variant.id}-${i}`,
-            name: variant[nameField],
-            value: variant[valueField]
-          });
-        }
-      }
-
-      return {
-        ...variant,
-        options
-      };
-    });
+    // Convert to frontend format with options array using the new helper function
+    return transformVariantsArray(variants);
   }
 
   async createProductVariant(productId: string, variantData: any, userId: string) {
@@ -453,13 +431,8 @@ export class ProductsService {
       position: nextPosition,
       image_id: variantData.image_id || null,
       is_active: variantData.is_active !== false,
-      // Handle options array (only 3 columns in database)
-      option1_name: variantData.options?.[0]?.name || variantData.option1_name || null,
-      option1_value: variantData.options?.[0]?.value || variantData.option1_value || null,
-      option2_name: variantData.options?.[1]?.name || variantData.option2_name || null,
-      option2_value: variantData.options?.[1]?.value || variantData.option2_value || null,
-      option3_name: variantData.options?.[2]?.name || variantData.option3_name || null,
-      option3_value: variantData.options?.[2]?.value || variantData.option3_value || null,
+      // Store options directly as JSON
+      options: variantData.options || [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -474,25 +447,8 @@ export class ProductsService {
       throw new Error(`Failed to create variant: ${error.message}`);
     }
 
-    // Convert to frontend format
-    const options = [];
-    for (let i = 1; i <= 3; i++) {
-      const nameField = `option${i}_name`;
-      const valueField = `option${i}_value`;
-
-      if (data[nameField] && data[valueField]) {
-        options.push({
-          id: `opt-${data.id}-${i}`,
-          name: data[nameField],
-          value: data[valueField]
-        });
-      }
-    }
-
-    return {
-      ...data,
-      options
-    };
+    // Transform to frontend format (remove old columns, use JSON options)
+    return transformVariantData(data);
   }
 
   async updateProductVariant(productId: string, variantId: string, variantData: any, userId: string) {
@@ -515,7 +471,7 @@ export class ProductsService {
     }
 
     // Prepare update data
-    const updateData = {
+    const updateData: any = {
       title: variantData.title,
       sku: variantData.sku,
       barcode: variantData.barcode || null,
@@ -529,21 +485,9 @@ export class ProductsService {
       updated_at: new Date().toISOString()
     };
 
-    // Handle options update (only 3 columns in database)
+    // Store options directly as JSON (no more column limits)
     if (variantData.options && Array.isArray(variantData.options)) {
-      // Update first 3 options
-      for (let i = 0; i < 3; i++) {
-        const nameField = `option${i + 1}_name`;
-        const valueField = `option${i + 1}_value`;
-
-        if (variantData.options[i]) {
-          updateData[nameField] = variantData.options[i].name || null;
-          updateData[valueField] = variantData.options[i].value || null;
-        } else {
-          updateData[nameField] = null;
-          updateData[valueField] = null;
-        }
-      }
+      updateData.options = variantData.options;
     }
 
     const { data, error } = await supabase
@@ -558,25 +502,8 @@ export class ProductsService {
       throw new Error(`Failed to update variant: ${error.message}`);
     }
 
-    // Convert to frontend format
-    const options = [];
-    for (let i = 1; i <= 3; i++) {
-      const nameField = `option${i}_name`;
-      const valueField = `option${i}_value`;
-
-      if (data[nameField] && data[valueField]) {
-        options.push({
-          id: `opt-${data.id}-${i}`,
-          name: data[nameField],
-          value: data[valueField]
-        });
-      }
-    }
-
-    return {
-      ...data,
-      options
-    };
+    // Transform to frontend format (remove old columns, use JSON options)
+    return transformVariantData(data);
   }
 
   async deleteProductVariant(productId: string, variantId: string, userId: string) {
@@ -877,13 +804,28 @@ export class ProductsService {
     }
 
     // Get total count for pagination
-    const { count, error: countError } = await supabase
+    let countQuery = supabase
       .from('products')
-      .select('*', { count: 'exact', head: true })
-      .eq(supplierId ? 'supplier_id' : 'supplier_id', supplierId || '')
-      .eq(categoryId ? 'category_id' : 'category_id', categoryId || '')
-      .ilike(search ? 'title' : 'title', search ? `%${search}%` : '')
-      .eq(status ? 'status' : 'status', status || '');
+      .select('*', { count: 'exact', head: true });
+
+    // Apply same filters to count query
+    if (supplierId) {
+      countQuery = countQuery.eq('supplier_id', supplierId);
+    }
+
+    if (categoryId) {
+      countQuery = countQuery.eq('category_id', categoryId);
+    }
+
+    if (search) {
+      countQuery = countQuery.ilike('title', `%${search}%`);
+    }
+
+    if (status) {
+      countQuery = countQuery.eq('status', status);
+    }
+
+    const { count, error: countError } = await countQuery;
 
     if (countError) {
       throw new Error(`Failed to get total count: ${countError.message}`);

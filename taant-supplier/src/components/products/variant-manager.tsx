@@ -141,47 +141,23 @@ const VariantManager: React.FC<VariantManagerProps> = ({
     })
   }
 
-  // Convert old variant format to new format
+  // Convert variant format - now only handles JSON options
   const convertVariantToNewFormat = (variant: any): ProductVariant => {
-    if (variant.options && Array.isArray(variant.options)) {
-      return variant // Keep the original ID - no conversion
-    }
-
-    const options: Array<{ id: string; name: string; value: string }> = []
-    const timestamp = Date.now()
-
-    // Convert old format to new format
-    const optionFields = [
-      ['option1_name', 'option1_value'],
-      ['option2_name', 'option2_value'],
-      ['option3_name', 'option3_value'],
-      ['option4_name', 'option4_value'],
-      ['option5_name', 'option5_value']
-    ]
-
-    optionFields.forEach(([nameField, valueField], index) => {
-      if (variant[nameField] && variant[valueField]) {
-        options.push({
-          id: `opt-${timestamp}-${index + 1}`,
-          name: variant[nameField],
-          value: variant[valueField]
-        })
-      }
-    })
-
-    // Keep original ID for old format variants
-    let variantId = variant.id
+    // All variants should now have options in JSON format
+    const options = (variant.options || []).map((option: any, index: number) => ({
+      id: option.id || `opt-${Date.now()}-${index + 1}`,
+      name: option.name || '',
+      value: option.value || ''
+    }))
 
     return {
       ...variant,
-      id: variantId,
       options,
       // Clean up old fields
       option1_name: undefined, option1_value: undefined,
       option2_name: undefined, option2_value: undefined,
       option3_name: undefined, option3_value: undefined,
       option4_name: undefined, option4_value: undefined,
-      option5_name: undefined, option5_value: undefined,
       barcode: undefined
     }
   }
@@ -268,19 +244,8 @@ const VariantManager: React.FC<VariantManagerProps> = ({
         ...editingVariant,
         ...values,
         image_id: imageId,
-        // Preserve the options array from editingVariant
+        // Use the options array directly - no more column conversion needed
         options: editingVariant.options,
-        // Convert options array to old format for compatibility with parent
-        option1_name: editingVariant.options[0]?.name || '',
-        option1_value: editingVariant.options[0]?.value || '',
-        option2_name: editingVariant.options[1]?.name || '',
-        option2_value: editingVariant.options[1]?.value || '',
-        option3_name: editingVariant.options[2]?.name || '',
-        option3_value: editingVariant.options[2]?.value || '',
-        option4_name: editingVariant.options[3]?.name || '',
-        option4_value: editingVariant.options[3]?.value || '',
-        option5_name: editingVariant.options[4]?.name || '',
-        option5_value: editingVariant.options[4]?.value || '',
       }
 
       

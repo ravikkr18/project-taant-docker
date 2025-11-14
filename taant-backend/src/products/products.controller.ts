@@ -68,7 +68,7 @@ interface ProductUpdateDto {
 }
 
 @Controller('api/products')
-// @UseGuards(SupabaseAuthGuard) // Temporarily disabled for debugging
+@UseGuards(SupabaseAuthGuard)
 export class ProductsController {
   constructor(
     private readonly productsService: ProductsService,
