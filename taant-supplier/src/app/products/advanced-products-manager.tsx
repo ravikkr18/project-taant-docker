@@ -70,7 +70,7 @@ import VariantManager, { ProductVariant } from '../../components/products/varian
 import OptimizedVariantManager from '../../components/products/optimized-variant-manager'
 import APlusContentImagesManager from '../../components/products/a-plus-content-images-manager'
 // import FAQManager from '../../components/products/faq-manager' // Temporarily disabled due to react-dnd issues
-import TiptapEditor from '../../components/ui/tiptap-editor'
+import SimpleWysiwygEditor from '../../components/ui/simple-wysiwyg-editor'
 import SimpleDynamicFields from '../../components/products/simple-dynamic-fields-final'
 import InformationSectionsManager from '../../components/products/information-sections-manager-final'
 import FloatingHelp from '../../components/ui/floating-help'
@@ -217,6 +217,45 @@ const AdvancedProductManager: React.FC = () => {
   const [features, setFeatures] = useState<string[]>([''])
   const [specifications, setSpecifications] = useState<Record<string, string>>({})
   const [contentImages, setContentImages] = useState<Array<any>>([])
+  const [originalVariants, setOriginalVariants] = useState<ProductVariant[]>([])
+  const [variantsWereModified, setVariantsWereModified] = useState(false)
+
+  // Helper function to check if variants have been modified
+  const areVariantsModified = (newVariants: ProductVariant[], originalVariants: ProductVariant[]): boolean => {
+    if (newVariants.length !== originalVariants.length) return true
+
+    return newVariants.some((newVariant, index) => {
+      const originalVariant = originalVariants[index]
+      if (!originalVariant) return true
+
+      // Compare key fields to detect actual changes
+      return (
+        newVariant.title !== originalVariant.title ||
+        newVariant.price !== originalVariant.price ||
+        newVariant.compare_price !== originalVariant.compare_price ||
+        newVariant.cost_price !== originalVariant.cost_price ||
+        newVariant.sku !== originalVariant.sku ||
+        newVariant.weight !== originalVariant.weight ||
+        newVariant.inventory_quantity !== originalVariant.inventory_quantity ||
+        newVariant.is_active !== originalVariant.is_active ||
+        JSON.stringify(newVariant.options) !== JSON.stringify(originalVariant.options) ||
+        newVariant.position !== originalVariant.position ||
+        newVariant.image_id !== originalVariant.image_id
+      )
+    })
+  }
+
+  // Debug: Log contentImages changes
+  React.useEffect(() => {
+    console.log('AdvancedProductsManager - contentImages state updated:', contentImages.length, contentImages.map(img => ({ id: img.id, url: img.url.substring(0, 50) + '...', alt_text: img.alt_text })))
+  }, [contentImages])
+
+  // Debug: Create a wrapper function to track setContentImages calls
+  const setContentImagesWithLogging = useCallback((newImages: any[]) => {
+    console.log('AdvancedProductsManager - setContentImages called with:', newImages.length, 'images')
+    console.log('AdvancedProductsManager - New images preview:', newImages.map(img => ({ id: img.id, hasUrl: !!img.url, urlType: img.url?.substring(0, 10) })))
+    setContentImages(newImages)
+  }, [])
   const [aPlusSections, setAPlusSections] = useState<Array<{
     id: string
     type: 'text' | 'image_text' | 'text_image'
@@ -241,6 +280,41 @@ const AdvancedProductManager: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [isInitialLoad, setIsInitialLoad] = useState(true)
   const hasInitialized = useRef(false)
+
+  // Debug: Log modal state changes
+  useEffect(() => {
+    console.log('🪟 MODAL STATE CHANGED - modalOpen:', modalOpen, 'editingProduct:', editingProduct?.title || 'null')
+  }, [modalOpen, editingProduct])
+
+  // Debug: Log tab changes
+  useEffect(() => {
+    console.log('📋 TAB CHANGED - activeTab:', activeTab, 'for product:', editingProduct?.title || 'null')
+  }, [activeTab, editingProduct])
+
+  // Custom tab change handler with variant refresh logic
+  const handleTabChange = (tabKey: string) => {
+    console.log('🔥🔥🔥 TAB CHANGE FIRED! - to tab:', tabKey, 'for product:', editingProduct?.title || 'null')
+
+    // If switching to Variants tab (key '3'), reload variants from current product
+    if (tabKey === '3' && editingProduct) {
+      console.log('🔄 SWITCHING TO VARIANTS TAB - Reloading fresh variant data for product:', editingProduct.title)
+
+      const variants = editingProduct.product_variants || editingProduct.variants || []
+      console.log('📦 LOADING VARIANTS FROM PRODUCT - Found', variants.length, 'variants')
+      console.log('📋 RAW VARIANTS DATA:', JSON.stringify(variants, null, 2))
+
+      // Reset variant state with fresh data from the current product
+      setProductVariants(JSON.parse(JSON.stringify(variants))) // Deep copy to prevent reference issues
+      setOriginalVariants(JSON.parse(JSON.stringify(variants))) // Reset original variants
+      setVariantsWereModified(false) // Reset modification flag
+
+      console.log('✅ VARIANTS REFRESHED - Product variants loaded fresh for tab switch')
+    }
+
+    // Set the new active tab
+    setActiveTab(tabKey)
+    console.log('✅ TAB SWITCHED TO:', tabKey)
+  }
 
   // Debug: Log when validationErrors changes
   useEffect(() => {
@@ -542,6 +616,11 @@ const AdvancedProductManager: React.FC = () => {
                 console.log('ProductVariants changed from:', productVariants)
                 console.log('ProductVariants changed to:', newVariants)
                 setProductVariants(newVariants)
+
+                // Check if variants were actually modified compared to original
+                const modified = areVariantsModified(newVariants, originalVariants)
+                console.log('Variants were modified:', modified)
+                setVariantsWereModified(modified)
               }}
             />
           )}
@@ -565,9 +644,10 @@ const AdvancedProductManager: React.FC = () => {
       children: (
         <>
           <APlusContentImagesManager
+            key={`content-images-${editingProduct?.id || 'new'}`}
             productId={editingProduct?.id || ''}
             contentImages={contentImages}
-            onChange={setContentImages}
+            onChange={setContentImagesWithLogging}
           />
             </>
       )
@@ -805,7 +885,7 @@ const AdvancedProductManager: React.FC = () => {
             help={fieldErrors['description']}
             validateStatus={fieldErrors['description'] ? 'error' : ''}
           >
-            <TiptapEditor
+            <SimpleWysiwygEditor
               value={form.getFieldValue('description') || ''}
               onChange={(value) => form.setFieldValue('description', value)}
               placeholder="Comprehensive product description with features, benefits, and use cases"
@@ -841,7 +921,7 @@ const AdvancedProductManager: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="compatibility" label="Compatibility">
-                <TiptapEditor
+                <SimpleWysiwygEditor
                   value={form.getFieldValue('compatibility') || ''}
                   onChange={(value) => form.setFieldValue('compatibility', value)}
                   placeholder="Compatibility information with other products or systems"
@@ -852,7 +932,7 @@ const AdvancedProductManager: React.FC = () => {
           </Row>
 
           <Form.Item name="safety_warnings" label="Safety Warnings & Usage Instructions">
-            <TiptapEditor
+            <SimpleWysiwygEditor
               value={form.getFieldValue('safety_warnings') || ''}
               onChange={(value) => form.setFieldValue('safety_warnings', value)}
               placeholder="Important safety information and usage guidelines"
@@ -861,7 +941,7 @@ const AdvancedProductManager: React.FC = () => {
           </Form.Item>
 
           <Form.Item name="care_instructions" label="Care & Maintenance">
-            <TiptapEditor
+            <SimpleWysiwygEditor
               value={form.getFieldValue('care_instructions') || ''}
               onChange={(value) => form.setFieldValue('care_instructions', value)}
               placeholder="Instructions for product care and maintenance"
@@ -1455,14 +1535,30 @@ const AdvancedProductManager: React.FC = () => {
           position: index,
           is_primary: img.is_primary
         })),
-        variants: productVariants.map(variant => ({
-          ...variant,
-          sku: variant.sku || `VAR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
-        })),
+        // Include variants for new products or only if they were actually modified for existing products
+        ...(editingProduct ? (variantsWereModified ? {
+          variants: productVariants.map(variant => ({
+            ...variant,
+            sku: variant.sku || `VAR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
+          }))
+        } : {}) : {
+          variants: productVariants.map(variant => ({
+            ...variant,
+            sku: variant.sku || `VAR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
+          }))
+        }),
         faqs: productFAQs.filter(faq => faq.question.trim() !== '' && faq.answer.trim() !== ''),
       }
 
       const supplierId = await getSupplierId()
+
+      console.log('🔍 SAVE PRODUCT DEBUG - editingProduct:', editingProduct)
+      console.log('🔍 SAVE PRODUCT DEBUG - variantsWereModified:', variantsWereModified)
+      console.log('🔍 SAVE PRODUCT DEBUG - productData keys:', Object.keys(productData))
+      console.log('🔍 SAVE PRODUCT DEBUG - variants in data:', 'variants' in productData)
+      if ('variants' in productData) {
+        console.log('🔍 SAVE PRODUCT DEBUG - number of variants:', productData.variants?.length)
+      }
 
       if (editingProduct) {
         // Update existing product
@@ -1478,6 +1574,8 @@ const AdvancedProductManager: React.FC = () => {
       form.resetFields()
       setProductImages([])
       setProductVariants([])
+      setOriginalVariants([])
+      setVariantsWereModified(false)
       setProductFAQs([])
       setFeatures([''])
       setSpecifications({})
@@ -1500,7 +1598,15 @@ const AdvancedProductManager: React.FC = () => {
 
   // Load product for editing
   const handleEditProduct = (product: Product) => {
+    console.log('🔄 OPENING PRODUCT EDIT - Clearing all previous state and loading new product:', product.title)
+
     setEditingProduct(product)
+
+    // Reset ALL state variables to ensure no data leakage between products
+    setActiveTab('1') // Reset to first tab
+    setValidationErrors({}) // Clear previous validation errors
+    setFieldErrors({}) // Clear previous field errors
+    setIsInitialLoad(true) // Reset initial load flag
 
     // Set all fields including the new ones
     const formValues = {
@@ -1532,7 +1638,10 @@ const AdvancedProductManager: React.FC = () => {
 
     form.setFieldsValue(formValues)
     setProductImages(product.product_images || product.images || [])
-    setProductVariants(product.product_variants || product.variants || [])
+    const variants = product.product_variants || product.variants || []
+    setProductVariants(variants)
+    setOriginalVariants(JSON.parse(JSON.stringify(variants))) // Store deep copy for comparison
+    setVariantsWereModified(false) // Reset modification flag when loading product
     setProductFAQs(product.faqs || [])
     setAPlusSections(product.a_plus_sections || [])
 
@@ -1543,7 +1652,11 @@ const AdvancedProductManager: React.FC = () => {
     setSpecifications(product.specifications || {})
     setSimpleFields(product.simple_fields || [])
     setInformationSections(product.information_sections || [])
+
+    // IMPORTANT: Set modalOpen last after all state is properly initialized
     setModalOpen(true)
+
+    console.log('✅ PRODUCT EDIT LOADED - All state reset and new product data loaded')
   }
 
   // Table columns
@@ -1795,27 +1908,49 @@ const AdvancedProductManager: React.FC = () => {
         open={modalOpen}
         maskClosable={false}
         onCancel={() => {
+          console.log('🚫 CLOSING MODAL - Clearing all state')
           setModalOpen(false)
           setEditingProduct(null)
           form.resetFields()
+
+          // Clear ALL product-related state to prevent data leakage
           setProductImages([])
           setProductVariants([])
+          setOriginalVariants([])
+          setVariantsWereModified(false)
           setProductFAQs([])
           setFeatures([''])
           setSpecifications({})
-          // Don't reset simpleFields and informationSections
+          setAPlusSections([])
+          setContentImages([])
+          setActiveTab('1') // Reset to first tab
+          setValidationErrors({}) // Clear validation errors
+          setFieldErrors({}) // Clear field errors
+          setIsInitialLoad(true) // Reset initial load flag
+          // Don't reset simpleFields and informationSections as per comment
         }}
         width={1200}
         footer={[
           <Button key="back" onClick={() => {
+            console.log('🚫 CANCEL BUTTON CLICKED - Clearing all state')
             setModalOpen(false)
             setEditingProduct(null)
             form.resetFields()
+
+            // Clear ALL product-related state to prevent data leakage
             setProductImages([])
             setProductVariants([])
+            setOriginalVariants([])
+            setVariantsWereModified(false)
             setProductFAQs([])
             setFeatures([''])
             setSpecifications({})
+            setAPlusSections([])
+            setContentImages([])
+            setActiveTab('1') // Reset to first tab
+            setValidationErrors({}) // Clear validation errors
+            setFieldErrors({}) // Clear field errors
+            setIsInitialLoad(true) // Reset initial load flag
           }}>
             Cancel
           </Button>,
@@ -1833,7 +1968,7 @@ const AdvancedProductManager: React.FC = () => {
           <ValidationErrorSummary />
           <Tabs
             activeKey={activeTab}
-            onChange={setActiveTab}
+            onChange={handleTabChange}
             items={tabItems}
           />
           {modalOpen && <FloatingHelp tabId={activeTab} />}

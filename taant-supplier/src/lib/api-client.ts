@@ -319,6 +319,24 @@ class ApiClient {
     });
     return response.data;
   }
+
+  // Upload methods for A+ content images
+  async uploadAPlusImage(formData: FormData): Promise<{ success: boolean; data: { url: string }; message: string }> {
+    const response = await this.request<{ success: boolean; data: { url: string }; message: string }>('/api/products/upload-a-plus-image', {
+      method: 'POST',
+      body: formData,
+      headers: {}, // Don't set Content-Type for FormData, browser will set it with boundary
+    });
+    return response.data;
+  }
+
+  async convertBlobToS3(blobUrl: string, fileName: string): Promise<{ success: boolean; data: { s3Url: string }; message: string }> {
+    const response = await this.request<{ success: boolean; data: { s3Url: string }; message: string }>('/api/products/convert-blob-to-s3', {
+      method: 'POST',
+      body: JSON.stringify({ blobUrl, fileName }),
+    });
+    return response.data;
+  }
 }
 
 // Export singleton instance

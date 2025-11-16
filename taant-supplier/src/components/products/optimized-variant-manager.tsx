@@ -421,8 +421,8 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
         image_id: imageId,
       }
 
-      let savedVariant
-      let newVariantsList
+      let savedVariant: ProductVariant
+      let newVariantsList: ProductVariant[]
 
       if (editingVariant.id.startsWith('temp-')) {
         // Create new variant
@@ -869,7 +869,7 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
               <Form.Item name="sku" label="SKU">
                 <Input
                   placeholder="Auto-generated if empty"
-                  disabled={editingVariant && !editingVariant.id.startsWith('temp-') && editingVariant.sku !== ''}
+                  disabled={!!(editingVariant && !editingVariant.id.startsWith('temp-') && editingVariant.sku !== '')}
                   title={editingVariant && !editingVariant.id.startsWith('temp-') ?
                     "SKU cannot be modified once generated" :
                     "Enter SKU or leave empty to auto-generate"

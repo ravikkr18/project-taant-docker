@@ -214,16 +214,12 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
     formData.append('file', file)
 
     try {
-      const response = await apiClient.post('/api/products/upload-a-plus-image', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
+      const response = await apiClient.uploadAPlusImage(formData)
 
-      if (response.data.success) {
-        return response.data.data.url
+      if (response.success) {
+        return response.data.url
       } else {
-        throw new Error(response.data.message || 'Upload failed')
+        throw new Error(response.message || 'Upload failed')
       }
     } catch (error) {
       console.error('S3 upload error:', error)
@@ -234,15 +230,12 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
   // Convert existing blob URLs to S3 URLs
   const convertBlobToS3 = async (blobUrl: string, fileName: string): Promise<string> => {
     try {
-      const response = await apiClient.post('/api/products/convert-blob-to-s3', {
-        blobUrl,
-        fileName,
-      })
+      const response = await apiClient.convertBlobToS3(blobUrl, fileName)
 
-      if (response.data.success) {
-        return response.data.data.s3Url
+      if (response.success) {
+        return response.data.s3Url
       } else {
-        throw new Error(response.data.message || 'Conversion failed')
+        throw new Error(response.message || 'Conversion failed')
       }
     } catch (error) {
       console.error('Blob to S3 conversion error:', error)

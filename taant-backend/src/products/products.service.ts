@@ -189,7 +189,18 @@ export class ProductsService {
   async updateProduct(id: string, productData: any, supplierId: string) {
     const supabase = await this.createServiceClient();
 
-    
+    // DEBUG: Log what data is being received
+    console.log('🔍 UPDATE PRODUCT DEBUG - Received productData:', {
+      id,
+      supplierId,
+      hasVariants: !!productData.variants,
+      variantCount: productData.variants?.length || 0,
+      variantKeys: productData.variants ? Object.keys(productData.variants[0] || {}) : [],
+      allKeys: Object.keys(productData),
+      aPlusContent: !!productData.a_plus_content,
+      aPlusSections: !!productData.a_plus_sections
+    });
+
     // First verify the product belongs to the supplier
     const { data: existingProduct, error: fetchError } = await supabase
       .from('products')
