@@ -595,6 +595,7 @@ const AdvancedProductManager: React.FC = () => {
         <>
           {editingProduct ? (
             <OptimizedVariantManager
+              key={`variants-${editingProduct.id}`}
               productId={editingProduct.id}
               productImages={productImages}
               initialVariants={productVariants}

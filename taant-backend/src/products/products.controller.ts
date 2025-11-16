@@ -562,7 +562,20 @@ export class ProductsController {
   }
 
   @Post('upload-a-plus-image')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB
+      },
+      fileFilter: (req, file, callback) => {
+        // Accept only image files
+        if (!file.mimetype.match(/^image\/(jpeg|jpg|png|gif|webp)$/)) {
+          return callback(new Error('Only image files are allowed!'), false);
+        }
+        callback(null, true);
+      }
+    })
+  )
   async uploadAPlusImage(
     @UploadedFile() file: Express.Multer.File,
     @Request() req?: any

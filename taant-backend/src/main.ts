@@ -1,4 +1,6 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import * as express from 'express';
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
 
@@ -6,7 +8,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Enable CORS
   app.enableCors({
@@ -19,6 +21,24 @@ async function bootstrap() {
       'http://94.136.187.1:3002'
     ],
     credentials: true,
+  });
+
+  // Configure Express to handle larger request bodies (excluding multipart routes)
+  const expressApp = app as NestExpressApplication;
+
+  // Conditional body parser: only apply to non-multipart routes
+  expressApp.use((req, res, next) => {
+    const contentType = req.headers['content-type'];
+    if (contentType && contentType.includes('multipart/form-data')) {
+      // Skip body parsing for multipart data - let FileInterceptor handle it
+      next();
+    } else {
+      // Apply normal body parsing for other content types
+      express.json({ limit: '50mb' })(req, res, (err) => {
+        if (err) return next(err);
+        express.urlencoded({ limit: '50mb', extended: true, parameterLimit: 100000 })(req, res, next);
+      });
+    }
   });
 
   const port = process.env.PORT || 4000;

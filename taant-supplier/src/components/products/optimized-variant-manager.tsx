@@ -182,9 +182,6 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
   const loadVariants = useCallback(async (forceRefresh = false) => {
     if (!productId) return
 
-    // Check if already loaded and not forcing refresh
-    if (!forceRefresh && isLoaded) return
-
     setLoading(true)
     try {
       // Skip cache if forcing refresh
@@ -229,7 +226,7 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
     } finally {
       setLoading(false)
     }
-  }, [productId, isLoaded, onVariantCountChange])
+  }, [productId, onVariantCountChange])
 
   // Instant variant save/update function
   const saveVariantInstantly = useCallback(async (variant: ProductVariant) => {
@@ -726,10 +723,20 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
     },
   ], [productImages, handleToggleActive, handleEdit, handleDuplicate, handleDelete])
 
-  // Load variants immediately when component mounts
+  // Reset state and reload variants when productId changes
   useEffect(() => {
+    // Reset all state when productId changes
+    setVariants([])
+    setIsLoaded(false)
+    setLoading(false)
+    setEditingVariant(null)
+    setModalOpen(false)
+    setSelectedImageUrl('')
+    form.resetFields()
+
+    // Load variants for the new productId
     loadVariants()
-  }, [loadVariants])
+  }, [productId, loadVariants])
 
   return (
     <div>

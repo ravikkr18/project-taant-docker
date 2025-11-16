@@ -99,12 +99,16 @@ class ApiClient {
     const token = await this.getAuthToken();
 
     const defaultHeaders: HeadersInit = {
-      'Content-Type': 'application/json',
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
       'Expires': '0',
       ...(token && { Authorization: `Bearer ${token}` }),
     };
+
+    // Only set Content-Type to application/json if the body is not FormData
+    if (!(options.body instanceof FormData)) {
+      defaultHeaders['Content-Type'] = 'application/json';
+    }
 
     try {
       const response = await fetch(url, {
@@ -325,7 +329,7 @@ class ApiClient {
     const response = await this.request<{ success: boolean; data: { url: string }; message: string }>('/api/products/upload-a-plus-image', {
       method: 'POST',
       body: formData,
-      headers: {}, // Don't set Content-Type for FormData, browser will set it with boundary
+      headers: {}, // Don't set Content-Type for FormData, base request method will handle it
     });
     return response.data;
   }
