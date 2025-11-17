@@ -289,7 +289,10 @@ class ApiClient {
 
   // A+ Content Images methods
   async getAPlusContentImages(productId: string): Promise<any[]> {
-    const response = await this.request<any[]>(`/api/products/${productId}/content-images`);
+    console.log('📡 API Client: Getting A+ content images for product:', productId)
+    const response = await this.request<{ success: boolean; data: any[]; message: string }>(`/api/products/${productId}/content-images`);
+    console.log('📡 API Client: Raw response:', response)
+    console.log('📡 API Client: Response data:', response.data)
     return response.data;
   }
 
@@ -326,18 +329,54 @@ class ApiClient {
 
   // Upload methods for A+ content images
   async uploadAPlusImage(formData: FormData): Promise<{ success: boolean; data: { url: string }; message: string }> {
-    const response = await this.request<{ success: boolean; data: { url: string }; message: string }>('/api/products/upload-a-plus-image', {
-      method: 'POST',
-      body: formData,
-      headers: {}, // Don't set Content-Type for FormData, base request method will handle it
-    });
-    return response.data;
+    try {
+      console.log('API Client: Starting uploadAPlusImage')
+      const response = await this.request<{ success: boolean; data: { url: string; key: string; originalName: string; size: number; mimetype: string }; message: string }>('/api/products/upload-a-plus-image', {
+        method: 'POST',
+        body: formData,
+        headers: {}, // Don't set Content-Type for FormData, base request method will handle it
+      });
+      console.log('API Client: Upload response:', response)
+
+      // Check if response has the expected structure
+      if (response && typeof response === 'object') {
+        if (response.success && response.data && response.data.url) {
+          // Normal case: response is wrapped
+          return response;
+        } else if (response.url) {
+          // Direct case: response is the data itself
+          return {
+            success: true,
+            data: response,
+            message: 'A+ content image uploaded successfully'
+          };
+        }
+      }
+
+      throw new Error('Invalid response structure');
+    } catch (error) {
+      console.error('API Client: Upload failed with error:', error)
+      throw error
+    }
   }
 
   async convertBlobToS3(blobUrl: string, fileName: string): Promise<{ success: boolean; data: { s3Url: string }; message: string }> {
     const response = await this.request<{ success: boolean; data: { s3Url: string }; message: string }>('/api/products/convert-blob-to-s3', {
       method: 'POST',
       body: JSON.stringify({ blobUrl, fileName }),
+    });
+    return response.data;
+  }
+
+  async getOrphanedImages(): Promise<{ success: boolean; data: { totalS3Images: number; totalDbImages: number; orphanedImages: any[]; orphanedCount: number }; message: string }> {
+    const response = await this.request<{ success: boolean; data: { totalS3Images: number; totalDbImages: number; orphanedImages: any[]; orphanedCount: number }; message: string }>('/api/products/orphaned-images');
+    return response.data;
+  }
+
+  async cleanupOrphanedImages(imageKeys: string[]): Promise<{ success: boolean; data: { deletedImages: string[]; deletedCount: number }; message: string }> {
+    const response = await this.request<{ success: boolean; data: { deletedImages: string[]; deletedCount: number }; message: string }>('/api/products/cleanup-orphaned-images', {
+      method: 'DELETE',
+      body: JSON.stringify({ imageKeys }),
     });
     return response.data;
   }

@@ -763,6 +763,39 @@ export class ProductsService {
     return { success: true, message: 'Content image deleted successfully' };
   }
 
+  // Get all A+ content images for a user (for orphaned images detection)
+  async getAllAPlusContentImages(userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Get all products the user can access
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select('id')
+      .eq('status', 'active');
+
+    if (productsError) {
+      throw new Error(`Failed to fetch products: ${productsError.message}`);
+    }
+
+    if (!products || products.length === 0) {
+      return [];
+    }
+
+    const productIds = products.map(p => p.id);
+
+    // Get all A+ content images for these products
+    const { data: images, error: imagesError } = await supabase
+      .from('a_plus_content_images')
+      .select('*')
+      .in('product_id', productIds);
+
+    if (imagesError) {
+      throw new Error(`Failed to fetch content images: ${imagesError.message}`);
+    }
+
+    return images || [];
+  }
+
   // Paginated products method
   async getProductsPaginated(
     supplierId?: string,

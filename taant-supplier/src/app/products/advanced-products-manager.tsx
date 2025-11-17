@@ -367,16 +367,20 @@ const AdvancedProductManager: React.FC = () => {
 
   // Load content images for a product
   const loadContentImages = async (productId: string) => {
+    console.log('🔄 Loading content images for product:', productId)
     if (!productId) {
+      console.log('❌ No productId provided, setting empty contentImages')
       setContentImages([])
       return
     }
 
     try {
+      console.log('📡 Calling API to get content images...')
       const images = await apiClient.getAPlusContentImages(productId)
+      console.log('✅ Content images loaded:', images.length, images)
       setContentImages(images)
     } catch (error) {
-      console.error('Failed to load content images:', error)
+      console.error('❌ Failed to load content images:', error)
       setContentImages([])
     }
   }

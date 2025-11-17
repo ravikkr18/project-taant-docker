@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
-import { Upload, Button, Card, Image, Input, Space, message, Modal, Tooltip, Typography } from 'antd'
+import { Upload, Button, Card, Image, Input, Space, message, Modal, Tooltip, Typography, Table, Tag } from 'antd'
 const { TextArea } = Input
 import {
   UploadOutlined,
@@ -37,7 +37,6 @@ interface APlusContentImage {
 
 interface APlusContentImagesManagerProps {
   productId: string
-  contentImages: APlusContentImage[]
   onChange: (images: APlusContentImage[]) => void
 }
 
@@ -203,10 +202,120 @@ const DraggableContentImageCard: React.FC<{
   )
 }
 
-const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ productId, contentImages, onChange }) => {
+const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ productId, onChange }) => {
   const [uploading, setUploading] = useState(false)
-  const [forceUpdate, setForceUpdate] = useState(0)
-  const [localImages, setLocalImages] = useState(contentImages)
+  const [localImages, setLocalImages] = useState<APlusContentImage[]>([])
+  const [isUploading, setIsUploading] = useState(false) // Track upload state to prevent duplicates
+  const [orphanedImagesModal, setOrphanedImagesModal] = useState(false)
+  const [orphanedImages, setOrphanedImages] = useState([])
+  const [loadingOrphaned, setLoadingOrphaned] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [hasLoaded, setHasLoaded] = useState(false)
+
+  // Load content images fresh every time component mounts or productId changes
+  React.useEffect(() => {
+    const loadContentImages = async () => {
+      if (!productId) {
+        console.log('APlusContentImagesManager - No productId provided')
+        setLocalImages([])
+        setHasLoaded(true)
+        return
+      }
+
+      console.log('🔄 APlusContentImagesManager - Loading fresh content images for product:', productId)
+      setIsLoading(true)
+
+      try {
+        const response = await apiClient.getAPlusContentImages(productId)
+        console.log('✅ APlusContentImagesManager - Fresh content images loaded:', response.length, response)
+        setLocalImages(response)
+        // Also update parent state
+        if (onChange) {
+          onChange(response)
+        }
+      } catch (error) {
+        console.error('❌ APlusContentImagesManager - Failed to load fresh content images:', error)
+        setLocalImages([])
+      } finally {
+        setIsLoading(false)
+        setHasLoaded(true)
+      }
+    }
+
+    loadContentImages()
+  }, [productId])
+
+  // Remove the second useEffect to prevent race conditions
+  // The first useEffect already handles state updates properly
+
+  // Handle orphaned images management
+  const handleViewOrphanedImages = async () => {
+    setLoadingOrphaned(true)
+    try {
+      const response = await apiClient.getOrphanedImages()
+      if (response.success) {
+        setOrphanedImages(response.data.orphanedImages)
+        setOrphanedImagesModal(true)
+        message.info(`Found ${response.data.orphanedCount} orphaned images out of ${response.data.totalS3Images} total S3 images`)
+      }
+    } catch (error) {
+      console.error('Failed to fetch orphaned images:', error)
+      message.error('Failed to fetch orphaned images')
+    } finally {
+      setLoadingOrphaned(false)
+    }
+  }
+
+  const handleCleanupOrphanedImages = async (selectedKeys: string[]) => {
+    try {
+      const response = await apiClient.cleanupOrphanedImages(selectedKeys)
+      if (response.success) {
+        message.success(`Successfully deleted ${response.data.deletedCount} orphaned images`)
+        // Refresh the orphaned images list
+        await handleViewOrphanedImages()
+      }
+    } catch (error) {
+      console.error('Failed to cleanup orphaned images:', error)
+      message.error('Failed to cleanup orphaned images')
+    }
+  }
+
+  // Save any unsaved temp images (cleanup mechanism)
+  React.useEffect(() => {
+    const unsavedImages = localImages.filter(img => img.needsSave && img.id.startsWith('temp-'))
+
+    if (unsavedImages.length > 0) {
+      console.log('Found unsaved images, attempting to save:', unsavedImages.length)
+
+      unsavedImages.forEach(async (image) => {
+        try {
+          const imageData = {
+            url: image.url,
+            alt_text: image.alt_text,
+            file_name: image.file_name,
+            file_size: image.file_size,
+            file_type: image.file_type,
+            position: image.position,
+            is_active: image.is_active,
+          }
+
+          const response = await apiClient.createAPlusContentImage(productId, imageData)
+          if (response.success) {
+            console.log('Unsaved image saved to DB:', response.data)
+
+            // Update the temp image with real DB data
+            setLocalImages(prev => prev.map(img =>
+              img.id === image.id
+                ? { ...response.data, file: img.file }
+                : img
+            ))
+          }
+        } catch (error) {
+          console.error('Failed to save unsaved image:', image.id, error)
+        }
+      })
+    }
+  }, [localImages, productId])
 
   // S3 upload function
   const uploadToS3 = async (file: File): Promise<string> => {
@@ -214,15 +323,23 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
     formData.append('file', file)
 
     try {
+      console.log('Starting S3 upload for file:', file.name)
       const response = await apiClient.uploadAPlusImage(formData)
+      console.log('S3 upload response:', response)
 
       if (response.success) {
+        console.log('S3 upload successful, URL:', response.data.url)
         return response.data.url
       } else {
+        console.error('S3 upload failed with response:', response)
         throw new Error(response.message || 'Upload failed')
       }
     } catch (error) {
-      console.error('S3 upload error:', error)
+      console.error('S3 upload error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      })
       throw error
     }
   }
@@ -243,30 +360,17 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
     }
   }
 
-  // Debug: Log when contentImages changes
-  React.useEffect(() => {
-    console.log('APlusContentImagesManager - contentImages updated:', contentImages.length, 'images')
-    // Update local images when prop changes
-    setLocalImages(contentImages)
-  }, [contentImages])
-
-  // Force re-render when localImages change
-  React.useEffect(() => {
-    console.log('APlusContentImagesManager - localImages updated, triggering re-render')
-    setForceUpdate(prev => prev + 1)
-  }, [localImages])
-
   // Cleanup blob URLs when component unmounts
   React.useEffect(() => {
     return () => {
       // Clean up blob URLs when component unmounts
-      contentImages.forEach(image => {
+      localImages.forEach(image => {
         if (image.url && image.url.startsWith('blob:')) {
           URL.revokeObjectURL(image.url)
         }
       })
     }
-  }, [contentImages, productId])
+  }, [localImages])
 
   // Move image (for drag and drop)
   const moveImage = useCallback((dragIndex: number, hoverIndex: number) => {
@@ -356,10 +460,19 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
 
   // Handle image upload
   const handleImageUpload: UploadProps['beforeUpload'] = async (file, fileList) => {
+    // Prevent multiple simultaneous uploads
+    if (isUploading) {
+      message.warning('Upload in progress, please wait...')
+      return false
+    }
+
     console.log('A+ Content image upload started:', { file: file.name, currentImages: localImages.length })
 
-    // Process all files at once when the first file is processed (exactly like regular images)
+    // Process all files at once when the first file is processed
     if (fileList.length > 0) {
+      setIsUploading(true)
+      setUploading(true)
+
       // Process valid files
       const validFiles = fileList.filter(file => {
         const isImage = file.type.startsWith('image/')
@@ -383,8 +496,11 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
         return true
       })
 
-      // Create new images for all valid files and upload to S3
-      setUploading(true)
+      if (validFiles.length === 0) {
+        setIsUploading(false)
+        setUploading(false)
+        return false
+      }
 
       try {
         const newImages = await Promise.all(
@@ -394,42 +510,52 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
               const s3Url = await uploadToS3(file)
               console.log('Uploaded to S3:', s3Url, 'for file:', file.name)
 
-              return {
-                id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              // Create image data for instant DB saving
+              const imageData = {
                 url: s3Url,
                 alt_text: file.name.split('.')[0], // Use filename as default alt text
                 file_name: file.name,
                 file_size: file.size,
                 file_type: file.type,
-                width: undefined,
-                height: undefined,
                 position: localImages.length + index,
                 is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                file: file
+              }
+
+              // Save to database immediately
+              try {
+                const response = await apiClient.createAPlusContentImage(productId, imageData)
+                if (response.success) {
+                  console.log('Image saved to DB:', response.data)
+                  return {
+                    ...response.data,
+                    file: file // Keep file reference for duplicate detection
+                  }
+                } else {
+                  throw new Error(response.message || 'Failed to save to database')
+                }
+              } catch (dbError) {
+                console.error('Failed to save to DB, using temp ID:', dbError)
+                // Fall back to temp image if DB save fails
+                return {
+                  id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                  url: s3Url,
+                  alt_text: file.name.split('.')[0],
+                  file_name: file.name,
+                  file_size: file.size,
+                  file_type: file.type,
+                  width: undefined,
+                  height: undefined,
+                  position: localImages.length + index,
+                  is_active: true,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                  file: file,
+                  needsSave: true // Flag for later saving
+                }
               }
             } catch (error) {
               console.error('Failed to upload file to S3:', file.name, error)
-              // Fall back to blob URL if S3 upload fails
-              const blobUrl = URL.createObjectURL(file)
-              message.warning(`${file.name} uploaded locally (will sync later)`)
-
-              return {
-                id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                url: blobUrl,
-                alt_text: file.name.split('.')[0],
-                file_name: file.name,
-                file_size: file.size,
-                file_type: file.type,
-                width: undefined,
-                height: undefined,
-                position: localImages.length + index,
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                file: file
-              }
+              throw error // Re-throw to handle in outer catch
             }
           })
         )
@@ -444,16 +570,17 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
           // Call onChange to update parent state
           onChange(updatedImages)
         }
+
+        message.success(`${validFiles.length} content image${validFiles.length > 1 ? 's' : ''} uploaded and saved successfully`)
       } catch (error) {
         console.error('Error during image upload:', error)
         message.error('Failed to upload images')
       } finally {
+        setIsUploading(false)
         setUploading(false)
       }
-
-      message.success(`${validFiles.length} content image${validFiles.length > 1 ? 's' : ''} added successfully`)
     }
-    return false // Prevent automatic upload for all files (exactly like regular images)
+    return false // Prevent automatic upload
   }
 
   const uploadProps: UploadProps = {
@@ -477,15 +604,24 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
               Add full-width content images to enhance your product presentation
             </Text>
           </div>
-          <Upload {...uploadProps}>
+          <Space>
             <Button
-              type="primary"
-              icon={<UploadOutlined />}
-              loading={uploading}
+              icon={<DeleteOutlined />}
+              loading={loadingOrphaned}
+              onClick={handleViewOrphanedImages}
             >
-              Upload Content Images
+              Manage Orphaned Images
             </Button>
-          </Upload>
+            <Upload {...uploadProps}>
+              <Button
+                type="primary"
+                icon={<UploadOutlined />}
+                loading={uploading}
+              >
+                Upload Content Images
+              </Button>
+            </Upload>
+          </Space>
         </div>
 
         {/* Info */}
@@ -499,41 +635,153 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
           </div>
         </Card>
 
-        {/* Content Images Grid */}
-        <div key={`content-grid-${forceUpdate}`} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
-          {localImages.map((image, index) => (
-            <DraggableContentImageCard
-              key={`${image.id}-${forceUpdate}`}
-              image={image}
-              index={index}
-              onMove={moveImage}
-              onRemove={removeImage}
-              onUpdateAlt={updateAltText}
-            />
-          ))}
-        </div>
-
-        {/* Empty State */}
-        {localImages.length === 0 && (
+        {/* Loading State */}
+        {isLoading ? (
           <Card>
             <div style={{ textAlign: 'center', padding: 48 }}>
               <div style={{ fontSize: 64, color: '#d9d9d9', marginBottom: 16 }}>
                 <CameraOutlined />
               </div>
               <Typography.Title level={4} type="secondary">
-                No Content Images Yet
+                Loading Content Images...
               </Typography.Title>
               <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>
-                Upload content images to create an engaging product presentation
+                Fetching your content images from the server
               </Text>
-              <Upload {...uploadProps}>
-                <Button type="primary" size="large" icon={<PlusOutlined />} loading={uploading}>
-                  Add First Content Image
-                </Button>
-              </Upload>
             </div>
           </Card>
+        ) : (
+          <>
+            {/* Content Images Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+              {localImages.map((image, index) => (
+                <DraggableContentImageCard
+                  key={image.id}
+                  image={image}
+                  index={index}
+                  onMove={moveImage}
+                  onRemove={removeImage}
+                  onUpdateAlt={updateAltText}
+                />
+              ))}
+            </div>
+
+            {/* Empty State */}
+            {localImages.length === 0 && (
+              <Card>
+                <div style={{ textAlign: 'center', padding: 48 }}>
+                  <div style={{ fontSize: 64, color: '#d9d9d9', marginBottom: 16 }}>
+                    <CameraOutlined />
+                  </div>
+                  <Typography.Title level={4} type="secondary">
+                    No Content Images Yet
+                  </Typography.Title>
+                  <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>
+                    Upload content images to create an engaging product presentation
+                  </Text>
+                  <Upload {...uploadProps}>
+                    <Button type="primary" size="large" icon={<PlusOutlined />} loading={uploading}>
+                      Add First Content Image
+                    </Button>
+                  </Upload>
+                </div>
+              </Card>
+            )}
+          </>
         )}
+
+        {/* Orphaned Images Management Modal */}
+        <Modal
+          title="Manage Orphaned Images"
+          open={orphanedImagesModal}
+          onCancel={() => setOrphanedImagesModal(false)}
+          width={800}
+          footer={[
+            <Button key="cancel" onClick={() => setOrphanedImagesModal(false)}>
+              Close
+            </Button>,
+            <Button
+              key="cleanup"
+              type="primary"
+              danger
+              onClick={() => {
+                const selectedKeys = orphanedImages.map(img => img.key)
+                if (selectedKeys.length > 0) {
+                  Modal.confirm({
+                    title: 'Delete Orphaned Images',
+                    content: `Are you sure you want to delete ${selectedKeys.length} orphaned images? This action cannot be undone.`,
+                    onOk: () => handleCleanupOrphanedImages(selectedKeys),
+                  })
+                } else {
+                  message.info('No orphaned images to delete')
+                }
+              }}
+            >
+              Delete All Orphaned Images ({orphanedImages.length})
+            </Button>,
+          ]}
+        >
+          <div>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+              Orphaned images are files in S3 that are not registered in the database. These are typically from failed uploads or abandoned sessions.
+            </Text>
+
+            {orphanedImages.length > 0 ? (
+              <Table
+                dataSource={orphanedImages}
+                rowKey="key"
+                size="small"
+                pagination={{ pageSize: 10 }}
+                columns={[
+                  {
+                    title: 'S3 Key',
+                    dataIndex: 'key',
+                    key: 'key',
+                    ellipsis: true,
+                    render: (text) => (
+                      <Text code style={{ fontSize: '11px' }}>{text}</Text>
+                    )
+                  },
+                  {
+                    title: 'Size',
+                    dataIndex: 'size',
+                    key: 'size',
+                    render: (size) => size ? `${(size / 1024 / 1024).toFixed(2)} MB` : 'Unknown'
+                  },
+                  {
+                    title: 'Last Modified',
+                    dataIndex: 'lastModified',
+                    key: 'lastModified',
+                    render: (date) => date ? new Date(date).toLocaleString() : 'Unknown'
+                  },
+                  {
+                    title: 'Actions',
+                    key: 'actions',
+                    render: (_, record) => (
+                      <Button
+                        size="small"
+                        danger
+                        onClick={() => {
+                          Modal.confirm({
+                            title: 'Delete Image',
+                            content: `Are you sure you want to delete ${record.key}?`,
+                            onOk: () => handleCleanupOrphanedImages([record.key]),
+                          })
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    )
+                  }
+                ]}
+              />
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <Text type="secondary">No orphaned images found. Your S3 storage is clean!</Text>
+              </div>
+            )}
+          </div>
+        </Modal>
       </div>
     </DndProvider>
   )

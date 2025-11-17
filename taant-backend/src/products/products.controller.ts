@@ -644,4 +644,103 @@ export class ProductsController {
       );
     }
   }
+
+  @Get('orphaned-images')
+  async getOrphanedImages(@Request() req?: any) {
+    try {
+      const user = req.user;
+      let userId: string;
+
+      // Handle both authenticated and non-authenticated cases
+      if (user) {
+        // Get user profile to determine role and verify access
+        const profile = await this.authService.getUserProfile(user.id);
+        if (!profile) {
+          throw new HttpException('User profile not found', HttpStatus.FORBIDDEN);
+        }
+        userId = user.id;
+      } else {
+        // For non-authenticated requests, use a default user ID for testing
+        userId = 'fa0ca8e0-f848-45b9-b107-21e56b38573f';
+        console.log('Auth disabled, using default user ID for orphaned images:', userId);
+      }
+
+      // Get all S3 images in a-plus-content folder
+      const s3Images = await this.s3Service.listS3Files('a-plus-content/');
+
+      // Get all images from database
+      const dbImages = await this.productsService.getAllAPlusContentImages(userId);
+
+      // Extract S3 keys from database images
+      const dbS3Keys = new Set();
+      dbImages.forEach(img => {
+        if (img.url && img.url.includes('amazonaws.com')) {
+          // Extract S3 key from URL
+          const urlParts = img.url.split('/');
+          const key = urlParts.slice(3).join('/'); // Remove protocol, domain, bucket
+          dbS3Keys.add(key);
+        }
+      });
+
+      // Find orphaned images (in S3 but not in DB)
+      const orphanedImages = s3Images.filter(s3Img => !dbS3Keys.has(s3Img.key));
+
+      return {
+        success: true,
+        data: {
+          totalS3Images: s3Images.length,
+          totalDbImages: dbImages.length,
+          orphanedImages: orphanedImages,
+          orphanedCount: orphanedImages.length
+        },
+        message: 'Orphaned images retrieved successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to retrieve orphaned images',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Delete('cleanup-orphaned-images')
+  async cleanupOrphanedImages(@Body() body: { imageKeys?: string[] }, @Request() req?: any) {
+    try {
+      const user = req.user;
+
+      // Handle both authenticated and non-authenticated cases
+      if (user) {
+        // Get user profile to determine role and verify access
+        const profile = await this.authService.getUserProfile(user.id);
+        if (!profile) {
+          throw new HttpException('User profile not found', HttpStatus.FORBIDDEN);
+        }
+      } else {
+        console.log('Auth disabled, allowing orphaned images cleanup');
+      }
+
+      const { imageKeys } = body;
+
+      if (!imageKeys || imageKeys.length === 0) {
+        throw new HttpException('imageKeys are required', HttpStatus.BAD_REQUEST);
+      }
+
+      // Delete specified orphaned images from S3
+      const deletedImages = await this.s3Service.deleteMultipleFiles(imageKeys);
+
+      return {
+        success: true,
+        data: {
+          deletedImages: deletedImages,
+          deletedCount: deletedImages.length
+        },
+        message: `Successfully deleted ${deletedImages.length} orphaned images`
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to cleanup orphaned images',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
 }

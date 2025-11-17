@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 @Injectable()
@@ -144,17 +144,62 @@ export class S3Service {
    * Delete a file from S3
    */
   async deleteFile(key: string): Promise<void> {
-    const command = new PutObjectCommand({
+    const command = new DeleteObjectsCommand({
       Bucket: this.bucketName,
-      Key: key,
+      Delete: {
+        Objects: [{ Key: key }],
+        Quiet: false,
+      },
     });
 
     try {
-      // For Supabase, we'll need to use DELETE method
-      // This is a placeholder - actual deletion may need different implementation
-      console.log(`Delete file: ${key}`);
+      await this.s3Client.send(command);
     } catch (error) {
       throw new Error(`Failed to delete file: ${error.message}`);
+    }
+  }
+
+  /**
+   * List all files in a specific S3 folder
+   */
+  async listS3Files(prefix: string = ''): Promise<Array<{ key: string; size?: number; lastModified?: Date }>> {
+    const command = new ListObjectsV2Command({
+      Bucket: this.bucketName,
+      Prefix: prefix,
+    });
+
+    try {
+      const response = await this.s3Client.send(command);
+
+      return (response.Contents || []).map(obj => ({
+        key: obj.Key || '',
+        size: obj.Size,
+        lastModified: obj.LastModified,
+      }));
+    } catch (error) {
+      throw new Error(`Failed to list S3 files: ${error.message}`);
+    }
+  }
+
+  /**
+   * Delete multiple files from S3
+   */
+  async deleteMultipleFiles(keys: string[]): Promise<string[]> {
+    if (keys.length === 0) return [];
+
+    const command = new DeleteObjectsCommand({
+      Bucket: this.bucketName,
+      Delete: {
+        Objects: keys.map(key => ({ Key: key })),
+        Quiet: false,
+      },
+    });
+
+    try {
+      const response = await this.s3Client.send(command);
+      return response.Deleted?.map(deleted => deleted.Key || '') || [];
+    } catch (error) {
+      throw new Error(`Failed to delete multiple files: ${error.message}`);
     }
   }
 }
