@@ -327,7 +327,77 @@ class ApiClient {
     return response.data;
   }
 
-  // Upload methods for A+ content images
+  // Product Images methods
+  async getProductImages(productId: string): Promise<any[]> {
+    console.log('📡 API Client: Getting product images for product:', productId)
+    const response = await this.request<{ success: boolean; data: any[]; message: string }>(`/api/products/${productId}/images`);
+    console.log('📡 API Client: Product images response:', response)
+    return response.data;
+  }
+
+  async createProductImage(productId: string, imageData: any): Promise<any> {
+    const response = await this.request<any>(`/api/products/${productId}/images`, {
+      method: 'POST',
+      body: JSON.stringify(imageData),
+    });
+    return response.data;
+  }
+
+  async updateProductImagePositions(productId: string, positions: { id: string; position: number }[]): Promise<{ success: boolean; message: string }> {
+    const response = await this.request<{ success: boolean; message: string }>(`/api/products/${productId}/images/positions`, {
+      method: 'PUT',
+      body: JSON.stringify({ positions }),
+    });
+    return response.data;
+  }
+
+  async updateProductImage(productId: string, imageId: string, imageData: any): Promise<any> {
+    const response = await this.request<any>(`/api/products/${productId}/images/${imageId}`, {
+      method: 'PUT',
+      body: JSON.stringify(imageData),
+    });
+    return response.data;
+  }
+
+  async deleteProductImage(productId: string, imageId: string): Promise<{ success: boolean; message: string }> {
+    const response = await this.request<{ success: boolean; message: string }>(`/api/products/${productId}/images/${imageId}`, {
+      method: 'DELETE',
+    });
+    return response.data;
+  }
+
+  async uploadProductImage(formData: FormData): Promise<{ success: boolean; data: { url: string; key: string; originalName: string; size: number; mimetype: string }; message: string }> {
+    try {
+      console.log('API Client: Starting uploadProductImage')
+      const response = await this.request<{ success: boolean; data: { url: string; key: string; originalName: string; size: number; mimetype: string }; message: string }>('/api/products/upload-product-image', {
+        method: 'POST',
+        body: formData,
+        headers: {}, // Don't set Content-Type for FormData, base request method will handle it
+      });
+      console.log('API Client: Product image upload response:', response)
+
+      // Check if response has the expected structure
+      if (response && typeof response === 'object') {
+        if (response.success && response.data && response.data.url) {
+          // Normal case: response is wrapped
+          return response;
+        } else if (response.url) {
+          // Direct case: response is the data itself
+          return {
+            success: true,
+            data: response,
+            message: 'Product image uploaded successfully'
+          };
+        }
+      }
+
+      throw new Error('Invalid response structure');
+    } catch (error) {
+      console.error('API Client: Product image upload failed with error:', error)
+      throw error
+    }
+  }
+
   async uploadAPlusImage(formData: FormData): Promise<{ success: boolean; data: { url: string }; message: string }> {
     try {
       console.log('API Client: Starting uploadAPlusImage')

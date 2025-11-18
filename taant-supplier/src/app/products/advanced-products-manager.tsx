@@ -69,7 +69,7 @@ import ImageUploadManager from '../../components/products/image-upload-manager'
 import VariantManager, { ProductVariant } from '../../components/products/variant-manager'
 import OptimizedVariantManager from '../../components/products/optimized-variant-manager'
 import APlusContentImagesManager from '../../components/products/a-plus-content-images-manager'
-// import FAQManager from '../../components/products/faq-manager' // Temporarily disabled due to react-dnd issues
+import FAQManager from '../../components/products/faq-manager'
 import SimpleWysiwygEditor from '../../components/ui/simple-wysiwyg-editor'
 import SimpleDynamicFields from '../../components/products/simple-dynamic-fields-final'
 import InformationSectionsManager from '../../components/products/information-sections-manager-final'
@@ -311,6 +311,12 @@ const AdvancedProductManager: React.FC = () => {
       console.log('✅ VARIANTS REFRESHED - Product variants loaded fresh for tab switch')
     }
 
+    // If switching to Images tab (key '2'), refresh images to ensure latest data
+    if (tabKey === '2' && editingProduct) {
+      console.log('🔄 SWITCHING TO IMAGES TAB - Refreshing images for product:', editingProduct.title)
+      loadProductImages(editingProduct.id)
+    }
+
     // Set the new active tab
     setActiveTab(tabKey)
     console.log('✅ TAB SWITCHED TO:', tabKey)
@@ -382,6 +388,26 @@ const AdvancedProductManager: React.FC = () => {
     } catch (error) {
       console.error('❌ Failed to load content images:', error)
       setContentImages([])
+    }
+  }
+
+  // Load product images for a product
+  const loadProductImages = async (productId: string) => {
+    console.log('🔄 Loading product images for product:', productId)
+    if (!productId) {
+      console.log('❌ No productId provided, setting empty productImages')
+      setProductImages([])
+      return
+    }
+
+    try {
+      console.log('📡 Calling API to get product images...')
+      const images = await apiClient.getProductImages(productId)
+      console.log('✅ Product images loaded:', images.length, images)
+      setProductImages(images)
+    } catch (error) {
+      console.error('❌ Failed to load product images:', error)
+      setProductImages([])
     }
   }
 
@@ -577,6 +603,7 @@ const AdvancedProductManager: React.FC = () => {
             images={productImages}
             onChange={setProductImages}
             maxImages={10}
+            productId={editingProduct?.id}
           />
             </>
       )
@@ -673,10 +700,10 @@ const AdvancedProductManager: React.FC = () => {
       ),
       children: (
         <>
-          {/* <FAQManager
+          <FAQManager
             faqs={productFAQs}
             onChange={setProductFAQs}
-          /> */}
+          />
               </>
       )
     },
@@ -1328,11 +1355,14 @@ const AdvancedProductManager: React.FC = () => {
     }
 
     form.setFieldsValue(initialValues)
+
+    // Clear images for new product
     setProductImages([])
     setProductVariants([])
     setProductFAQs([])
     setAPlusSections([])
     setContentImages([])
+
     // Don't reset simpleFields and informationSections - let components initialize themselves
     setValidationErrors({})
     setActiveTab('1')
@@ -1505,6 +1535,10 @@ const AdvancedProductManager: React.FC = () => {
       const sku = `SKU-${Date.now().toString(36).toUpperCase()}`
       const slug = values.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 
+      // Use current productImages state - ImageUploadManager keeps it in sync with database
+      const finalImages = productImages
+      console.log('🎯 Using current productImages state for save:', finalImages.length, finalImages)
+
       // Prepare product data
       const productData = {
         ...values,
@@ -1534,7 +1568,7 @@ const AdvancedProductManager: React.FC = () => {
         // Include dynamic fields and information sections
         simple_fields: simpleFields,
         information_sections: informationSections,
-        images: productImages.map((img, index) => ({
+        images: finalImages.map((img, index) => ({
           url: img.url,
           alt_text: img.alt_text,
           position: index,
@@ -1642,16 +1676,19 @@ const AdvancedProductManager: React.FC = () => {
     }
 
     form.setFieldsValue(formValues)
-    setProductImages(product.product_images || product.images || [])
+
+    // Load product images immediately when opening modal for editing
+    loadProductImages(product.id)
+
+    // Load content images from the new table
+    loadContentImages(product.id)
+
     const variants = product.product_variants || product.variants || []
     setProductVariants(variants)
     setOriginalVariants(JSON.parse(JSON.stringify(variants))) // Store deep copy for comparison
     setVariantsWereModified(false) // Reset modification flag when loading product
     setProductFAQs(product.faqs || [])
     setAPlusSections(product.a_plus_sections || [])
-
-    // Load content images from the new table
-    loadContentImages(product.id)
 
     setFeatures(product.features?.length > 0 ? product.features : [''])
     setSpecifications(product.specifications || {})

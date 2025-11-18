@@ -15,6 +15,7 @@ import {
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface'
 import { DndProvider, useDrag, useDrop } from 'react-dnd/dist/index'
 import { HTML5Backend } from 'react-dnd-html5-backend'
+import apiClient from '../../lib/api-client'
 
 const { Text } = Typography
 
@@ -24,13 +25,18 @@ interface ProductImage {
   alt_text: string
   position: number
   is_primary: boolean
+  file_name?: string
+  file_size?: number
+  file_type?: string
   file?: File
+  needsSave?: boolean
 }
 
 interface ImageUploadManagerProps {
   images: ProductImage[]
   onChange: (images: ProductImage[]) => void
   maxImages?: number
+  productId?: string
 }
 
 // Draggable Image Card Component
@@ -174,100 +180,374 @@ const DraggableImageCard: React.FC<{
 const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
   images,
   onChange,
-  maxImages = 10
+  maxImages = 10,
+  productId
 }) => {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewImage, setPreviewImage] = useState<string>('')
+  const [isUploading, setIsUploading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [processingFiles, setProcessingFiles] = useState<Set<string>>(new Set())
+  const [uploadCounter, setUploadCounter] = useState(0)
+  const [shouldReloadAfterUpload, setShouldReloadAfterUpload] = useState(false)
+
+  // Load product images from database on component mount or productId change
+  React.useEffect(() => {
+    const loadProductImages = async () => {
+      if (!productId) {
+        console.log('ImageUploadManager - No productId provided')
+        return
+      }
+
+      console.log('🔄 ImageUploadManager - Loading product images for:', productId)
+      console.log('🔄 ImageUploadManager - Current images in state before API call:', images.length, images.map(img => ({ id: img.id, url: img.url.substring(0, 50) })))
+      setIsLoading(true)
+
+      try {
+        // Add timestamp to prevent caching
+        const timestamp = Date.now()
+        console.log('🔍 ImageUploadManager - Fetching images with timestamp:', timestamp)
+        const response = await apiClient.getProductImages(productId)
+        console.log('✅ ImageUploadManager - Product images loaded from DB:', response.length, response)
+        console.log('📋 Current productImages in state before update:', images.length)
+
+        // Convert database images to the expected format
+        const formattedImages = response.map(img => ({
+          ...img,
+          file: undefined, // No file for existing images
+          needsSave: false
+        }))
+
+        onChange(formattedImages)
+      } catch (error) {
+        console.error('❌ ImageUploadManager - Failed to load product images:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadProductImages()
+  }, [productId, shouldReloadAfterUpload]) // Add shouldReloadAfterUpload to trigger reload after uploads
+
+  // Renumber positions when all uploads are complete and processingFiles is empty
+  React.useEffect(() => {
+    if (processingFiles.size === 0 && images.length > 0) {
+      // Only renumber if there might be position gaps from concurrent uploads
+      const needsRenumering = images.some((img, index) => img.position !== index)
+
+      if (needsRenumering) {
+        console.log('🔄 Renumbering image positions after concurrent uploads')
+        const renumberedImages = images.map((img, index) => ({
+          ...img,
+          position: index
+        }))
+
+        // Only update if positions actually changed
+        const positionsChanged = renumberedImages.some((img, index) => img.position !== images[index].position)
+        if (positionsChanged) {
+          onChange(renumberedImages)
+        }
+      }
+    }
+  }, [processingFiles.size, images.length]) // Check when processing completes or images change
+
+  
+  // S3 upload function
+  const uploadToS3 = async (file: File): Promise<string> => {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      console.log('Starting product image S3 upload for file:', file.name)
+      const response = await apiClient.uploadProductImage(formData)
+      console.log('Product image S3 upload response:', response)
+
+      if (response.success) {
+        console.log('Product image S3 upload successful, URL:', response.data.url)
+        return response.data.url
+      } else {
+        console.error('Product image S3 upload failed with response:', response)
+        throw new Error(response.message || 'Upload failed')
+      }
+    } catch (error) {
+      console.error('Product image S3 upload error details:', error)
+      throw error
+    }
+  }
+
+  // Process a single file upload
+  const processSingleFile = async (file: File, currentImagesLength: number, isPrimary: boolean): Promise<ProductImage | null> => {
+    try {
+      console.log(`🚀 Processing single file: ${file.name} (primary: ${isPrimary})`)
+      const s3Url = await uploadToS3(file)
+      console.log(`✅ S3 upload complete for: ${file.name}`)
+
+      return {
+        id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        url: s3Url,
+        alt_text: file.name.split('.')[0],
+        position: currentImagesLength,
+        is_primary: isPrimary,
+        file_name: file.name,
+        file_size: file.size,
+        file_type: file.type,
+        file,
+        needsSave: true
+      }
+    } catch (error) {
+      console.error(`Failed to upload ${file.name}:`, error)
+      message.error(`Failed to upload ${file.name}`)
+      return null
+    }
+  }
 
   // Handle file upload
-  const handleUpload: UploadProps['beforeUpload'] = (file, fileList) => {
-    // Process all files at once when the first file is processed
-    if (fileList.length > 0) {
+  const handleUpload: UploadProps['beforeUpload'] = async (file, fileList) => {
+    // Create a unique identifier for this file based on name, size, and last modified time
+    const fileKey = `${file.name}-${file.size}-${file.lastModified}`
+
+    // Check if this file is already being processed
+    if (processingFiles.has(fileKey)) {
+      console.log(`⏭️ File ${file.name} is already being processed, skipping...`)
+      return false
+    }
+
+    // Mark this file as being processed and increment upload counter
+    const currentUploadCounter = uploadCounter
+    setProcessingFiles(prev => new Set([...prev, fileKey]))
+    setUploadCounter(prev => prev + 1)
+
+    try {
       const remainingSlots = maxImages - images.length
       if (remainingSlots <= 0) {
         message.error(`Maximum ${maxImages} images allowed!`)
         return false
       }
 
-      // Process valid files
-      const validFiles = fileList.slice(0, remainingSlots).filter(file => {
-        const isImage = file.type.startsWith('image/')
-        const isLt5M = file.size / 1024 / 1024 < 5
-        const isDuplicate = images.some(img =>
-          img.file && img.file.name === file.name && img.file.size === file.size
-        )
+      // Validate this single file
+      const isImage = file.type.startsWith('image/')
+      const isLt5M = file.size / 1024 / 1024 < 5
+      const isDuplicate = images.some(img =>
+        img.file && img.file.name === file.name && img.file.size === file.size
+      )
 
-        if (!isImage) {
-          message.error(`${file.name} is not an image file!`)
-          return false
-        }
-        if (!isLt5M) {
-          message.error(`${file.name} must be smaller than 5MB!`)
-          return false
-        }
-        if (isDuplicate) {
-          message.error(`${file.name} has already been uploaded!`)
-          return false
-        }
-
-        return true
-      })
-
-      // Create new images for all valid files
-      const newImages = validFiles.map(file => ({
-        id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        url: URL.createObjectURL(file),
-        alt_text: file.name.split('.')[0],
-        position: images.length + validFiles.indexOf(file),
-        is_primary: images.length === 0 && validFiles.indexOf(file) === 0,
-        file
-      }))
-
-      if (newImages.length > 0) {
-        onChange([...images, ...newImages])
-        message.success(`${newImages.length} image${newImages.length > 1 ? 's' : ''} added to gallery`)
+      if (!isImage) {
+        message.error(`${file.name} is not an image file!`)
+        return false
       }
+      if (!isLt5M) {
+        message.error(`${file.name} must be smaller than 5MB!`)
+        return false
+      }
+      if (isDuplicate) {
+        message.error(`${file.name} has already been uploaded!`)
+        return false
+      }
+
+      setIsUploading(true)
+
+      // Get current images length and add offset for concurrent uploads
+      const currentImagesLength = images.length + processingFiles.size
+
+      // Determine if this should be the primary image
+      // Only set as primary if there's no existing primary image in the gallery
+      const hasExistingPrimary = images.some(img => img.is_primary)
+      const shouldThisBePrimary = !hasExistingPrimary && processingFiles.size === 0 && currentUploadCounter === 0
+
+      // Process this single file with explicit primary status
+      const uploadedImage = await processSingleFile(file, currentImagesLength, shouldThisBePrimary)
+
+      if (uploadedImage) {
+        console.log(`📝 Processing image: ${uploadedImage.file_name} - S3 complete, now saving to database`)
+
+        try {
+          const imageData = {
+            url: uploadedImage.url,
+            alt_text: uploadedImage.alt_text,
+            file_name: uploadedImage.file_name,
+            file_size: uploadedImage.file_size,
+            file_type: uploadedImage.file_type,
+            position: uploadedImage.position,
+            is_primary: uploadedImage.is_primary,
+          }
+
+          const response = await apiClient.createProductImage(productId, imageData)
+          if (response) {
+            console.log(`✅ Image saved to database: ${response.id} (replacing temp ID: ${uploadedImage.id})`)
+
+            // Use functional update to ensure we get the latest state
+            const finalImage = { ...response, file: uploadedImage.file, needsSave: false }
+            onChange(prevImages => {
+              // Check if this image is already in the state (avoid duplicates)
+              const alreadyExists = prevImages.some(img =>
+                img.file_name === finalImage.file_name ||
+                img.id === finalImage.id
+              )
+
+              if (alreadyExists) {
+                console.log(`⏭️ Image ${finalImage.file_name} already exists in state, skipping...`)
+                return prevImages
+              }
+
+              // Check if there's already a primary image in the current state
+              const hasPrimaryInState = prevImages.some(img => img.is_primary)
+
+              // If there's already a primary and this image is marked as primary, remove primary flag
+              if (hasPrimaryInState && finalImage.is_primary) {
+                console.log(`🔄 Removing primary flag from ${finalImage.file_name} - primary already exists`)
+                finalImage.is_primary = false
+              }
+
+              console.log(`➕ Adding image ${finalImage.file_name} to state (primary: ${finalImage.is_primary})`)
+              return [...prevImages, finalImage]
+            })
+
+            message.success(`Image "${uploadedImage.file_name}" uploaded and saved`)
+          } else {
+            throw new Error('No response from database')
+          }
+        } catch (error) {
+          console.error(`❌ Failed to save image to database: ${uploadedImage.id}`, error)
+          // If database save fails, still add the uploaded image to state
+          onChange(prevImages => {
+            // Check if this temp image is already in the state
+            const alreadyExists = prevImages.some(img =>
+              img.file_name === uploadedImage.file_name ||
+              (img.id.startsWith('temp-') && img.id === uploadedImage.id)
+            )
+
+            if (alreadyExists) {
+              console.log(`⏭️ Temp image ${uploadedImage.file_name} already exists in state, skipping...`)
+              return prevImages
+            }
+
+            // Check if there's already a primary image in the current state
+            const hasPrimaryInState = prevImages.some(img => img.is_primary)
+
+            // If there's already a primary and this temp image is marked as primary, remove primary flag
+            if (hasPrimaryInState && uploadedImage.is_primary) {
+              console.log(`🔄 Removing primary flag from temp image ${uploadedImage.file_name} - primary already exists`)
+              uploadedImage.is_primary = false
+            }
+
+            console.log(`➕ Adding temp image ${uploadedImage.file_name} to state (primary: ${uploadedImage.is_primary})`)
+            return [...prevImages, uploadedImage]
+          })
+
+          message.warning(`Image uploaded to S3 but failed to save to database`)
+        }
+      }
+
+      setIsUploading(false)
+    } catch (error) {
+      console.error('File upload failed:', error)
+      message.error('Upload failed. Please try again.')
+      setIsUploading(false)
+    } finally {
+      // Remove the file from processing set after a delay to prevent immediate reprocessing
+      setTimeout(() => {
+        setProcessingFiles(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(fileKey)
+
+          // Reset upload counter when all uploads are complete
+          if (newSet.size === 0) {
+            setUploadCounter(0)
+            // Trigger reload to get fresh data from database after all uploads complete
+            setShouldReloadAfterUpload(prev => !prev) // Toggle to trigger useEffect
+          }
+
+          return newSet
+        })
+      }, 100)
     }
 
-    return false // Prevent automatic upload for all files
+    return false // Prevent automatic upload
   }
 
   // Remove image
-  const handleRemove = useCallback((imageId: string) => {
-    const updatedImages = images.filter(img => img.id !== imageId)
+  const handleRemove = useCallback(async (imageId: string) => {
+    const imageToRemove = images.find(img => img.id === imageId)
+    if (!imageToRemove) return
 
-    // If primary image was removed, make first image primary
-    if (images.find(img => img.id === imageId)?.is_primary && updatedImages.length > 0) {
-      updatedImages[0].is_primary = true
+    try {
+      // If image has a real database ID (not temp), delete from database
+      if (!imageId.startsWith('temp-') && productId) {
+        console.log('🗑️ Deleting image from database:', imageId)
+        await apiClient.deleteProductImage(productId, imageId)
+        message.success(`Image "${imageToRemove.file_name || 'image'}" deleted from database`)
+      } else {
+        console.log('🗑️ Removing temp image from state:', imageId)
+        message.success(`Image "${imageToRemove.file_name || 'image'}" removed`)
+      }
+
+      // Update local state
+      const updatedImages = images.filter(img => img.id !== imageId)
+
+      // If primary image was removed, make first image primary
+      if (imageToRemove.is_primary && updatedImages.length > 0) {
+        updatedImages[0].is_primary = true
+      }
+
+      // Update positions
+      const repositionedImages = updatedImages.map((img, index) => ({
+        ...img,
+        position: index
+      }))
+
+      onChange(repositionedImages)
+    } catch (error) {
+      console.error('❌ Failed to delete image:', error)
+      message.error('Failed to delete image from database')
     }
-
-    // Update positions
-    const repositionedImages = updatedImages.map((img, index) => ({
-      ...img,
-      position: index
-    }))
-
-    onChange(repositionedImages)
-    message.success('Image removed')
-  }, [images, onChange])
+  }, [images, onChange, productId])
 
   // Set primary image
-  const handleSetPrimary = useCallback((imageId: string) => {
-    const updatedImages = images.map(img => ({
-      ...img,
-      is_primary: img.id === imageId
-    }))
-    onChange(updatedImages)
-    message.success('Primary image updated')
-  }, [images, onChange])
+  const handleSetPrimary = useCallback(async (imageId: string) => {
+    try {
+      const updatedImages = images.map(img => ({
+        ...img,
+        is_primary: img.id === imageId
+      }))
+      onChange(updatedImages)
+
+      // Update primary image in database for non-temp images
+      if (!imageId.startsWith('temp-') && productId) {
+        await apiClient.updateProductImage(productId, imageId, {
+          is_primary: true
+        })
+        message.success('Primary image updated')
+      } else {
+        message.success('Primary image updated')
+      }
+    } catch (error) {
+      console.error('❌ Failed to update primary image:', error)
+      message.error('Failed to update primary image')
+    }
+  }, [images, onChange, productId])
 
   // Update alt text
-  const handleUpdateAlt = useCallback((imageId: string, altText: string) => {
-    const updatedImages = images.map(img =>
-      img.id === imageId ? { ...img, alt_text: altText } : img
-    )
-    onChange(updatedImages)
-  }, [images, onChange])
+  const handleUpdateAlt = useCallback(async (imageId: string, altText: string) => {
+    try {
+      const updatedImages = images.map(img =>
+        img.id === imageId ? { ...img, alt_text: altText } : img
+      )
+      onChange(updatedImages)
+
+      // Update alt text in database for non-temp images
+      if (!imageId.startsWith('temp-') && productId) {
+        await apiClient.updateProductImage(productId, imageId, {
+          alt_text: altText
+        })
+        message.success('Alt text updated')
+      } else {
+        message.success('Alt text updated')
+      }
+    } catch (error) {
+      console.error('❌ Failed to update alt text:', error)
+      message.error('Failed to update alt text')
+    }
+  }, [images, onChange, productId])
 
   // Move image
   const handleMoveImage = useCallback((dragIndex: number, hoverIndex: number) => {
@@ -308,18 +588,24 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
           style={{ marginBottom: 16 }}
           bodyStyle={{ padding: 16 }}
         >
-          <Upload.Dragger {...uploadProps}>
-            <p className="ant-upload-drag-icon">
-              <UploadOutlined style={{ fontSize: 48, color: '#1890ff' }} />
-            </p>
+          <Upload.Dragger {...uploadProps} disabled={isUploading}>
+            <div className="ant-upload-drag-icon">
+              {isUploading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div className="loading-spinner" style={{ fontSize: 48, color: '#1890ff' }}>🔄</div>
+                </div>
+              ) : (
+                <UploadOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+              )}
+            </div>
             <p className="ant-upload-text" style={{ fontSize: 16, fontWeight: 500 }}>
-              Click or drag images to this area to upload
+              {isUploading ? 'Uploading to S3...' : 'Click or drag images to this area to upload'}
             </p>
             <p className="ant-upload-hint" style={{ color: '#666' }}>
               Support for JPG, PNG, GIF. Maximum {maxImages} images. Individual files must be smaller than 5MB.
             </p>
             <p style={{ color: '#52c41a', fontSize: 12, marginTop: 8 }}>
-              📸 Drag to reorder images • ⭐ First image is automatically set as primary
+              📸 Drag to reorder images • ⭐ First image is automatically set as primary • ☁️ Images saved to cloud storage
             </p>
           </Upload.Dragger>
         </Card>
@@ -333,6 +619,34 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
                   <CameraOutlined /> Image Gallery ({images.length}/{maxImages})
                 </span>
                 <Space>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      console.log('🔄 Manual refresh triggered')
+                      const loadProductImages = async () => {
+                        if (!productId) return
+                        setIsLoading(true)
+                        try {
+                          const response = await apiClient.getProductImages(productId)
+                          console.log('🔄 Manual refresh - images loaded:', response.length)
+                          const formattedImages = response.map(img => ({
+                            ...img,
+                            file: undefined,
+                            needsSave: false
+                          }))
+                          onChange(formattedImages)
+                        } catch (error) {
+                          console.error('Manual refresh failed:', error)
+                        } finally {
+                          setIsLoading(false)
+                        }
+                      }
+                      loadProductImages()
+                    }}
+                    icon={<CameraOutlined />}
+                  >
+                    Refresh
+                  </Button>
                   {images.length > 0 && (
                     <Button
                       size="small"
