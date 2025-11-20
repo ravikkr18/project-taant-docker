@@ -80,7 +80,7 @@ const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
   };
 
   const imageProps = {
-    src: imageError ? generatePlaceholder() : imageSrc,
+    src: imageError ? generatePlaceholder() : (imageSrc || generatePlaceholder()),
     alt,
     className,
     priority,

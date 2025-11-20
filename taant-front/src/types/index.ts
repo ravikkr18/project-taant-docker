@@ -31,6 +31,18 @@ export interface ProductVariant {
   image?: string;
   inStock: boolean;
   color?: string;
+  options?: VariantOption[];
+  option1_name?: string;
+  option1_value?: string;
+  option2_name?: string;
+  option2_value?: string;
+  option3_name?: string;
+  option3_value?: string;
+}
+
+export interface VariantOption {
+  name: string;
+  value: string;
 }
 
 export interface CartItem {

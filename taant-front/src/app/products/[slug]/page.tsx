@@ -6,7 +6,7 @@ import ImageWithFallback from '@/components/ImageWithFallback';
 import Link from 'next/link';
 import { Star, Heart, ShoppingBag, Truck, Shield, RefreshCw, Minus, Plus, ChevronLeft, ChevronRight, Search, X, ZoomIn, Check, AlertCircle, Zap, Share2 } from 'lucide-react';
 import { Product, ProductVariant } from '@/types';
-import { getProductBySlug, getRelatedProducts } from '@/data/products';
+import { getProductBySlug as getProductBySlugAPI, getRelatedProducts as getRelatedProductsAPI, transformProductForFrontend } from '@/api/products';
 import { useLocation } from '@/contexts/LocationContext';
 
 
@@ -85,7 +85,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedReviewImages, setSelectedReviewImages] = useState<string[]>([]);
   const [selectedReviewImageIndex, setSelectedReviewImageIndex] = useState(0);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['faq-0'])); // First FAQ expanded by default
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set()); // No sections expanded by default
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [stockCount] = useState(14); // Fixed stock count
@@ -102,19 +102,32 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const addToCartRef = useRef<HTMLDivElement>(null);
   const { pincode, city } = useLocation();
 
-  // Unwrap params promise
+  // Unwrap params promise and load product data
   useEffect(() => {
-    const getSlug = async () => {
-      const resolvedParams = await params;
-      setSlug(resolvedParams.slug);
-      const productData = getProductBySlug(resolvedParams.slug);
-      setProduct(productData);
-      if (productData) {
-        const related = getRelatedProducts(productData);
-        setRelatedProducts(related);
+    const loadProduct = async () => {
+      try {
+        const resolvedParams = await params;
+        setSlug(resolvedParams.slug);
+
+        // Fetch product data from API
+        const apiProduct = await getProductBySlugAPI(resolvedParams.slug);
+        if (apiProduct) {
+          // Transform API data to frontend format
+          const productData = transformProductForFrontend(apiProduct);
+          setProduct(productData);
+
+          // Temporarily skip related products to isolate issue
+          setRelatedProducts([]);
+        } else {
+          setProduct(null);
+        }
+      } catch (error) {
+        console.error('Error loading product:', error);
+        setProduct(null);
       }
     };
-    getSlug();
+
+    loadProduct();
   }, [params]);
 
   // Initialize selected color/variant on component mount
@@ -178,26 +191,10 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
     };
   }, [product]);
 
-  // Create dummy variants if needed to show 10 total
+  // Display only real variants from API
   const displayVariants = React.useMemo(() => {
     if (!product || !product.variants) return [];
-
-    const originalVariants = product.variants;
-    const dummyVariants = [];
-
-    // Add dummy variants to reach 10 total
-    for (let i = originalVariants.length + 1; i <= 10; i++) {
-      dummyVariants.push({
-        id: `dummy-${i}`,
-        name: `Variant ${i}`,
-        price: 299.99 + (i * 10),
-        color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
-        image: `https://picsum.photos/seed/variant-${i}/100/100.jpg`,
-        inStock: Math.random() > 0.3
-      });
-    }
-
-    return [...originalVariants, ...dummyVariants].slice(0, 10);
+    return product.variants;
   }, [product]);
 
   // Show loading state while fetching data
@@ -593,12 +590,12 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
             {/* Price */}
             <div className="flex items-baseline gap-2 border-b border-gray-200 pb-3">
               <span className="text-2xl font-bold text-gray-900">
-                ₹{Math.round(currentPrice * 83).toLocaleString('en-IN')}
+                ₹{Math.round(currentPrice).toLocaleString('en-IN')}
               </span>
               {product.originalPrice && product.originalPrice > product.price && (
                 <>
                   <span className="text-lg text-gray-500 line-through">
-                    ₹{Math.round(product.originalPrice * 83).toLocaleString('en-IN')}
+                    ₹{Math.round(product.originalPrice).toLocaleString('en-IN')}
                   </span>
                   <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
                     {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
@@ -611,11 +608,13 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
             </div>
 
             {/* Product Short Description */}
-            <div className="border-b border-gray-200 pb-4 mb-4">
-              <p className="text-gray-700 text-sm leading-relaxed">
-                Experience premium audio quality with our advanced headphones featuring custom-tuned drivers, active noise cancellation, and all-day comfort. Perfect for music lovers, professionals, and travelers who demand the best in sound performance and comfort.
-              </p>
-            </div>
+            {product.short_description && (
+              <div className="border-b border-gray-200 pb-4 mb-4">
+                <p className="text-gray-700 text-sm leading-relaxed">
+                  {product.short_description}
+                </p>
+              </div>
+            )}
 
             {/* Product Variants */}
             {displayVariants && displayVariants.length > 0 && (
@@ -645,7 +644,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                       <div className="p-1 bg-white">
                         <h4 className="text-[8px] font-medium text-gray-900 truncate leading-tight">{variant.name}</h4>
                         <p className="text-[8px] font-bold text-orange-800-muted leading-tight">
-                          ₹{Math.round(variant.price * 83).toLocaleString('en-IN')}
+                          ₹{Math.round(variant.price).toLocaleString('en-IN')}
                         </p>
                       </div>
                       {selectedColor?.id === variant.id && (
@@ -781,67 +780,29 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
             </div>
 
             {/* FAQ Section */}
-            <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
-              <div className="space-y-2">
-                <div className="border border-gray-200 rounded-lg">
-                  <button
-                    onClick={() => toggleSection('faq-0')}
-                    className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                  >
-                    <h3 className="font-medium text-gray-900 text-sm">What is the battery life of these headphones?</h3>
-                    <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has('faq-0') ? 'rotate-90' : ''}`} />
-                  </button>
-                  {expandedSections.has('faq-0') && (
-                    <div className="px-3 pb-3 text-xs text-gray-700 border-t border-gray-200">
-                      These headphones offer up to 30 hours of continuous playback on a single charge with quick charge support.
+            {product.faqs && product.faqs.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
+                <div className="space-y-2">
+                  {product.faqs.map((faq, index) => (
+                    <div key={faq.id} className="border border-gray-200 rounded-lg">
+                      <button
+                        onClick={() => toggleSection(`faq-${index}`)}
+                        className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
+                      >
+                        <h3 className="font-medium text-gray-900 text-sm">{faq.question}</h3>
+                        <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has(`faq-${index}`) ? 'rotate-90' : ''}`} />
+                      </button>
+                      {expandedSections.has(`faq-${index}`) && (
+                        <div className="px-3 pb-3 text-xs text-gray-700 border-t border-gray-200">
+                          {faq.answer}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="border border-gray-200 rounded-lg">
-                  <button
-                    onClick={() => toggleSection('faq-1')}
-                    className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                  >
-                    <h3 className="font-medium text-gray-900 text-sm">Does it support Bluetooth connectivity?</h3>
-                    <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has('faq-1') ? 'rotate-90' : ''}`} />
-                  </button>
-                  {expandedSections.has('faq-1') && (
-                    <div className="px-3 pb-3 text-xs text-gray-700 border-t border-gray-200">
-                      Yes, these headphones feature Bluetooth 5.0 connectivity with a range of up to 10 meters and support for multiple audio codecs.
-                    </div>
-                  )}
-                </div>
-                <div className="border border-gray-200 rounded-lg">
-                  <button
-                    onClick={() => toggleSection('faq-2')}
-                    className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                  >
-                    <h3 className="font-medium text-gray-900 text-sm">Is noise cancellation effective?</h3>
-                    <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has('faq-2') ? 'rotate-90' : ''}`} />
-                  </button>
-                  {expandedSections.has('faq-2') && (
-                    <div className="px-3 pb-3 text-xs text-gray-700 border-t border-gray-200">
-                      The advanced Active Noise Cancellation (ANC) technology effectively blocks out ambient noise, perfect for travel and noisy environments.
-                    </div>
-                  )}
-                </div>
-                <div className="border border-gray-200 rounded-lg">
-                  <button
-                    onClick={() => toggleSection('faq-3')}
-                    className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                  >
-                    <h3 className="font-medium text-gray-900 text-sm">What is the warranty period?</h3>
-                    <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has('faq-3') ? 'rotate-90' : ''}`} />
-                  </button>
-                  {expandedSections.has('faq-3') && (
-                    <div className="px-3 pb-3 text-xs text-gray-700 border-t border-gray-200">
-                      These headphones come with a 1-year manufacturer warranty with extended support options available.
-                    </div>
-                  )}
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Product Details Section */}
             <div className="bg-white rounded-lg shadow-sm mb-6 p-6">
@@ -919,11 +880,11 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                       </div>
                       <div className="flex items-center gap-1">
                         <span className="text-sm font-bold text-gray-900">
-                          ₹{Math.round(relatedProduct.price * 83).toLocaleString('en-IN')}
+                          ₹{Math.round(relatedProduct.price).toLocaleString('en-IN')}
                         </span>
                         {relatedProduct.originalPrice && relatedProduct.originalPrice > relatedProduct.price && (
                           <span className="text-xs text-gray-500 line-through">
-                            ₹{Math.round(relatedProduct.originalPrice * 83).toLocaleString('en-IN')}
+                            ₹{Math.round(relatedProduct.originalPrice).toLocaleString('en-IN')}
                           </span>
                         )}
                       </div>
@@ -1452,11 +1413,11 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-lg font-bold text-gray-900">
-                          ₹{Math.round(relatedProduct.price * 83).toLocaleString('en-IN')}
+                          ₹{Math.round(relatedProduct.price).toLocaleString('en-IN')}
                         </span>
                         {relatedProduct.originalPrice && relatedProduct.originalPrice > relatedProduct.price && (
                           <span className="text-sm text-gray-500 line-through">
-                            ₹{Math.round(relatedProduct.originalPrice * 83).toLocaleString('en-IN')}
+                            ₹{Math.round(relatedProduct.originalPrice).toLocaleString('en-IN')}
                           </span>
                         )}
                       </div>
@@ -1688,11 +1649,11 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                   </div>
                   <div className="flex items-center gap-1">
                     <span className="text-sm font-bold text-gray-900">
-                      ₹{Math.round(relatedProduct.price * 83).toLocaleString('en-IN')}
+                      ₹{Math.round(relatedProduct.price).toLocaleString('en-IN')}
                     </span>
                     {relatedProduct.originalPrice && relatedProduct.originalPrice > relatedProduct.price && (
                       <span className="text-xs text-gray-500 line-through">
-                        ₹{Math.round(relatedProduct.originalPrice * 83).toLocaleString('en-IN')}
+                        ₹{Math.round(relatedProduct.originalPrice).toLocaleString('en-IN')}
                       </span>
                     )}
                   </div>
