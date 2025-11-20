@@ -38,6 +38,23 @@ import {
 import apiClient from '../../lib/api-client'
 
 const { Text } = Typography
+const { Option } = Select
+
+// Common option names
+const COMMON_OPTIONS = [
+  'Color',
+  'Size',
+  'Material',
+  'Style',
+  'Weight',
+  'Dimensions',
+  'Finish',
+  'Pattern',
+  'Fit',
+  'Length',
+  'Width',
+  'Height',
+]
 
 export interface ProductVariant {
   id: string
@@ -924,11 +941,22 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
                       <Text strong style={{ color: '#1890ff' }}>{index + 1}</Text>
                     </Col>
                     <Col span={8}>
-                      <Input
+                      <Select
                         value={option.name}
                         placeholder="Option name (e.g., Size, Color)"
-                        onChange={(e) => updateVariantOption(option.id, 'name', e.target.value, editingVariant!)}
-                      />
+                        onChange={(newValue) => updateVariantOption(option.id, 'name', newValue, editingVariant!)}
+                        style={{ width: '100%' }}
+                        showSearch
+                        filterOption={(input, option) =>
+                          (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                        }
+                      >
+                        {COMMON_OPTIONS.map(commonOption => (
+                          <Option key={commonOption} value={commonOption}>
+                            {commonOption}
+                          </Option>
+                        ))}
+                      </Select>
                     </Col>
                     <Col span={9}>
                       {option.name?.toLowerCase() === 'color' ? (

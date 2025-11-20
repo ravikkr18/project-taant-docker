@@ -74,6 +74,7 @@ import SimpleWysiwygEditor from '../../components/ui/simple-wysiwyg-editor'
 import SimpleDynamicFields from '../../components/products/simple-dynamic-fields-final'
 import InformationSectionsManager from '../../components/products/information-sections-manager-final'
 import FloatingHelp from '../../components/ui/floating-help'
+import ProductOptionsManager from '../../components/products/product-options-manager'
 
 const { Title, Text, Paragraph } = Typography
 const { Search } = Input
@@ -576,6 +577,45 @@ const AdvancedProductManager: React.FC = () => {
                   placeholder="Add tags"
                   tokenSeparators={[',']}
                 />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider>Product Inventory & Options</Divider>
+
+          <Row gutter={16}>
+            <Col span={6}>
+              <Form.Item
+                name="quantity"
+                label="Quantity"
+                style={{ marginBottom: 8 }}
+                help="Main product inventory quantity"
+                rules={[
+                  { required: true, message: 'Please enter quantity' },
+                  { type: 'number', min: 0, message: 'Quantity must be 0 or greater' }
+                ]}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="0"
+                  min={0}
+                  precision={0}
+                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => Number(value!.replace(/\$s?|(,*)/g, '')) as any}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                name="options"
+                label="Product Options"
+                style={{ marginBottom: 8 }}
+                help="Add options similar to variant options (e.g., Color, Size, etc.)"
+              >
+                <ProductOptionsManager />
               </Form.Item>
             </Col>
           </Row>
@@ -1533,7 +1573,56 @@ const AdvancedProductManager: React.FC = () => {
 
       // Generate SKU and slug
       const sku = `SKU-${Date.now().toString(36).toUpperCase()}`
-      const slug = values.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+
+      // Generate unique slug
+      const generateUniqueSlug = async (title: string, sku: string): Promise<string> => {
+        // Create title-based slug
+        let titleSlug = title.toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+          .replace(/\s+/g, '-') // Replace spaces with hyphens
+          .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+          .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+
+        // Clean SKU for URL use
+        let cleanSku = sku.toLowerCase()
+          .replace(/[^a-z0-9-]/g, '') // Keep only alphanumeric and hyphens
+          .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+          .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+
+        // If title slug is empty, use just SKU
+        if (!titleSlug) {
+          titleSlug = 'product'
+        }
+
+        // Create base slug with both title and SKU for reliability
+        const baseSlug = `${titleSlug}-${cleanSku}`
+
+        let slug = baseSlug
+        let counter = 1
+
+        // Check if slug exists and add counter if needed
+        while (true) {
+          try {
+            const response = await fetch(`http://94.136.187.1:4000/public/products/slug/${slug}`)
+            const data = await response.json()
+
+            if (!data.success) {
+              // Slug doesn't exist, return it
+              return slug
+            }
+
+            // Slug exists, add counter
+            slug = `${baseSlug}-${counter}`
+            counter++
+          } catch (error) {
+            // If API call fails, return the slug (probably doesn't exist)
+            return slug
+          }
+        }
+      }
+
+      const slug = await generateUniqueSlug(values.title, sku)
 
       // Use current productImages state - ImageUploadManager keeps it in sync with database
       const finalImages = productImages
@@ -1554,6 +1643,8 @@ const AdvancedProductManager: React.FC = () => {
         length: values.length || null,
         width: values.width || null,
         height: values.height || null,
+        quantity: values.quantity || 0,
+        options: values.options || [],
         warranty_months: values.warranty_months || 0,
         warranty_text: values.warranty_text || '',
         origin_country: values.origin_country || null,
@@ -1576,10 +1667,14 @@ const AdvancedProductManager: React.FC = () => {
         })),
         // Include variants for new products or only if they were actually modified for existing products
         ...(editingProduct ? (variantsWereModified ? {
-          variants: productVariants.map(variant => ({
-            ...variant,
-            sku: variant.sku || `VAR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
-          }))
+          variants: productVariants.map(variant => {
+            // For existing variants, preserve the original SKU
+            const originalVariant = originalProduct?.product_variants?.find(v => v.id === variant.id);
+            return {
+              ...variant,
+              sku: originalVariant?.sku || variant.sku || `VAR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
+            };
+          })
         } : {}) : {
           variants: productVariants.map(variant => ({
             ...variant,
@@ -1657,6 +1752,8 @@ const AdvancedProductManager: React.FC = () => {
       length: product.length || null,
       width: product.width || null,
       height: product.height || null,
+      quantity: product.quantity || 0,
+      options: product.options || [],
       manufacturer: product.manufacturer || '',
       model_number: product.model_number || '',
       warranty_text: product.warranty_text || '',
