@@ -98,6 +98,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const [recentPurchase, setRecentPurchase] = useState<any>(null);
   const [addToCartAnimation, setAddToCartAnimation] = useState(false);
   const [buyNowAnimation, setBuyNowAnimation] = useState(false);
+  const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string }>({});
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const addToCartRef = useRef<HTMLDivElement>(null);
   const { pincode, city } = useLocation();
@@ -197,6 +198,72 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
     return product.variants;
   }, [product]);
 
+  // Group and merge all variant options by key
+  const groupedOptions = React.useMemo(() => {
+    if (!product || !product.variants) return {};
+
+    const optionsMap: { [key: string]: Set<string> } = {};
+
+    // Get all active variants
+    const activeVariants = product.variants.filter((variant: any) => variant.is_active);
+
+    activeVariants.forEach((variant: any) => {
+      if (!variant.options) return;
+
+      variant.options.forEach((option: any) => {
+        if (!option.name || !option.value || option.name.trim() === '' || option.value.trim() === '') return;
+
+        if (!optionsMap[option.name]) {
+          optionsMap[option.name] = new Set();
+        }
+        optionsMap[option.name].add(option.value);
+      });
+    });
+
+    // Convert Sets to sorted arrays
+    const result: { [key: string]: string[] } = {};
+    Object.entries(optionsMap).forEach(([key, values]) => {
+      result[key] = Array.from(values).sort();
+    });
+
+    return result;
+  }, [product]);
+
+  // Find variant that matches selected options
+  const findMatchingVariant = React.useCallback((options: { [key: string]: string }) => {
+    if (!product || !product.variants || Object.keys(options).length === 0) return null;
+
+    const matchingVariant = product.variants.find((variant: any) => {
+      if (!variant.is_active || !variant.options) return false;
+
+      // Check if all selected options match this variant
+      const selectedKeys = Object.keys(options);
+      if (selectedKeys.length === 0) return false;
+
+      return selectedKeys.every(key => {
+        const variantHasOption = variant.options.some((opt: any) =>
+          opt.name === key && opt.value === options[key]
+        );
+        return variantHasOption;
+      });
+    });
+
+    return matchingVariant || null;
+  }, [product]);
+
+  // Get currently selected variant based on selected options
+  const selectedVariant = React.useMemo(() => {
+    return findMatchingVariant(selectedOptions);
+  }, [selectedOptions, findMatchingVariant]);
+
+  // Handle option selection
+  const handleOptionSelect = (optionName: string, optionValue: string) => {
+    setSelectedOptions(prev => ({
+      ...prev,
+      [optionName]: optionValue
+    }));
+  };
+
   // Show loading state while fetching data
   if (!product) {
     return (
@@ -277,7 +344,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
     },
   ];
 
-  const currentPrice = selectedColor?.price || product.price;
+  const currentPrice = selectedColor?.price || selectedVariant?.price || product.price;
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isZoomed || !imageContainerRef.current) return;
@@ -663,26 +730,58 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
               </div>
             )}
 
-            {/* Size Selection */}
-            {sizes.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold text-gray-900 mb-1">Size: <span className="font-normal text-xs">{selectedSize || 'Select'}</span></h3>
-                <div className="flex flex-wrap gap-2">
-                  {sizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`px-2 py-1 border-2 rounded text-xs font-medium transition-all duration-200 relative overflow-hidden group ${
-                        selectedSize === size
-                          ? 'border-orange-500 bg-orange-500-light text-orange-800-muted'
-                          : 'border-gray-300 hover:border-gray-400 text-gray-700'
-                      }`}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-200/50 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-all duration-500"></div>
-                      <span className="relative z-10">{size}</span>
-                    </button>
-                  ))}
-                </div>
+            {/* Product Options - Show only selected variant's options */}
+            {selectedColor && selectedColor.options && selectedColor.options.length > 0 && (
+              <div className="space-y-4">
+                {(() => {
+                  // Group options by key to handle duplicates (like multiple Size options)
+                  const groupedOptions: { [key: string]: string[] } = {};
+
+                  selectedColor.options
+                    .filter((option: any) => option.name && option.value && option.value.trim() !== '')
+                    .forEach((option: any) => {
+                      if (!groupedOptions[option.name]) {
+                        groupedOptions[option.name] = [];
+                      }
+                      groupedOptions[option.name].push(option.value);
+                    });
+
+                  return Object.entries(groupedOptions).map(([optionName, optionValues]) => (
+                    <div key={optionName}>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                        {optionName}:
+                        <span className="font-normal text-sm text-gray-600 ml-1">
+                          {selectedOptions[optionName] || 'Select option'}
+                        </span>
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {optionValues.map((optionValue, index) => {
+                          const isSelected = selectedOptions[optionName] === optionValue;
+                          return (
+                            <button
+                              key={`${optionName}-${index}`}
+                              onClick={() => setSelectedOptions(prev => ({
+                                ...prev,
+                                [optionName]: optionValue
+                              }))}
+                              className={`px-3 py-2 border-2 rounded text-sm font-medium transition-all duration-200 relative overflow-hidden group ${
+                                isSelected
+                                  ? 'border-orange-500 bg-orange-50 text-orange-800'
+                                  : 'border-gray-300 hover:border-gray-400 text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-200/30 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-all duration-500"></div>
+                              <span className="relative z-10 capitalize">{optionValue}</span>
+                              {isSelected && (
+                                <Check className="w-3 h-3 inline-block ml-1 text-orange-600" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ));
+                })()}
               </div>
             )}
 
@@ -784,7 +883,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
               <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
                 <h2 className="text-lg font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
                 <div className="space-y-2">
-                  {product.faqs.map((faq, index) => (
+                  {product.faqs.map((faq: any, index: number) => (
                     <div key={faq.id} className="border border-gray-200 rounded-lg">
                       <button
                         onClick={() => toggleSection(`faq-${index}`)}
