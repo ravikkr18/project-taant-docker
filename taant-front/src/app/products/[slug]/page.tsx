@@ -691,7 +691,10 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                   {displayVariants.map((variant) => (
                     <button
                       key={variant.id}
-                      onClick={() => setSelectedColor(variant)}
+                      onClick={() => {
+                        setSelectedColor(variant);
+                        setSelectedOptions({}); // Clear all selected options when switching variants
+                      }}
                       disabled={!variant.inStock}
                       className={`relative group transition-all duration-200 rounded border-2 overflow-hidden w-14 h-18 ${
                         !variant.inStock ? 'opacity-50 cursor-not-allowed' : ''
@@ -734,53 +737,67 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
             {selectedColor && selectedColor.options && selectedColor.options.length > 0 && (
               <div className="space-y-4">
                 {(() => {
-                  // Group options by key to handle duplicates (like multiple Size options)
+                  // Normalize option names and group options by key
                   const groupedOptions: { [key: string]: string[] } = {};
 
                   selectedColor.options
                     .filter((option: any) => option.name && option.value && option.value.trim() !== '')
                     .forEach((option: any) => {
-                      if (!groupedOptions[option.name]) {
-                        groupedOptions[option.name] = [];
+                      // Normalize option name: capitalize first letter, lowercase rest
+                      const normalizedName = option.name.charAt(0).toUpperCase() + option.name.slice(1).toLowerCase();
+
+                      if (!groupedOptions[normalizedName]) {
+                        groupedOptions[normalizedName] = [];
                       }
-                      groupedOptions[option.name].push(option.value);
+                      groupedOptions[normalizedName].push(option.value);
                     });
 
-                  return Object.entries(groupedOptions).map(([optionName, optionValues]) => (
-                    <div key={optionName}>
-                      <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                        {optionName}:
-                        <span className="font-normal text-sm text-gray-600 ml-1">
-                          {selectedOptions[optionName] || 'Select option'}
-                        </span>
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {optionValues.map((optionValue, index) => {
-                          const isSelected = selectedOptions[optionName] === optionValue;
-                          return (
-                            <button
-                              key={`${optionName}-${index}`}
-                              onClick={() => setSelectedOptions(prev => ({
-                                ...prev,
-                                [optionName]: optionValue
-                              }))}
-                              className={`px-3 py-2 border-2 rounded text-sm font-medium transition-all duration-200 relative overflow-hidden group ${
-                                isSelected
-                                  ? 'border-orange-500 bg-orange-50 text-orange-800'
-                                  : 'border-gray-300 hover:border-gray-400 text-gray-700 hover:bg-gray-50'
-                              }`}
-                            >
-                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-200/30 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-all duration-500"></div>
-                              <span className="relative z-10 capitalize">{optionValue}</span>
-                              {isSelected && (
-                                <Check className="w-3 h-3 inline-block ml-1 text-orange-600" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ));
+                  return Object.entries(groupedOptions).map(([optionName, optionValues]) => {
+                    // If only one option exists for this key, display as text instead of buttons
+                    const hasSingleOption = optionValues.length === 1;
+                    const uniqueValues = [...new Set(optionValues)]; // Remove duplicates
+
+                    return (
+                      <div key={optionName}>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                          {optionName}:
+                          <span className="font-normal text-sm text-gray-600 ml-1">
+                            {selectedOptions[optionName] || (hasSingleOption ? optionValues[0] : 'Select option')}
+                          </span>
+                        </h3>
+
+                        {/* Only show as clickable buttons if multiple options exist */}
+                        {!hasSingleOption && (
+                          <div className="flex flex-wrap gap-2">
+                            {uniqueValues.map((optionValue, index) => {
+                              const isSelected = selectedOptions[optionName] === optionValue;
+                              return (
+                                <button
+                                  key={`${optionName}-${index}`}
+                                  onClick={() => setSelectedOptions(prev => ({
+                                    ...prev,
+                                    [optionName]: optionValue
+                                  }))}
+                                  className={`px-3 py-2 border-2 rounded text-sm font-medium transition-all duration-200 relative overflow-hidden group ${
+                                    isSelected
+                                      ? 'border-orange-500 bg-orange-50 text-orange-800'
+                                      : 'border-gray-300 hover:border-gray-400 text-gray-700 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-200/30 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-all duration-500"></div>
+                                  <span className="relative z-10 capitalize">{optionValue}</span>
+                                  {isSelected && (
+                                    <Check className="w-3 h-3 inline-block ml-1 text-orange-600" />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        </div>
+                    );
+                  });
                 })()}
               </div>
             )}
