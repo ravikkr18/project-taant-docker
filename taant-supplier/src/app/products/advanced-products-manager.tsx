@@ -668,7 +668,6 @@ const AdvancedProductManager: React.FC = () => {
             <OptimizedVariantManager
               key={`variants-${editingProduct.id}`}
               productId={editingProduct.id}
-              productImages={productImages}
               initialVariants={productVariants}
               onVariantCountChange={(count) => {
                 // Update the editing product with new variant count

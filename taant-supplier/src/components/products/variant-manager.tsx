@@ -36,6 +36,7 @@ import {
 
 const { Text } = Typography
 const { Option } = Select
+import VariantImageUploadManager from './variant-image-upload-manager'
 
 // Common option names
 const COMMON_OPTIONS = [
@@ -53,6 +54,17 @@ const COMMON_OPTIONS = [
   'Height',
 ]
 
+interface VariantImage {
+  id: string
+  url: string
+  alt_text: string
+  position: number
+  is_primary: boolean
+  file_name?: string
+  file_size?: number
+  file_type?: string
+}
+
 export interface ProductVariant {
   id: string
   title: string
@@ -66,6 +78,7 @@ export interface ProductVariant {
   image_id?: string
   is_active: boolean
   position: number
+  variant_images?: VariantImage[]
 }
 
 interface VariantManagerProps {
@@ -787,103 +800,29 @@ const VariantManager: React.FC<VariantManagerProps> = ({
             </Col>
           </Row>
 
-          {/* Image Selection */}
-          <Form.Item label="Variant Image">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8 }}>
-              <input
-                type="file"
-                id="variant-image-upload"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    const previewUrl = URL.createObjectURL(file)
-                    setSelectedImageUrl(previewUrl)
-                    message.success('Variant image uploaded')
+          {/* Variant Images */}
+          <Form.Item label="Variant Images">
+            <VariantImageUploadManager
+              images={editingVariant?.variant_images || []}
+              onChange={(variantImages) => {
+                setEditingVariant(prev => {
+                  if (!prev) return prev
+                  return {
+                    ...prev,
+                    variant_images: variantImages
                   }
-                }}
-              />
-              <div
-                onClick={() => document.getElementById('variant-image-upload')?.click()}
-                style={{
-                  width: 80,
-                  height: 80,
-                  border: '1px dashed #d9d9d9',
-                  borderRadius: 4,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#999',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#1890ff'
-                  e.currentTarget.style.color = '#1890ff'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#d9d9d9'
-                  e.currentTarget.style.color = '#999'
-                }}
-              >
-                <CameraOutlined style={{ fontSize: 20 }} />
-              </div>
-              {productImages.map(image => (
-                <div
-                  key={image.id}
-                  onClick={() => {
-                    setSelectedImageUrl(image.url)
-                    message.success(`Selected image: ${image.alt_text}`)
-                  }}
-                  style={{
-                    width: 80,
-                    height: 80,
-                    border: selectedImageUrl === image.url ? '2px solid #1890ff' : '1px solid #d9d9d9',
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                    overflow: 'hidden',
-                    transition: 'all 0.2s',
-                    position: 'relative'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#1890ff'
-                    e.currentTarget.style.transform = 'scale(1.05)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = selectedImageUrl === image.url ? '#1890ff' : '#d9d9d9'
-                    e.currentTarget.style.transform = 'scale(1)'
-                  }}
-                >
-                  <Image
-                    src={image.url}
-                    alt={image.alt_text}
-                    width={80}
-                    height={80}
-                    style={{ objectFit: 'cover' }}
-                    preview={false}
-                  />
-                  {selectedImageUrl === image.url && (
-                    <div style={{
-                      position: 'absolute',
-                      top: 2,
-                      right: 2,
-                      background: '#1890ff',
-                      color: 'white',
-                      borderRadius: '50%',
-                      width: 16,
-                      height: 16,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '10px'
-                    }}>
-                      ✓
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                })
+
+                // Update parent state immediately
+                const updatedVariants = variants.map(v =>
+                  v.id === editingVariant.id
+                    ? { ...v, variant_images: variantImages }
+                    : v
+                )
+                onChange(updatedVariants)
+              }}
+              variantId={editingVariant?.id}
+            />
           </Form.Item>
         </Form>
       </Modal>

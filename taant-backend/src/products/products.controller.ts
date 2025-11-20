@@ -617,6 +617,345 @@ export class ProductsController {
     }
   }
 
+  @Post('upload-product-image')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB
+      },
+      fileFilter: (req, file, callback) => {
+        // Accept only image files
+        if (!file.mimetype.match(/^image\/(jpeg|jpg|png|gif|webp)$/)) {
+          return callback(new Error('Only image files are allowed!'), false);
+        }
+        callback(null, true);
+      },
+    })
+  )
+  async uploadProductImage(@UploadedFile() file: Express.Multer.File, @Request() req) {
+    try {
+      if (!file) {
+        throw new HttpException('No file uploaded', HttpStatus.BAD_REQUEST);
+      }
+
+      // Get user info from request
+      const user = req.user;
+      let userId: string;
+
+      // Handle both authenticated and non-authenticated cases
+      if (user) {
+        // Get user profile to determine role and verify access
+        const profile = await this.authService.getUserProfile(user.id);
+        if (!profile) {
+          throw new HttpException('User profile not found', HttpStatus.FORBIDDEN);
+        }
+        userId = user.id;
+      } else {
+        // For non-authenticated requests, use a default user ID for testing
+        userId = 'fa0ca8e0-f848-45b9-b107-21e56b38573f';
+        console.log('Auth disabled, using default user ID for product image upload:', userId);
+      }
+
+      // Upload to S3 with folder structure for product images
+      const s3Url = await this.s3Service.uploadProductImage(file, userId);
+
+      return {
+        success: true,
+        data: {
+          url: s3Url,
+          key: `product-images/${userId}/${file.originalname}`,
+          originalName: file.originalname,
+          size: file.size,
+          mimetype: file.mimetype
+        },
+        message: 'Product image uploaded successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to upload product image',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  // Product Images Database Management endpoints
+  @Get(':id/images')
+  async getProductImages(@Param('id') productId: string, @Request() req?: any) {
+    try {
+      const user = req.user;
+
+      // Get user profile to determine role and verify access
+      const profile = await this.authService.getUserProfile(user.id);
+      if (!profile) {
+        throw new HttpException('User profile not found', HttpStatus.FORBIDDEN);
+      }
+
+      const productImages = await this.productsService.getProductImages(productId, user.id);
+      return {
+        success: true,
+        data: productImages,
+        message: 'Product images retrieved successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to retrieve product images',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post(':id/images')
+  async createProductImage(
+    @Param('id') productId: string,
+    @Body() imageData: any,
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const productImage = await this.productsService.createProductImage(productId, imageData, user.id);
+      return {
+        success: true,
+        data: productImage,
+        message: 'Product image created successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to create product image',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Put(':id/images/:imageId')
+  async updateProductImage(
+    @Param('id') productId: string,
+    @Param('imageId') imageId: string,
+    @Body() imageData: any,
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const updatedImage = await this.productsService.updateProductImage(productId, imageId, imageData, user.id);
+      return {
+        success: true,
+        data: updatedImage,
+        message: 'Product image updated successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to update product image',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Put(':id/images/positions')
+  async updateProductImagePositions(
+    @Param('id') productId: string,
+    @Body() positionsData: { positions: { id: string; position: number }[] },
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const result = await this.productsService.updateProductImagePositions(productId, positionsData.positions, user.id);
+      return {
+        success: true,
+        data: result,
+        message: 'Product image positions updated successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to update product image positions',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Delete(':id/images/:imageId')
+  async deleteProductImage(
+    @Param('id') productId: string,
+    @Param('imageId') imageId: string,
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const result = await this.productsService.deleteProductImage(productId, imageId, user.id);
+      return {
+        success: true,
+        data: result,
+        message: 'Product image deleted successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to delete product image',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  // Variant Images Management endpoints
+  @Post('variants/:variantId/upload-image')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB
+      },
+      fileFilter: (req, file, callback) => {
+        // Accept only image files
+        if (!file.mimetype.match(/^image\/(jpeg|jpg|png|gif|webp)$/)) {
+          return callback(new Error('Only image files are allowed!'), false);
+        }
+        callback(null, true);
+      },
+    })
+  )
+  async uploadVariantImage(@UploadedFile() file: Express.Multer.File, @Param('variantId') variantId: string, @Request() req) {
+    try {
+      if (!file) {
+        throw new HttpException('No file uploaded', HttpStatus.BAD_REQUEST);
+      }
+
+      // Get user info from request
+      const user = req.user;
+      let userId: string;
+
+      // Handle both authenticated and non-authenticated cases
+      if (user) {
+        userId = user.id;
+      } else {
+        // For non-authenticated requests, use a default user ID for testing
+        userId = 'fa0ca8e0-f848-45b9-b107-21e56b38573f';
+        console.log('Auth disabled, using default user ID for variant image upload:', userId);
+      }
+
+      // Upload to S3 with folder structure for variant images
+      const s3Url = await this.s3Service.uploadVariantImage(file, userId, variantId);
+
+      return {
+        success: true,
+        data: {
+          url: s3Url,
+          key: `variant-images/${userId}/${variantId}/${file.originalname}`,
+          originalName: file.originalname,
+          size: file.size,
+          mimetype: file.mimetype
+        },
+        message: 'Variant image uploaded successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to upload variant image',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Get('variants/:variantId/images')
+  async getVariantImages(@Param('variantId') variantId: string, @Request() req?: any) {
+    try {
+      const user = req.user;
+      const variantImages = await this.productsService.getVariantImages(variantId, user.id);
+      return {
+        success: true,
+        data: variantImages,
+        message: 'Variant images retrieved successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to retrieve variant images',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post('variants/:variantId/images')
+  async createVariantImage(
+    @Param('variantId') variantId: string,
+    @Body() imageData: any,
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const variantImage = await this.productsService.createVariantImage(variantId, imageData, user.id);
+      return {
+        success: true,
+        data: variantImage,
+        message: 'Variant image created successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to create variant image',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Put('variants/:variantId/images/positions')
+  async updateVariantImagePositions(
+    @Param('variantId') variantId: string,
+    @Body() positionsData: { positions: { id: string; position: number }[] },
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const result = await this.productsService.updateVariantImagePositions(variantId, positionsData.positions, user.id);
+      return {
+        success: true,
+        data: result,
+        message: 'Variant image positions updated successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to update variant image positions',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Put('variants/:variantId/images/:imageId/primary')
+  async setVariantPrimaryImage(
+    @Param('variantId') variantId: string,
+    @Param('imageId') imageId: string,
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const result = await this.productsService.setVariantPrimaryImage(variantId, imageId, user.id);
+      return {
+        success: true,
+        data: result,
+        message: 'Variant primary image updated successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to update variant primary image',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Delete('variants/:variantId/images/:imageId')
+  async deleteVariantImage(
+    @Param('variantId') variantId: string,
+    @Param('imageId') imageId: string,
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const result = await this.productsService.deleteVariantImage(variantId, imageId, user.id);
+      return {
+        success: true,
+        data: result,
+        message: 'Variant image deleted successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to delete variant image',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   @Post('convert-blob-to-s3')
   async convertBlobToS3(@Body() body: { blobUrl: string; fileName: string }) {
     try {

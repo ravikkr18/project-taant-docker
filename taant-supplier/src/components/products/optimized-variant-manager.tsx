@@ -36,9 +36,21 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import apiClient from '../../lib/api-client'
+import VariantImageUploadManager from './variant-image-upload-manager'
 
 const { Text } = Typography
 const { Option } = Select
+
+interface VariantImage {
+  id: string
+  url: string
+  alt_text: string
+  position: number
+  is_primary: boolean
+  file_name?: string
+  file_size?: number
+  file_type?: string
+}
 
 // Common option names
 const COMMON_OPTIONS = [
@@ -66,14 +78,13 @@ export interface ProductVariant {
   inventory_quantity: number
   weight?: number
   options: Array<{ id: string; name: string; value: string }>
-  image_id?: string
+  variant_images?: VariantImage[]
   is_active: boolean
   position: number
 }
 
 interface OptimizedVariantManagerProps {
   productId: string
-  productImages: Array<{ id: string; url: string; alt_text: string; is_primary: boolean }>
   initialVariants?: ProductVariant[]
   onVariantCountChange?: (count: number) => void
 }
@@ -183,7 +194,6 @@ const getColorHex = (colorValue: string): string => {
 
 const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
   productId,
-  productImages,
   initialVariants = [],
   onVariantCountChange
 }) => {
@@ -193,7 +203,6 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [form] = Form.useForm()
-  const [selectedImageUrl, setSelectedImageUrl] = useState<string>('')
 
   // Load variants lazily - only when this component is first used
   const loadVariants = useCallback(async (forceRefresh = false) => {
@@ -370,7 +379,6 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
       inventory_quantity: 0,
       is_active: true
     })
-    setSelectedImageUrl('')
     setModalOpen(true)
 
     // Load variants if not already loaded
@@ -393,22 +401,13 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
       is_active: variant.is_active
     })
 
-    if (variant.image_id) {
-      const existingImage = productImages.find(img => img.id === variant.image_id)
-      if (existingImage) {
-        setSelectedImageUrl(existingImage.url)
-      }
-    } else {
-      setSelectedImageUrl('')
-    }
-
     setModalOpen(true)
 
     // Load variants if not already loaded
     if (!isLoaded) {
       loadVariants()
     }
-  }, [productImages, isLoaded, loadVariants])
+  }, [isLoaded, loadVariants])
 
   // Save variant (from modal)
   const handleSave = useCallback(async (values: any) => {
@@ -420,19 +419,9 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
         values.sku = `VAR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
       }
 
-      // Handle image selection
-      let imageId = editingVariant.image_id
-      if (selectedImageUrl) {
-        const selectedImage = productImages.find(img => img.url === selectedImageUrl)
-        if (selectedImage) {
-          imageId = selectedImage.id
-        }
-      }
-
       const updatedVariant = {
         ...editingVariant,
         ...values,
-        image_id: imageId,
       }
 
       let savedVariant: ProductVariant
@@ -483,13 +472,12 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
 
       setModalOpen(false)
       setEditingVariant(null)
-      setSelectedImageUrl('')
       form.resetFields()
     } catch (error) {
       message.error('Failed to save variant')
       console.error(error)
     }
-  }, [editingVariant, selectedImageUrl, productImages, productId, onVariantCountChange])
+  }, [editingVariant, productId, onVariantCountChange])
 
   // Refresh variants function
   const handleRefresh = useCallback(async () => {
@@ -594,32 +582,27 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
       title: 'Image',
       key: 'image',
       render: (_: any, record: ProductVariant) => {
-        const variantImage = productImages.find(img => img.id === record.image_id)
+        const primaryImage = record.variant_images?.find(img => img.is_primary)
         return (
           <div style={{ textAlign: 'center' }}>
-            {variantImage ? (
+            {primaryImage ? (
               <Image
-                src={variantImage.url}
-                alt={variantImage.alt_text}
+                src={primaryImage.url}
+                alt={primaryImage.alt_text}
                 width={50}
                 height={50}
                 style={{ objectFit: 'cover', borderRadius: 4 }}
                 preview={false}
               />
-            ) : record.image_id ? (
-              <div style={{
-                width: 50,
-                height: 50,
-                border: '1px solid #d9d9d9',
-                borderRadius: 4,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#52c41a',
-                backgroundColor: '#f6ffed'
-              }}>
-                <CheckOutlined />
-              </div>
+            ) : record.variant_images && record.variant_images.length > 0 ? (
+              <Image
+                src={record.variant_images[0].url}
+                alt={record.variant_images[0].alt_text}
+                width={50}
+                height={50}
+                style={{ objectFit: 'cover', borderRadius: 4 }}
+                preview={false}
+              />
             ) : (
               <Tooltip title="Each variant should have at least one image">
                 <div style={{
@@ -738,7 +721,7 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
         </Space>
       ),
     },
-  ], [productImages, handleToggleActive, handleEdit, handleDuplicate, handleDelete])
+  ], [handleToggleActive, handleEdit, handleDuplicate, handleDelete])
 
   // Reset state and reload variants when productId changes
   useEffect(() => {
@@ -748,7 +731,6 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
     setLoading(false)
     setEditingVariant(null)
     setModalOpen(false)
-    setSelectedImageUrl('')
     form.resetFields()
 
     // Load variants for the new productId
@@ -864,7 +846,6 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
         onCancel={() => {
           setModalOpen(false)
           setEditingVariant(null)
-          setSelectedImageUrl('')
           form.resetFields()
         }}
         width={800}
@@ -872,7 +853,6 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
           <Button key="cancel" onClick={() => {
             setModalOpen(false)
             setEditingVariant(null)
-            setSelectedImageUrl('')
             form.resetFields()
           }}>
             Cancel
@@ -1072,103 +1052,20 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
             </Col>
           </Row>
 
-          {/* Image Selection */}
-          <Form.Item label="Variant Image">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8 }}>
-              <input
-                type="file"
-                id="variant-image-upload"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    const previewUrl = URL.createObjectURL(file)
-                    setSelectedImageUrl(previewUrl)
-                    message.success('Variant image uploaded')
-                  }
-                }}
-              />
-              <div
-                onClick={() => document.getElementById('variant-image-upload')?.click()}
-                style={{
-                  width: 80,
-                  height: 80,
-                  border: '1px dashed #d9d9d9',
-                  borderRadius: 4,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#999',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#1890ff'
-                  e.currentTarget.style.color = '#1890ff'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#d9d9d9'
-                  e.currentTarget.style.color = '#999'
-                }}
-              >
-                <CameraOutlined style={{ fontSize: 20 }} />
-              </div>
-              {productImages.map(image => (
-                <div
-                  key={image.id}
-                  onClick={() => {
-                    setSelectedImageUrl(image.url)
-                    message.success(`Selected image: ${image.alt_text}`)
-                  }}
-                  style={{
-                    width: 80,
-                    height: 80,
-                    border: selectedImageUrl === image.url ? '2px solid #1890ff' : '1px solid #d9d9d9',
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                    overflow: 'hidden',
-                    transition: 'all 0.2s',
-                    position: 'relative'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#1890ff'
-                    e.currentTarget.style.transform = 'scale(1.05)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = selectedImageUrl === image.url ? '#1890ff' : '#d9d9d9'
-                    e.currentTarget.style.transform = 'scale(1)'
-                  }}
-                >
-                  <Image
-                    src={image.url}
-                    alt={image.alt_text}
-                    width={80}
-                    height={80}
-                    style={{ objectFit: 'cover' }}
-                    preview={false}
-                  />
-                  {selectedImageUrl === image.url && (
-                    <div style={{
-                      position: 'absolute',
-                      top: 2,
-                      right: 2,
-                      background: '#1890ff',
-                      color: 'white',
-                      borderRadius: '50%',
-                      width: 16,
-                      height: 16,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '10px'
-                    }}>
-                      ✓
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+          {/* Variant Images */}
+          <Form.Item label="Variant Images">
+            <VariantImageUploadManager
+              images={editingVariant?.variant_images || []}
+              onChange={(images) => {
+                if (editingVariant) {
+                  setEditingVariant({
+                    ...editingVariant,
+                    variant_images: images
+                  })
+                }
+              }}
+              variantId={editingVariant?.id}
+            />
           </Form.Item>
         </Form>
       </Modal>

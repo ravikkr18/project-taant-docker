@@ -922,4 +922,645 @@ export class ProductsService {
       }
     };
   }
+
+  // Product Images Database Management methods
+  async getProductImages(productId: string, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this product
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot access this product\'s images');
+    }
+
+    const { data, error } = await supabase
+      .from('product_images')
+      .select('*')
+      .eq('product_id', productId)
+      .order('position', { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch product images: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  async createProductImage(productId: string, imageData: any, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this product
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this product\'s images');
+    }
+
+    // Get next position
+    const { data: maxPosition } = await supabase
+      .from('product_images')
+      .select('position')
+      .eq('product_id', productId)
+      .order('position', { ascending: false })
+      .limit(1)
+      .single();
+
+    const nextPosition = maxPosition ? maxPosition.position + 1 : 0;
+
+    // Insert new product image
+    const { data, error } = await supabase
+      .from('product_images')
+      .insert({
+        product_id: productId,
+        url: imageData.url,
+        alt_text: imageData.alt_text || '',
+        file_name: imageData.file_name || '',
+        file_size: imageData.file_size || 0,
+        file_type: imageData.file_type || '',
+        position: imageData.position || nextPosition,
+        is_primary: imageData.is_primary || false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create product image: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async updateProductImagePositions(productId: string, positions: { id: string; position: number }[], userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this product
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this product\'s images');
+    }
+
+    // Update each image position
+    const updatePromises = positions.map(({ id, position }) =>
+      supabase
+        .from('product_images')
+        .update({ position, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('product_id', productId)
+    );
+
+    await Promise.all(updatePromises);
+
+    return { success: true, message: 'Product image positions updated successfully' };
+  }
+
+  async updateProductImage(productId: string, imageId: string, imageData: any, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this product
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this product\'s images');
+    }
+
+    // Update the image
+    const { data, error } = await supabase
+      .from('product_images')
+      .update({
+        ...imageData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', imageId)
+      .eq('product_id', productId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update product image: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async deleteProductImage(productId: string, imageId: string, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this product
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this product\'s images');
+    }
+
+    const { error } = await supabase
+      .from('product_images')
+      .delete()
+      .eq('id', imageId)
+      .eq('product_id', productId);
+
+    if (error) {
+      throw new Error(`Failed to delete product image: ${error.message}`);
+    }
+
+    return { success: true, message: 'Product image deleted successfully' };
+  }
+
+  // Public methods for frontend consumption
+  async getProductsBySlug(slug: string) {
+    const supabase = this.createServiceClient();
+
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        categories:category_id (
+          id,
+          name,
+          slug,
+          parent_id
+        ),
+        suppliers:supplier_id (
+          id,
+          business_name,
+          slug,
+          rating,
+          is_verified,
+          status
+        ),
+        product_images (
+          id,
+          url,
+          alt_text,
+          file_name,
+          file_size,
+          file_type,
+          width,
+          height,
+          position,
+          is_primary
+        ),
+        product_variants (
+          id,
+          product_id,
+          sku,
+          title,
+          barcode,
+          price,
+          compare_price,
+          cost_price,
+          weight,
+          dimensions,
+          inventory_quantity,
+          inventory_policy,
+          inventory_tracking,
+          low_stock_threshold,
+          allow_backorder,
+          requires_shipping,
+          taxable,
+          tax_code,
+          position,
+          option1_name,
+          option1_value,
+          option2_name,
+          option2_value,
+          option3_name,
+          option3_value,
+          options,
+          image_id,
+          is_active,
+          created_at,
+          updated_at
+        )
+      `)
+      .eq('slug', slug)
+      .eq('status', 'active')
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null; // Product not found
+      }
+      throw new Error(`Failed to fetch product by slug: ${error.message}`);
+    }
+
+    // Transform variant options to ensure compatibility with frontend
+    if (data && data.product_variants) {
+      data.product_variants = transformVariantsArray(data.product_variants);
+    }
+
+    return data;
+  }
+
+  
+  async getRelatedProducts(categoryId: string, excludeId: string, limit: number = 6) {
+    const supabase = this.createServiceClient();
+
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        id,
+        title,
+        slug,
+        description,
+        base_price,
+        compare_price,
+        status,
+        total_reviews,
+        rating,
+        categories:category_id (
+          id,
+          name,
+          slug
+        ),
+        suppliers:supplier_id (
+          id,
+          business_name,
+          slug
+        ),
+        product_images (
+          id,
+          url,
+          alt_text,
+          position,
+          is_primary
+        )
+      `)
+      .eq('category_id', categoryId)
+      .neq('id', excludeId)
+      .eq('status', 'active')
+      .limit(limit)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch related products: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  // Variant Images Database Management methods
+  async getVariantImages(variantId: string, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this variant
+    const { data: variant, error: variantError } = await supabase
+      .from('product_variants')
+      .select('product_id')
+      .eq('id', variantId)
+      .single();
+
+    if (variantError) {
+      throw new Error(`Failed to fetch variant: ${variantError.message}`);
+    }
+
+    // Get the product to check supplier access
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', variant.product_id)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot access this variant\'s images');
+    }
+
+    const { data, error } = await supabase
+      .from('variant_images')
+      .select('*')
+      .eq('variant_id', variantId)
+      .order('position', { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch variant images: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  async createVariantImage(variantId: string, imageData: any, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this variant
+    const { data: variant, error: variantError } = await supabase
+      .from('product_variants')
+      .select('product_id')
+      .eq('id', variantId)
+      .single();
+
+    if (variantError) {
+      throw new Error(`Failed to fetch variant: ${variantError.message}`);
+    }
+
+    // Get the product to check supplier access
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', variant.product_id)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this variant\'s images');
+    }
+
+    // Get next position
+    const { data: maxPosition } = await supabase
+      .from('variant_images')
+      .select('position')
+      .eq('variant_id', variantId)
+      .order('position', { ascending: false })
+      .limit(1)
+      .single();
+
+    const nextPosition = maxPosition ? maxPosition.position + 1 : 0;
+
+    // If this is the first image or explicitly set as primary, set it as primary
+    const { data: existingImages } = await supabase
+      .from('variant_images')
+      .select('id')
+      .eq('variant_id', variantId);
+
+    const shouldBePrimary = existingImages?.length === 0 || imageData.is_primary === true;
+
+    // Insert new variant image
+    const { data, error } = await supabase
+      .from('variant_images')
+      .insert({
+        variant_id: variantId,
+        url: imageData.url,
+        alt_text: imageData.alt_text || '',
+        file_name: imageData.file_name || '',
+        file_size: imageData.file_size || 0,
+        file_type: imageData.file_type || '',
+        position: imageData.position || nextPosition,
+        is_primary: shouldBePrimary,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create variant image: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async updateVariantImagePositions(variantId: string, positions: { id: string; position: number }[], userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this variant
+    const { data: variant, error: variantError } = await supabase
+      .from('product_variants')
+      .select('product_id')
+      .eq('id', variantId)
+      .single();
+
+    if (variantError) {
+      throw new Error(`Failed to fetch variant: ${variantError.message}`);
+    }
+
+    // Get the product to check supplier access
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', variant.product_id)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this variant\'s images');
+    }
+
+    // Update each image position
+    const updatePromises = positions.map(({ id, position }) =>
+      supabase
+        .from('variant_images')
+        .update({ position, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('variant_id', variantId)
+    );
+
+    await Promise.all(updatePromises);
+
+    return { success: true, message: 'Variant image positions updated successfully' };
+  }
+
+  async setVariantPrimaryImage(variantId: string, imageId: string, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this variant
+    const { data: variant, error: variantError } = await supabase
+      .from('product_variants')
+      .select('product_id')
+      .eq('id', variantId)
+      .single();
+
+    if (variantError) {
+      throw new Error(`Failed to fetch variant: ${variantError.message}`);
+    }
+
+    // Get the product to check supplier access
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', variant.product_id)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this variant\'s images');
+    }
+
+    // First, set all images for this variant to non-primary
+    await supabase
+      .from('variant_images')
+      .update({ is_primary: false, updated_at: new Date().toISOString() })
+      .eq('variant_id', variantId);
+
+    // Then set the specified image as primary
+    const { data, error } = await supabase
+      .from('variant_images')
+      .update({
+        is_primary: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', imageId)
+      .eq('variant_id', variantId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update variant primary image: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async deleteVariantImage(variantId: string, imageId: string, userId: string) {
+    const supabase = await this.createServiceClient();
+
+    // Verify user can access this variant
+    const { data: variant, error: variantError } = await supabase
+      .from('product_variants')
+      .select('product_id')
+      .eq('id', variantId)
+      .single();
+
+    if (variantError) {
+      throw new Error(`Failed to fetch variant: ${variantError.message}`);
+    }
+
+    // Get the product to check supplier access
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('supplier_id')
+      .eq('id', variant.product_id)
+      .single();
+
+    if (productError) {
+      throw new Error(`Failed to fetch product: ${productError.message}`);
+    }
+
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You cannot modify this variant\'s images');
+    }
+
+    const { error } = await supabase
+      .from('variant_images')
+      .delete()
+      .eq('id', imageId)
+      .eq('variant_id', variantId);
+
+    if (error) {
+      throw new Error(`Failed to delete variant image: ${error.message}`);
+    }
+
+    return { success: true, message: 'Variant image deleted successfully' };
+  }
+
+  // Public versions of image and variant methods (no user authentication required)
+  async getProductImagesPublic(productId: string) {
+    const supabase = this.createServiceClient();
+
+    // First check if product is active
+    const { data: product } = await supabase
+      .from('products')
+      .select('id, status')
+      .eq('id', productId)
+      .eq('status', 'active')
+      .single();
+
+    if (!product) {
+      throw new Error('Product not found or not available');
+    }
+
+    const { data, error } = await supabase
+      .from('product_images')
+      .select('*')
+      .eq('product_id', productId)
+      .order('position', { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch product images: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  async getProductVariantsPublic(productId: string) {
+    const supabase = this.createServiceClient();
+
+    // First check if product is active
+    const { data: product } = await supabase
+      .from('products')
+      .select('id, status')
+      .eq('id', productId)
+      .eq('status', 'active')
+      .single();
+
+    if (!product) {
+      throw new Error('Product not found or not available');
+    }
+
+    const { data, error } = await supabase
+      .from('product_variants')
+      .select('*')
+      .eq('product_id', productId)
+      .order('position', { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch product variants: ${error.message}`);
+    }
+
+    return data || [];
+  }
 }
