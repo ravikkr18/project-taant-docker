@@ -1570,8 +1570,8 @@ const AdvancedProductManager: React.FC = () => {
         }
       }, 100)
 
-      // Generate SKU and slug
-      const sku = `SKU-${Date.now().toString(36).toUpperCase()}`
+      // Generate SKU and slug - use existing SKU for updates
+      const sku = editingProduct ? editingProduct.sku : `SKU-${Date.now().toString(36).toUpperCase()}`
 
       // Generate unique slug
       const generateUniqueSlug = async (title: string, sku: string): Promise<string> => {

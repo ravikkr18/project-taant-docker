@@ -414,9 +414,12 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
     try {
       if (!editingVariant) return
 
-      // Generate SKU if not provided
-      if (!values.sku) {
+      // Generate SKU if not provided (only for new variants)
+      if (!values.sku && !editingVariant.id) {
         values.sku = `VAR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
+      } else if (!values.sku && editingVariant.sku) {
+        // Use existing SKU for updates
+        values.sku = editingVariant.sku
       }
 
       const updatedVariant = {
