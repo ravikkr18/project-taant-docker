@@ -276,6 +276,8 @@ const VariantManager: React.FC<VariantManagerProps> = ({
         image_id: imageId,
         // Use the options array directly - no more column conversion needed
         options: editingVariant.options,
+        // Include variant_images from editingVariant state
+        variant_images: editingVariant.variant_images,
       }
 
       

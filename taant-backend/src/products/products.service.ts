@@ -385,10 +385,22 @@ export class ProductsService {
       throw new Error('Unauthorized: You cannot access this product\'s variants');
     }
 
-    // Fetch variants
+    // Fetch variants with their images
     const { data: variants, error } = await supabase
       .from('product_variants')
-      .select('*')
+      .select(`
+        *,
+        variant_images (
+          id,
+          url,
+          alt_text,
+          file_name,
+          file_size,
+          file_type,
+          position,
+          is_primary
+        )
+      `)
       .eq('product_id', productId)
       .order('position', { ascending: true });
 
@@ -466,6 +478,35 @@ export class ProductsService {
       throw new Error(`Failed to create variant: ${error.message}`);
     }
 
+    // Handle variant images if provided
+    if (variantData.variant_images && Array.isArray(variantData.variant_images)) {
+      const variantImagesToInsert = variantData.variant_images
+        .filter(img => img.url && !img.id.startsWith('temp-')) // Only save real images with URLs and non-temp IDs
+        .map(img => ({
+          variant_id: data.id,
+          url: img.url,
+          alt_text: img.alt_text || img.file_name || '',
+          position: img.position || 0,
+          is_primary: img.is_primary || false,
+          file_name: img.file_name || '',
+          file_size: img.file_size || 0,
+          file_type: img.file_type || '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }));
+
+      if (variantImagesToInsert.length > 0) {
+        const { error: imagesError } = await supabase
+          .from('variant_images')
+          .insert(variantImagesToInsert);
+
+        if (imagesError) {
+          // Don't fail the variant creation, but log the error
+          console.error('Failed to create variant images:', imagesError);
+        }
+      }
+    }
+
     // Transform to frontend format (remove old columns, use JSON options)
     return transformVariantData(data);
   }
@@ -519,6 +560,46 @@ export class ProductsService {
 
     if (error) {
       throw new Error(`Failed to update variant: ${error.message}`);
+    }
+
+    // Handle variant images if provided
+    if (variantData.variant_images && Array.isArray(variantData.variant_images)) {
+      // First, delete existing variant images for this variant
+      const { error: deleteError } = await supabase
+        .from('variant_images')
+        .delete()
+        .eq('variant_id', variantId);
+
+      if (deleteError) {
+        console.error('Failed to delete existing variant images:', deleteError);
+      }
+
+      // Then insert the new variant images
+      const variantImagesToInsert = variantData.variant_images
+        .filter(img => img.url && !img.id.startsWith('temp-')) // Only save real images with URLs and non-temp IDs
+        .map(img => ({
+          variant_id: variantId,
+          url: img.url,
+          alt_text: img.alt_text || img.file_name || '',
+          position: img.position || 0,
+          is_primary: img.is_primary || false,
+          file_name: img.file_name || '',
+          file_size: img.file_size || 0,
+          file_type: img.file_type || '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }));
+
+      if (variantImagesToInsert.length > 0) {
+        const { error: imagesError } = await supabase
+          .from('variant_images')
+          .insert(variantImagesToInsert);
+
+        if (imagesError) {
+          // Don't fail the variant update, but log the error
+          console.error('Failed to update variant images:', imagesError);
+        }
+      }
     }
 
     // Transform to frontend format (remove old columns, use JSON options)
@@ -1553,7 +1634,19 @@ export class ProductsService {
 
     const { data, error } = await supabase
       .from('product_variants')
-      .select('*')
+      .select(`
+        *,
+        variant_images (
+          id,
+          url,
+          alt_text,
+          file_name,
+          file_size,
+          file_type,
+          position,
+          is_primary
+        )
+      `)
       .eq('product_id', productId)
       .order('position', { ascending: true });
 

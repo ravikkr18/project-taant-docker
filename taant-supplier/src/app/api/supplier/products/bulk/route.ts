@@ -18,12 +18,27 @@ const supabaseAdmin = supabaseUrl && supabaseServiceKey ? createClient(supabaseU
   }
 }) : null
 
-// Helper function to generate unique slug
-async function generateUniqueSlug(title: string, supabaseClient: any): Promise<string> {
-  let baseSlug = title
+// Helper function to generate unique slug with SKU for reliability
+async function generateUniqueSlug(title: string, sku: string, supabaseClient: any): Promise<string> {
+  // Create title-based slug
+  let titleSlug = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')
+
+  // Clean SKU for URL use
+  let cleanSku = sku
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+
+  // If title slug is empty, use just SKU
+  if (!titleSlug) {
+    titleSlug = 'product'
+  }
+
+  // Create base slug with both title and SKU for reliability
+  const baseSlug = `${titleSlug}-${cleanSku}`
 
   let slug = baseSlug
   let counter = 1
@@ -115,9 +130,9 @@ export const POST = withAuth(async (request: NextRequest, { user, profile }: { u
           continue
         }
 
-        // Generate slug and SKU
-        const slug = product.slug || await generateUniqueSlug(product.title, supabaseAdmin)
+        // Generate SKU first, then slug with SKU for reliability
         const sku = product.sku || await generateUniqueSKU(supabaseAdmin)
+        const slug = product.slug || await generateUniqueSlug(product.title, sku, supabaseAdmin)
 
         // Prepare product data
         const productData = {

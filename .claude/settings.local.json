@@ -86,7 +86,16 @@
       "Bash(DB_URL=\"postgresql://postgres:d$z#6W&K@8pL!qR3@lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres?sslmode=require\" psql -c \"\\d product_variants\")",
       "Bash(SUPABASE_DB_URL=\"postgresql://postgres.d$z#6W&K@8pL!qR3@lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres\" psql:*)",
       "Bash(SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5dGVveG5xa2pycGlscmZjaW1jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTgwNzI2NSwiZXhwIjoyMDc3MzgzMjY1fQ.TTy-fS8I4dIgCvxkfQSxCGmAldoUz2PGi59ya8bx10M supabase db push:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(SUPABASE_DB_URL=\"postgresql://postgres.d$z#6W&K@8pL!qR3@lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres\" psql -c \"\\dt\")",
+      "Bash(xargs:*)",
+      "Bash(pm2 jlist:*)",
+      "Bash(DB_URL=\"postgresql://postgres.d$z#6W&K@8pL!qR3@lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres?sslmode=require\" psql:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:jqAR0nTfRHArzkYt@db.lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres\" psql:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:jqAR0nTfRHArzkYt@db.lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres?sslmode=require\" psql:*)",
+      "Bash(NODE_PATH=/www/ravi/project-taant-docker/taant-backend/node_modules node:*)",
+      "Bash(npx next build:*)",
+      "Bash(./supabase/supabase:*)"
     ],
     "deny": [],
     "ask": []

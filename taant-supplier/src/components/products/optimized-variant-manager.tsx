@@ -422,6 +422,8 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
       const updatedVariant = {
         ...editingVariant,
         ...values,
+        // Include variant_images from editingVariant state
+        variant_images: editingVariant.variant_images || [],
       }
 
       let savedVariant: ProductVariant
