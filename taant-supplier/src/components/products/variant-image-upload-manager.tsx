@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import { Upload, Button, Card, Image, Tag, Input, Space, message, Modal, Tooltip, Typography } from 'antd'
 import {
   UploadOutlined,
@@ -414,8 +414,11 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
     }
   }
 
-  // Sort images by position
-  const sortedImages = [...safeImages].sort((a, b) => a.position - b.position)
+  // Sort images by position with useMemo for performance and reactivity
+  const sortedImages = useMemo(() => {
+    console.log('🔄 VariantImageUploadManager: safeImages changed, re-sorting', safeImages.length, 'images')
+    return [...safeImages].sort((a, b) => a.position - b.position)
+  }, [safeImages])
 
   return (
     <DndProvider backend={HTML5Backend}>
