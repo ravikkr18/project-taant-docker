@@ -167,10 +167,14 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
   const [processingFiles, setProcessingFiles] = useState<Set<string>>(new Set())
   const [uploadCounter, setUploadCounter] = useState(0)
 
+  // Helper function to safely access images
+  const safeImages = Array.isArray(images) ? images : []
+  const imagesCount = safeImages.length
+
   // Load existing variant images on mount
   React.useEffect(() => {
     const loadVariantImages = async () => {
-      if (!variantId || images.length > 0) {
+      if (!variantId || imagesCount > 0) {
         return // Don't reload if we already have images or no variantId
       }
 
@@ -195,12 +199,12 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
     }
 
     loadVariantImages()
-  }, [variantId, images.length, onChange])
+  }, [variantId, imagesCount, onChange])
 
   // Move image to new position
   const moveImage = useCallback((dragIndex: number, hoverIndex: number) => {
-    const draggedImage = images[dragIndex]
-    const newImages = [...images]
+    const draggedImage = safeImages[dragIndex]
+    const newImages = [...safeImages]
     newImages.splice(dragIndex, 1)
     newImages.splice(hoverIndex, 0, draggedImage)
     // Update positions
@@ -209,17 +213,17 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
       position: index,
     }))
     onChange(updatedImages)
-  }, [images, onChange])
+  }, [safeImages, onChange])
 
   // Remove image
   const removeImage = useCallback((id: string) => {
-    const imageToRemove = images.find(img => img.id === id)
-    if (imageToRemove?.is_primary && images.length > 1) {
+    const imageToRemove = safeImages.find(img => img.id === id)
+    if (imageToRemove?.is_primary && imagesCount > 1) {
       message.error('Cannot remove primary image. Please set another image as primary first.')
       return
     }
 
-    const updatedImages = images.filter(img => img.id !== id)
+    const updatedImages = safeImages.filter(img => img.id !== id)
     // If we removed the primary image and there are other images, set the first one as primary
     if (imageToRemove?.is_primary && updatedImages.length > 0) {
       updatedImages[0].is_primary = true
@@ -233,33 +237,33 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
         message.error('Failed to delete image from server')
       })
     }
-  }, [images, onChange, variantId])
+  }, [safeImages, onChange, variantId])
 
   // Set primary image
   const setPrimaryImage = useCallback((id: string) => {
-    const updatedImages = images.map(img => ({
+    const updatedImages = safeImages.map(img => ({
       ...img,
       is_primary: img.id === id
     }))
     onChange(updatedImages)
 
     // Update backend if it has a real ID
-    const imageToSet = images.find(img => img.id === id)
+    const imageToSet = safeImages.find(img => img.id === id)
     if (imageToSet && !imageToSet.id.startsWith('temp-')) {
       apiClient.updateVariantImagePrimary(variantId!, id).catch(error => {
         console.error('Failed to set primary image:', error)
         message.error('Failed to set primary image on server')
       })
     }
-  }, [images, onChange, variantId])
+  }, [safeImages, onChange, variantId])
 
   // Update alt text
   const updateAltText = useCallback((id: string, alt: string) => {
-    const updatedImages = images.map(img =>
+    const updatedImages = safeImages.map(img =>
       img.id === id ? { ...img, alt_text: alt } : img
     )
     onChange(updatedImages)
-  }, [images, onChange])
+  }, [safeImages, onChange])
 
   // Process single file
   const processSingleFile = async (file: File, position: number, isPrimary: boolean): Promise<VariantImage | null> => {
@@ -307,7 +311,7 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
     setUploadCounter(prev => prev + 1)
 
     try {
-      const remainingSlots = maxImages - images.length
+      const remainingSlots = maxImages - imagesCount
       if (remainingSlots <= 0) {
         message.error(`Maximum ${maxImages} images allowed!`)
         return false
@@ -316,7 +320,7 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
       // Validate this single file
       const isImage = file.type.startsWith('image/')
       const isLt5M = file.size / 1024 / 1024 < 5
-      const isDuplicate = images.some(img =>
+      const isDuplicate = safeImages.some(img =>
         img.file && img.file.name === file.name && img.file.size === file.size
       )
 
@@ -336,11 +340,11 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
       setIsUploading(true)
 
       // Get current images length and add offset for concurrent uploads
-      const currentImagesLength = images.length + processingFiles.size
+      const currentImagesLength = imagesCount + processingFiles.size
 
       // Determine if this should be the primary image
       // Only set as primary if there's no existing primary image in the gallery
-      const hasExistingPrimary = images.some(img => img.is_primary)
+      const hasExistingPrimary = safeImages.some(img => img.is_primary)
       const shouldThisBePrimary = !hasExistingPrimary && processingFiles.size === 0 && currentUploadCounter === 0
 
       // Process this single file with explicit primary status
@@ -411,7 +415,7 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
   }
 
   // Sort images by position
-  const sortedImages = [...images].sort((a, b) => a.position - b.position)
+  const sortedImages = [...safeImages].sort((a, b) => a.position - b.position)
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -422,10 +426,10 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
           accept="image/*"
           beforeUpload={handleUpload}
           showUploadList={false}
-          disabled={isUploading || images.length >= maxImages}
+          disabled={isUploading || imagesCount >= maxImages}
           style={{
             marginBottom: 16,
-            border: images.length >= maxImages ? '2px dashed #d9d9d9' : undefined,
+            border: imagesCount >= maxImages ? '2px dashed #d9d9d9' : undefined,
           }}
         >
           <p className="ant-upload-drag-icon">
@@ -437,9 +441,9 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
           <p className="ant-upload-hint">
             Support for JPG, PNG, GIF, WebP. Maximum {maxImages} images, 5MB each.
           </p>
-          {images.length >= maxImages && (
+          {imagesCount >= maxImages && (
             <p style={{ color: '#ff4d4f' }}>
-              Maximum image limit reached ({images.length}/{maxImages})
+              Maximum image limit reached ({imagesCount}/{maxImages})
             </p>
           )}
         </Upload.Dragger>
