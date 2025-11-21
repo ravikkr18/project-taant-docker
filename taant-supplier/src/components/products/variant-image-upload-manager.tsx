@@ -1,17 +1,20 @@
 'use client'
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback } from 'react'
 import { Upload, Button, Card, Image, Tag, Input, Space, message, Modal, Tooltip, Typography } from 'antd'
 import {
   UploadOutlined,
   DeleteOutlined,
   EyeOutlined,
   StarOutlined,
+  DragOutlined,
   PlusOutlined,
   CameraOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons'
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface'
+import { DndProvider, useDrag, useDrop } from 'react-dnd/dist/index'
+import { HTML5Backend } from 'react-dnd-html5-backend'
 import apiClient from '../../lib/api-client'
 
 const { Text } = Typography
@@ -36,25 +39,138 @@ interface VariantImageUploadManagerProps {
   variantId?: string
 }
 
-export default function VariantImageUploadManager({
-  images,
+// Draggable Image Card Component
+const DraggableImageCard: React.FC<{
+  image: VariantImage
+  index: number
+  onMove: (dragIndex: number, hoverIndex: number) => void
+  onRemove: (id: string) => void
+  onSetPrimary: (id: string) => void
+  onUpdateAlt: (id: string, alt: string) => void
+}> = ({ image, index, onMove, onRemove, onSetPrimary, onUpdateAlt }) => {
+  const [{ isDragging }, drag] = useDrag({
+    type: 'image',
+    item: { index },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  })
+
+  const [, drop] = useDrop({
+    accept: 'image',
+    hover: (item: { index: number }) => {
+      if (!ref.current) return
+      const dragIndex = item.index
+      const hoverIndex = index
+      if (dragIndex === hoverIndex) return
+      onMove(dragIndex, hoverIndex)
+      item.index = hoverIndex
+    },
+  })
+
+  const ref = React.useRef<HTMLDivElement>(null)
+  drag(drop(ref))
+
+  return (
+    <Card
+      ref={ref}
+      size="small"
+      style={{
+        opacity: isDragging ? 0.5 : 1,
+        cursor: 'move',
+        marginBottom: 8,
+      }}
+      cover={
+        <div style={{ position: 'relative' }}>
+          <Image
+            src={image.url}
+            alt={image.alt_text}
+            height={150}
+            style={{ objectFit: 'cover', cursor: 'pointer' }}
+            fallback="data:image/svg+xml,%3Csvg width='200' height='150' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='200' height='150' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23999'%3ENo Image%3C/text%3E%3C/svg%3E"
+          />
+
+          {image.is_primary && (
+            <Tag color="gold" style={{ position: 'absolute', top: 8, left: 8 }}>
+              <StarOutlined /> Primary
+            </Tag>
+          )}
+
+          <div style={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            display: 'flex',
+            gap: 4
+          }}>
+            {!image.is_primary && (
+              <Tooltip title="Set as primary">
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<StarOutlined />}
+                  onClick={() => onSetPrimary(image.id)}
+                />
+              </Tooltip>
+            )}
+            <Tooltip title="Preview">
+              <Button
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={() => {
+                  Modal.info({
+                    title: 'Image Preview',
+                    content: (
+                      <img
+                        src={image.url}
+                        alt={image.alt_text}
+                        style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain' }}
+                      />
+                    ),
+                    width: 800,
+                    centered: true,
+                  })
+                }}
+              />
+            </Tooltip>
+            <Tooltip title="Delete">
+              <Button
+                danger
+                size="small"
+                icon={<DeleteOutlined />}
+                onClick={() => onRemove(image.id)}
+              />
+            </Tooltip>
+          </div>
+        </div>
+      }
+    >
+      <div style={{ padding: 8 }}>
+        <Input
+          placeholder="Alt text (description)"
+          value={image.alt_text}
+          onChange={(e) => onUpdateAlt(image.id, e.target.value)}
+          size="small"
+        />
+      </div>
+    </Card>
+  )
+}
+
+const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
+  images = [],
   onChange,
   maxImages = 10,
   variantId
-}: VariantImageUploadManagerProps) {
-  const [previewVisible, setPreviewVisible] = useState(false)
-  const [previewImage, setPreviewImage] = useState('')
-  const [previewTitle, setPreviewTitle] = useState('')
-  const [uploading, setUploading] = useState(false)
-
-  // Helper function to safely access images
-  const safeImages = Array.isArray(images) ? images : []
-  const imagesCount = safeImages.length
+}) => {
+  const [isUploading, setIsUploading] = useState(false)
+  const [processingFiles, setProcessingFiles] = useState<Set<string>>(new Set())
+  const [uploadCounter, setUploadCounter] = useState(0)
 
   // Load existing variant images on mount
-  useEffect(() => {
+  React.useEffect(() => {
     const loadVariantImages = async () => {
-      if (!variantId || imagesCount > 0) {
+      if (!variantId || images.length > 0) {
         return // Don't reload if we already have images or no variantId
       }
 
@@ -79,389 +195,296 @@ export default function VariantImageUploadManager({
     }
 
     loadVariantImages()
-  }, [variantId])
+  }, [variantId, images.length, onChange])
 
-  const handleUpload = async (file: File) => {
-    if (!variantId) {
-      message.error('Variant ID is required for image upload')
-      return false
-    }
+  // Move image to new position
+  const moveImage = useCallback((dragIndex: number, hoverIndex: number) => {
+    const draggedImage = images[dragIndex]
+    const newImages = [...images]
+    newImages.splice(dragIndex, 1)
+    newImages.splice(hoverIndex, 0, draggedImage)
+    // Update positions
+    const updatedImages = newImages.map((img, index) => ({
+      ...img,
+      position: index,
+    }))
+    onChange(updatedImages)
+  }, [images, onChange])
 
-    try {
-      // Create FormData for file upload
-      const formData = new FormData()
-      formData.append('file', file)
-
-      // Upload to backend using apiClient
-      const result = await apiClient.uploadVariantImage(variantId, formData)
-
-      if (result.success) {
-        // Add new image to the list
-        const newImage: VariantImage = {
-          id: result.data.id || result.data.key || `new-${Date.now()}`,
-          url: result.data.url,
-          alt_text: result.data.originalName || '',
-          position: result.data.position || imagesCount,
-          is_primary: result.data.is_primary || (imagesCount === 0), // First image is primary by default
-          file_name: result.data.originalName,
-          file_size: result.data.size,
-          file_type: result.data.mimetype,
-        }
-
-        onChange([...safeImages, newImage])
-        message.success(`Variant image "${file.name}" uploaded successfully`)
-        return false // Prevent default upload behavior
-      } else {
-        message.error(result.message || 'Failed to upload image')
-        return false
-      }
-    } catch (error) {
-      console.error('Upload error:', error)
-      message.error(`Failed to upload image "${file.name}"`)
-      return false
-    }
-  }
-
-  const handleMultipleUpload = async (fileList: File[]) => {
-    if (!variantId) {
-      message.error('Variant ID is required for image upload')
-      return
-    }
-
-    const totalFiles = fileList.length
-    const availableSlots = maxImages - imagesCount
-
-    if (totalFiles > availableSlots) {
-      message.error(`Can only upload ${availableSlots} more images (max: ${maxImages})`)
-      return
-    }
-
-    setUploading(true)
-    let successCount = 0
-    let errorCount = 0
-    const newImages: VariantImage[] = []
-
-    try {
-      // Process files one by one to avoid overwhelming the server
-      for (const file of fileList) {
-        try {
-          const formData = new FormData()
-          formData.append('file', file)
-
-          const result = await apiClient.uploadVariantImage(variantId, formData)
-
-          if (result.success) {
-            const newImage: VariantImage = {
-              id: result.data.id || result.data.key || `new-${Date.now()}-${Math.random()}`,
-              url: result.data.url,
-              alt_text: result.data.originalName || '',
-              position: result.data.position || (imagesCount + successCount),
-              is_primary: result.data.is_primary || (imagesCount === 0 && successCount === 0),
-              file_name: result.data.originalName,
-              file_size: result.data.size,
-              file_type: result.data.mimetype,
-            }
-
-            newImages.push(newImage)
-            successCount++
-          } else {
-            errorCount++
-            console.error(`Upload failed for ${file.name}:`, result.message)
-          }
-        } catch (error) {
-          errorCount++
-          console.error(`Upload error for ${file.name}:`, error)
-        }
-      }
-
-      // Update all images at once
-      if (newImages.length > 0) {
-        onChange([...safeImages, ...newImages])
-      }
-
-      // Show final status
-      if (successCount > 0 && errorCount === 0) {
-        message.success(`Successfully uploaded ${successCount} images`)
-      } else if (successCount > 0 && errorCount > 0) {
-        message.warning(`Uploaded ${successCount} images, ${errorCount} failed`)
-      } else {
-        message.error(`Failed to upload all ${totalFiles} images`)
-      }
-    } catch (error) {
-      message.error('Upload process failed')
-      console.error('Multiple upload error:', error)
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  const handleSetPrimary = async (imageId: string) => {
-    if (!variantId) {
-      message.error('Variant ID is required')
-      return
-    }
-
-    try {
-      // Update all images to non-primary
-      const updatedImages = safeImages.map(img => ({
-        ...img,
-        is_primary: img.id === imageId
-      }))
-
-      onChange(updatedImages)
-
-      // If image needs to be saved, update backend
-      const imageToSave = updatedImages.find(img => img.id === imageId)
-      if (imageToSave && !imageToSave.id.startsWith('new-')) {
-        const result = await apiClient.updateVariantImagePrimary(variantId, imageId)
-        if (result.success) {
-          message.success('Primary image updated successfully')
-        } else {
-          message.error(result.message || 'Failed to update primary image')
-        }
-      } else {
-        message.success('Primary image updated')
-      }
-    } catch (error) {
-      console.error('Primary image error:', error)
-      message.error('Failed to update primary image')
-    }
-  }
-
-  const handleRemove = async (imageId: string) => {
-    if (!variantId) {
-      message.error('Variant ID is required')
-      return
-    }
-
-    // If image is primary and there are other images, don't allow removal
-    const imageToRemove = safeImages.find(img => img.id === imageId)
-    if (imageToRemove?.is_primary && imagesCount > 1) {
+  // Remove image
+  const removeImage = useCallback((id: string) => {
+    const imageToRemove = images.find(img => img.id === id)
+    if (imageToRemove?.is_primary && images.length > 1) {
       message.error('Cannot remove primary image. Please set another image as primary first.')
       return
     }
 
+    const updatedImages = images.filter(img => img.id !== id)
+    // If we removed the primary image and there are other images, set the first one as primary
+    if (imageToRemove?.is_primary && updatedImages.length > 0) {
+      updatedImages[0].is_primary = true
+    }
+    onChange(updatedImages)
+
+    // Delete from backend if it has a real ID
+    if (imageToRemove && !imageToRemove.id.startsWith('temp-')) {
+      apiClient.deleteVariantImage(variantId!, id).catch(error => {
+        console.error('Failed to delete image:', error)
+        message.error('Failed to delete image from server')
+      })
+    }
+  }, [images, onChange, variantId])
+
+  // Set primary image
+  const setPrimaryImage = useCallback((id: string) => {
+    const updatedImages = images.map(img => ({
+      ...img,
+      is_primary: img.id === id
+    }))
+    onChange(updatedImages)
+
+    // Update backend if it has a real ID
+    const imageToSet = images.find(img => img.id === id)
+    if (imageToSet && !imageToSet.id.startsWith('temp-')) {
+      apiClient.updateVariantImagePrimary(variantId!, id).catch(error => {
+        console.error('Failed to set primary image:', error)
+        message.error('Failed to set primary image on server')
+      })
+    }
+  }, [images, onChange, variantId])
+
+  // Update alt text
+  const updateAltText = useCallback((id: string, alt: string) => {
+    const updatedImages = images.map(img =>
+      img.id === id ? { ...img, alt_text: alt } : img
+    )
+    onChange(updatedImages)
+  }, [images, onChange])
+
+  // Process single file
+  const processSingleFile = async (file: File, position: number, isPrimary: boolean): Promise<VariantImage | null> => {
     try {
-      // If image needs to be saved, delete from backend
-      if (imageToRemove && !imageToRemove.id.startsWith('new-')) {
-        const result = await apiClient.deleteVariantImage(variantId, imageId)
-        if (!result.success) {
-          message.error(result.message || 'Failed to delete image')
-          return
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const result = await apiClient.uploadVariantImage(variantId!, formData)
+
+      if (result.success) {
+        return {
+          id: result.data.id,
+          url: result.data.url,
+          alt_text: result.data.originalName || file.name,
+          position: result.data.position,
+          is_primary: result.data.is_primary,
+          file_name: result.data.originalName,
+          file_size: result.data.size,
+          file_type: result.data.mimetype,
+          file: file,
+          needsSave: false
         }
       }
-
-      // Remove from local state
-      const updatedImages = safeImages.filter(img => img.id !== imageId)
-
-      // If we removed the primary image and there are other images, set the first one as primary
-      if (imageToRemove?.is_primary && updatedImages.length > 0) {
-        updatedImages[0].is_primary = true
-      }
-
-      onChange(updatedImages)
-      message.success('Image deleted successfully')
+      return null
     } catch (error) {
-      console.error('Delete error:', error)
-      message.error('Failed to delete image')
+      console.error('Error uploading file:', error)
+      return null
     }
   }
 
-  const handlePreview = (image: VariantImage) => {
-    setPreviewImage(image.url)
-    setPreviewTitle(image.alt_text || 'Image Preview')
-    setPreviewVisible(true)
-  }
+  // Handle file upload
+  const handleUpload: UploadProps['beforeUpload'] = async (file, fileList) => {
+    // Create a unique identifier for this file based on name, size, and last modified time
+    const fileKey = `${file.name}-${file.size}-${file.lastModified}`
 
-  const handleAltTextChange = (imageId: string, altText: string) => {
-    const updatedImages = safeImages.map(img =>
-      img.id === imageId ? { ...img, alt_text: altText } : img
-    )
-    onChange(updatedImages)
-  }
+    // Check if this file is already being processed
+    if (processingFiles.has(fileKey)) {
+      console.log(`⏭️ File ${file.name} is already being processed, skipping...`)
+      return false
+    }
 
-  const uploadProps: UploadProps = {
-    name: 'file',
-    multiple: true,
-    accept: 'image/*',
-    beforeUpload: (file, fileList) => {
-      if (imagesCount >= maxImages) {
-        message.error(`Maximum ${maxImages} images allowed`)
+    // Mark this file as being processed and increment upload counter
+    const currentUploadCounter = uploadCounter
+    setProcessingFiles(prev => new Set([...prev, fileKey]))
+    setUploadCounter(prev => prev + 1)
+
+    try {
+      const remainingSlots = maxImages - images.length
+      if (remainingSlots <= 0) {
+        message.error(`Maximum ${maxImages} images allowed!`)
         return false
       }
 
-      // Check file size (10MB max)
-      const isLt10M = file.size / 1024 / 1024 < 10
-      if (!isLt10M) {
-        message.error('Image must be smaller than 10MB')
+      // Validate this single file
+      const isImage = file.type.startsWith('image/')
+      const isLt5M = file.size / 1024 / 1024 < 5
+      const isDuplicate = images.some(img =>
+        img.file && img.file.name === file.name && img.file.size === file.size
+      )
+
+      if (!isImage) {
+        message.error(`${file.name} is not an image file!`)
+        return false
+      }
+      if (!isLt5M) {
+        message.error(`${file.name} must be smaller than 5MB!`)
+        return false
+      }
+      if (isDuplicate) {
+        message.error(`${file.name} has already been uploaded!`)
         return false
       }
 
-      // Handle multiple files at once
-      // Only process the first file's fileList to avoid duplicate processing
-      if (fileList.length > 0 && file === fileList[0]) {
-        const validFiles = fileList.filter(f => {
-          const isValidSize = f.size / 1024 / 1024 < 10
-          const isValidType = f.type.startsWith('image/')
-          return isValidSize && isValidType
-        })
+      setIsUploading(true)
 
-        if (validFiles.length > 0) {
-          handleMultipleUpload(validFiles)
+      // Get current images length and add offset for concurrent uploads
+      const currentImagesLength = images.length + processingFiles.size
+
+      // Determine if this should be the primary image
+      // Only set as primary if there's no existing primary image in the gallery
+      const hasExistingPrimary = images.some(img => img.is_primary)
+      const shouldThisBePrimary = !hasExistingPrimary && processingFiles.size === 0 && currentUploadCounter === 0
+
+      // Process this single file with explicit primary status
+      const uploadedImage = await processSingleFile(file, currentImagesLength, shouldThisBePrimary)
+
+      if (uploadedImage) {
+        console.log(`📝 Processing image: ${uploadedImage.file_name} - S3 complete, now saving to database`)
+
+        try {
+          // Use functional update to ensure we get the latest state
+          const finalImage = { ...uploadedImage, file: uploadedImage.file, needsSave: false }
+          onChange(prevImages => {
+            // Check if this image is already in the state (avoid duplicates)
+            const alreadyExists = prevImages.some(img =>
+              img.file_name === finalImage.file_name ||
+              img.id === finalImage.id
+            )
+
+            if (alreadyExists) {
+              console.log(`⏭️ Image ${finalImage.file_name} already exists in state, skipping...`)
+              return prevImages
+            }
+
+            // Check if there's already a primary image in the current state
+            const hasPrimaryInState = prevImages.some(img => img.is_primary)
+
+            // If there's already a primary and this image is marked as primary, remove primary flag
+            if (hasPrimaryInState && finalImage.is_primary) {
+              console.log(`🔄 Removing primary flag from ${finalImage.file_name} - primary already exists`)
+              finalImage.is_primary = false
+            }
+
+            const newImages = [...prevImages, finalImage]
+            console.log(`✅ Added image to state: ${finalImage.file_name} (${newImages.length} total images)`)
+            return newImages
+          })
+
+          message.success(`${file.name} uploaded successfully!`)
+        } catch (error) {
+          console.error(`Failed to save ${file.name} to database:`, error)
+          message.error(`Failed to save ${file.name} to database`)
         }
       }
 
       return false // Prevent default upload behavior
-    },
-    fileList: [],
-    showUploadList: false,
+    } catch (error) {
+      console.error('Upload error:', error)
+      message.error('Upload failed')
+      return false
+    } finally {
+      // Always remove this file from processing set and reset uploading state
+      setProcessingFiles(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(fileKey)
+        return newSet
+      })
+
+      // Reset uploading state when all files are done processing
+      setTimeout(() => {
+        setProcessingFiles(current => {
+          if (current.size === 0) {
+            setIsUploading(false)
+          }
+          return current
+        })
+      }, 100)
+    }
   }
 
-  const getPrimaryImage = () => {
-    if (!images || !Array.isArray(images)) {
-      return null
-    }
-
-    const primaryImage = images.find(img => img.is_primary)
-    if (primaryImage) {
-      return (
-        <div style={{ marginBottom: 16 }}>
-          <Text strong>Primary Image:</Text>
-          <div style={{ marginTop: 8, border: '2px solid #1890ff', borderRadius: 8, padding: 8, backgroundColor: '#f6ffed' }}>
-            <Image
-              src={primaryImage.url}
-              alt={primaryImage.alt_text}
-              height={200}
-              style={{ width: '100%', objectFit: 'cover' }}
-            />
-          </div>
-        </div>
-      )
-    }
-    return null
-  }
+  // Sort images by position
+  const sortedImages = [...images].sort((a, b) => a.position - b.position)
 
   return (
-    <div>
-      {getPrimaryImage()}
-
-      <Upload.Dragger
-        {...uploadProps}
-        disabled={uploading || imagesCount >= maxImages}
-        style={{
-          marginBottom: 16,
-          border: imagesCount >= maxImages ? '2px dashed #d9d9d9' : undefined
-        }}
-      >
-        <p className="ant-upload-drag-icon">
-          <CameraOutlined />
-        </p>
-        <p className="ant-upload-text">
-          {uploading ? 'Uploading...' : 'Click or drag image files here to upload'}
-        </p>
-        <p className="ant-upload-hint">
-          Support JPG, PNG, GIF, WebP (Max {maxImages} images, 10MB each)
-        </p>
-        {imagesCount >= maxImages && (
-          <p style={{ color: '#ff4d4f' }}>
-            Maximum image limit reached ({imagesCount}/{maxImages})
+    <DndProvider backend={HTML5Backend}>
+      <div>
+        <Upload.Dragger
+          name="file"
+          multiple
+          accept="image/*"
+          beforeUpload={handleUpload}
+          showUploadList={false}
+          disabled={isUploading || images.length >= maxImages}
+          style={{
+            marginBottom: 16,
+            border: images.length >= maxImages ? '2px dashed #d9d9d9' : undefined,
+          }}
+        >
+          <p className="ant-upload-drag-icon">
+            <CameraOutlined />
           </p>
-        )}
-      </Upload.Dragger>
+          <p className="ant-upload-text">
+            {isUploading ? 'Uploading images...' : 'Click or drag image files here to upload'}
+          </p>
+          <p className="ant-upload-hint">
+            Support for JPG, PNG, GIF, WebP. Maximum {maxImages} images, 5MB each.
+          </p>
+          {images.length >= maxImages && (
+            <p style={{ color: '#ff4d4f' }}>
+              Maximum image limit reached ({images.length}/{maxImages})
+            </p>
+          )}
+        </Upload.Dragger>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
-        {safeImages.map((image, index) => (
-          <Card
-            key={image.id}
-            size="small"
-            cover={
-              <div style={{ position: 'relative' }}>
-                <Image
-                  src={image.url}
-                  alt={image.alt_text}
-                  height={150}
-                  style={{ objectFit: 'cover', cursor: 'pointer' }}
-                  fallback="data:image/svg+xml,%3Csvg width='200' height='150' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='200' height='150' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23999'%3ENo Image%3C/text%3E%3C/svg%3E"
-                  onClick={() => handlePreview(image)}
+        {sortedImages.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <Text strong style={{ marginBottom: 8, display: 'block' }}>
+              Image Gallery ({sortedImages.length}/{maxImages})
+            </Text>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+              {sortedImages.map((image, index) => (
+                <DraggableImageCard
+                  key={image.id}
+                  image={image}
+                  index={index}
+                  onMove={moveImage}
+                  onRemove={removeImage}
+                  onSetPrimary={setPrimaryImage}
+                  onUpdateAlt={updateAltText}
                 />
-
-                {image.is_primary && (
-                  <Tag color="gold" style={{ position: 'absolute', top: 8, left: 8 }}>
-                    <StarOutlined /> Primary
-                  </Tag>
-                )}
-
-                <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
-                  {!image.is_primary && (
-                    <Tooltip title="Set as primary">
-                      <Button
-                        type="primary"
-                        size="small"
-                        icon={<StarOutlined />}
-                        onClick={() => handleSetPrimary(image.id)}
-                      />
-                    </Tooltip>
-                  )}
-                  <Tooltip title="Preview">
-                    <Button
-                      size="small"
-                      icon={<EyeOutlined />}
-                      onClick={() => handlePreview(image)}
-                    />
-                  </Tooltip>
-                  <Tooltip title="Delete">
-                    <Button
-                      danger
-                      size="small"
-                      icon={<DeleteOutlined />}
-                      onClick={() => handleRemove(image.id)}
-                    />
-                  </Tooltip>
-                </div>
-              </div>
-            }
-          >
-            <div style={{ padding: 8 }}>
-              <Input
-                placeholder="Alt text (description)"
-                value={image.alt_text}
-                onChange={(e) => handleAltTextChange(image.id, e.target.value)}
-                size="small"
-              />
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <Modal
-        open={previewVisible}
-        title={previewTitle}
-        footer={null}
-        onCancel={() => setPreviewVisible(false)}
-        width={800}
-        centered
-      >
-        <img alt={previewTitle} style={{ width: '100%' }} src={previewImage} />
-      </Modal>
-
-      {imagesCount === 0 && (
-        <div style={{
-          textAlign: 'center',
-          padding: 40,
-          color: '#999',
-          backgroundColor: '#fafafa',
-          borderRadius: 8,
-          marginTop: 16
-        }}>
-          <InfoCircleOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-          <div>
-            <Text>No images uploaded yet</Text>
-            <div style={{ fontSize: '12px', marginTop: 8 }}>
-              Upload images to showcase this variant (up to {maxImages} images)
+              ))}
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {sortedImages.length === 0 && (
+          <div style={{
+            textAlign: 'center',
+            padding: 40,
+            color: '#999',
+            backgroundColor: '#fafafa',
+            borderRadius: 8,
+          }}>
+            <InfoCircleOutlined style={{ fontSize: 48, marginBottom: 16 }} />
+            <div>
+              <Text>No images uploaded yet</Text>
+              <div style={{ fontSize: '12px', marginTop: 8 }}>
+                Upload images to showcase this variant (up to {maxImages} images)
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </DndProvider>
   )
 }
+
+export default VariantImageUploadManager
