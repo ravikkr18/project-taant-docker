@@ -430,10 +430,10 @@ class ApiClient {
     }
   }
 
-  async uploadVariantImage(variantId: string, formData: FormData): Promise<{ success: boolean; data: { url: string; key: string; originalName: string; size: number; mimetype: string }; message: string }> {
+  async uploadVariantImage(variantId: string, formData: FormData): Promise<{ success: boolean; data: { id: string; url: string; key: string; originalName: string; size: number; mimetype: string; position: number; is_primary: boolean }; message: string }> {
     try {
       console.log('API Client: Starting uploadVariantImage for variant:', variantId)
-      const response = await this.request<{ success: boolean; data: { url: string; key: string; originalName: string; size: number; mimetype: string }; message: string }>(`/api/products/variants/${variantId}/upload-image`, {
+      const response = await this.request<{ success: boolean; data: { id: string; url: string; key: string; originalName: string; size: number; mimetype: string; position: number; is_primary: boolean }; message: string }>(`/api/products/variants/${variantId}/upload-image`, {
         method: 'POST',
         body: formData,
         headers: {}, // Don't set Content-Type for FormData, base request method will handle it

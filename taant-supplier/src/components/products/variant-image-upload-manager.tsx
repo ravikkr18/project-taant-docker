@@ -47,10 +47,14 @@ export default function VariantImageUploadManager({
   const [previewTitle, setPreviewTitle] = useState('')
   const [uploading, setUploading] = useState(false)
 
+  // Helper function to safely access images
+  const safeImages = Array.isArray(images) ? images : []
+  const imagesCount = safeImages.length
+
   // Load existing variant images on mount
   useEffect(() => {
     const loadVariantImages = async () => {
-      if (!variantId || images.length > 0) {
+      if (!variantId || imagesCount > 0) {
         return // Don't reload if we already have images or no variantId
       }
 
@@ -97,14 +101,14 @@ export default function VariantImageUploadManager({
           id: result.data.id || result.data.key || `new-${Date.now()}`,
           url: result.data.url,
           alt_text: result.data.originalName || '',
-          position: result.data.position || images.length,
-          is_primary: result.data.is_primary || (images.length === 0), // First image is primary by default
+          position: result.data.position || imagesCount,
+          is_primary: result.data.is_primary || (imagesCount === 0), // First image is primary by default
           file_name: result.data.originalName,
           file_size: result.data.size,
           file_type: result.data.mimetype,
         }
 
-        onChange([...images, newImage])
+        onChange([...safeImages, newImage])
         message.success(`Variant image "${file.name}" uploaded successfully`)
         return false // Prevent default upload behavior
       } else {
@@ -125,7 +129,7 @@ export default function VariantImageUploadManager({
     }
 
     const totalFiles = fileList.length
-    const availableSlots = maxImages - images.length
+    const availableSlots = maxImages - imagesCount
 
     if (totalFiles > availableSlots) {
       message.error(`Can only upload ${availableSlots} more images (max: ${maxImages})`)
@@ -135,6 +139,7 @@ export default function VariantImageUploadManager({
     setUploading(true)
     let successCount = 0
     let errorCount = 0
+    const newImages: VariantImage[] = []
 
     try {
       // Process files one by one to avoid overwhelming the server
@@ -150,15 +155,14 @@ export default function VariantImageUploadManager({
               id: result.data.id || result.data.key || `new-${Date.now()}-${Math.random()}`,
               url: result.data.url,
               alt_text: result.data.originalName || '',
-              position: result.data.position || (images.length + successCount),
-              is_primary: result.data.is_primary || (images.length === 0 && successCount === 0),
+              position: result.data.position || (imagesCount + successCount),
+              is_primary: result.data.is_primary || (imagesCount === 0 && successCount === 0),
               file_name: result.data.originalName,
               file_size: result.data.size,
               file_type: result.data.mimetype,
             }
 
-            // Update images list immediately
-            onChange(prev => [...prev, newImage])
+            newImages.push(newImage)
             successCount++
           } else {
             errorCount++
@@ -168,6 +172,11 @@ export default function VariantImageUploadManager({
           errorCount++
           console.error(`Upload error for ${file.name}:`, error)
         }
+      }
+
+      // Update all images at once
+      if (newImages.length > 0) {
+        onChange([...safeImages, ...newImages])
       }
 
       // Show final status
@@ -194,7 +203,7 @@ export default function VariantImageUploadManager({
 
     try {
       // Update all images to non-primary
-      const updatedImages = images.map(img => ({
+      const updatedImages = safeImages.map(img => ({
         ...img,
         is_primary: img.id === imageId
       }))
@@ -226,8 +235,8 @@ export default function VariantImageUploadManager({
     }
 
     // If image is primary and there are other images, don't allow removal
-    const imageToRemove = images.find(img => img.id === imageId)
-    if (imageToRemove?.is_primary && images.length > 1) {
+    const imageToRemove = safeImages.find(img => img.id === imageId)
+    if (imageToRemove?.is_primary && imagesCount > 1) {
       message.error('Cannot remove primary image. Please set another image as primary first.')
       return
     }
@@ -243,7 +252,7 @@ export default function VariantImageUploadManager({
       }
 
       // Remove from local state
-      const updatedImages = images.filter(img => img.id !== imageId)
+      const updatedImages = safeImages.filter(img => img.id !== imageId)
 
       // If we removed the primary image and there are other images, set the first one as primary
       if (imageToRemove?.is_primary && updatedImages.length > 0) {
@@ -265,8 +274,8 @@ export default function VariantImageUploadManager({
   }
 
   const handleAltTextChange = (imageId: string, altText: string) => {
-    const updatedImages = images.map(img =>
-      img.id === imageId ? { ...img, alt_text: altText, needsSave: true } : img
+    const updatedImages = safeImages.map(img =>
+      img.id === imageId ? { ...img, alt_text: altText } : img
     )
     onChange(updatedImages)
   }
@@ -276,7 +285,7 @@ export default function VariantImageUploadManager({
     multiple: true,
     accept: 'image/*',
     beforeUpload: (file, fileList) => {
-      if (images.length >= maxImages) {
+      if (imagesCount >= maxImages) {
         message.error(`Maximum ${maxImages} images allowed`)
         return false
       }
@@ -309,6 +318,10 @@ export default function VariantImageUploadManager({
   }
 
   const getPrimaryImage = () => {
+    if (!images || !Array.isArray(images)) {
+      return null
+    }
+
     const primaryImage = images.find(img => img.is_primary)
     if (primaryImage) {
       return (
@@ -334,10 +347,10 @@ export default function VariantImageUploadManager({
 
       <Upload.Dragger
         {...uploadProps}
-        disabled={uploading || images.length >= maxImages}
+        disabled={uploading || imagesCount >= maxImages}
         style={{
           marginBottom: 16,
-          border: images.length >= maxImages ? '2px dashed #d9d9d9' : undefined
+          border: imagesCount >= maxImages ? '2px dashed #d9d9d9' : undefined
         }}
       >
         <p className="ant-upload-drag-icon">
@@ -349,15 +362,15 @@ export default function VariantImageUploadManager({
         <p className="ant-upload-hint">
           Support JPG, PNG, GIF, WebP (Max {maxImages} images, 10MB each)
         </p>
-        {images.length >= maxImages && (
+        {imagesCount >= maxImages && (
           <p style={{ color: '#ff4d4f' }}>
-            Maximum image limit reached ({maxImages}/{maxImages})
+            Maximum image limit reached ({imagesCount}/{maxImages})
           </p>
         )}
       </Upload.Dragger>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
-        {images.map((image, index) => (
+        {safeImages.map((image, index) => (
           <Card
             key={image.id}
             size="small"
@@ -431,7 +444,7 @@ export default function VariantImageUploadManager({
         <img alt={previewTitle} style={{ width: '100%' }} src={previewImage} />
       </Modal>
 
-      {images.length === 0 && (
+      {imagesCount === 0 && (
         <div style={{
           textAlign: 'center',
           padding: 40,
