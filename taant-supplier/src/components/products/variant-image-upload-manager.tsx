@@ -351,11 +351,12 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
       const uploadedImage = await processSingleFile(file, currentImagesLength, shouldThisBePrimary)
 
       if (uploadedImage) {
-        console.log(`📝 Processing image: ${uploadedImage.file_name} - S3 complete, now saving to database`)
+        console.log(`📝 Processing image: ${uploadedImage.file_name} - S3 complete, saved to database`)
 
         try {
           // Use functional update to ensure we get the latest state
-          const finalImage = { ...uploadedImage, file: uploadedImage.file, needsSave: false }
+          const finalImage = { ...uploadedImage, needsSave: false }
+
           onChange(prevImages => {
             // Check if this image is already in the state (avoid duplicates)
             const alreadyExists = prevImages.some(img =>
@@ -377,15 +378,14 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
               finalImage.is_primary = false
             }
 
-            const newImages = [...prevImages, finalImage]
-            console.log(`✅ Added image to state: ${finalImage.file_name} (${newImages.length} total images)`)
-            return newImages
+            console.log(`➕ Adding image ${finalImage.file_name} to state (primary: ${finalImage.is_primary})`)
+            return [...prevImages, finalImage]
           })
 
-          message.success(`${file.name} uploaded successfully!`)
+          message.success(`Image "${uploadedImage.file_name}" uploaded and saved`)
         } catch (error) {
-          console.error(`Failed to save ${file.name} to database:`, error)
-          message.error(`Failed to save ${file.name} to database`)
+          console.error(`Failed to update state for ${file.name}:`, error)
+          message.error(`Failed to update image gallery`)
         }
       }
 

@@ -1419,7 +1419,15 @@ export class ProductsService {
       .select('id')
       .eq('variant_id', variantId);
 
-    const shouldBePrimary = existingImages?.length === 0 || imageData.is_primary === true;
+    // Check for existing primary images to avoid multiple primaries
+    const { data: existingPrimaryImages } = await supabase
+      .from('variant_images')
+      .select('id')
+      .eq('variant_id', variantId)
+      .eq('is_primary', true);
+
+    const hasExistingPrimary = existingPrimaryImages && existingPrimaryImages.length > 0;
+    const shouldBePrimary = (existingImages?.length === 0 && !hasExistingPrimary) || (imageData.is_primary === true && !hasExistingPrimary);
 
     // Insert new variant image
     const { data, error } = await supabase
