@@ -430,6 +430,63 @@ class ApiClient {
     }
   }
 
+  async uploadVariantImage(variantId: string, formData: FormData): Promise<{ success: boolean; data: { url: string; key: string; originalName: string; size: number; mimetype: string }; message: string }> {
+    try {
+      console.log('API Client: Starting uploadVariantImage for variant:', variantId)
+      const response = await this.request<{ success: boolean; data: { url: string; key: string; originalName: string; size: number; mimetype: string }; message: string }>(`/api/products/variants/${variantId}/upload-image`, {
+        method: 'POST',
+        body: formData,
+        headers: {}, // Don't set Content-Type for FormData, base request method will handle it
+      });
+      console.log('API Client: Variant upload response:', response)
+
+      // Check if response has the expected structure
+      if (response && typeof response === 'object') {
+        if (response.success && response.data && response.data.url) {
+          // Normal case: response is wrapped
+          return response;
+        } else if (response.url) {
+          // Direct case: response is the data itself
+          return {
+            success: true,
+            data: response,
+            message: 'Variant image uploaded successfully'
+          };
+        } else {
+          throw new Error('Invalid response structure');
+        }
+      } else {
+        throw new Error('Invalid response format');
+      }
+    } catch (error) {
+      console.error('API Client: Variant image upload failed with error:', error)
+      return {
+        success: false,
+        data: { url: '', key: '', originalName: '', size: 0, mimetype: '' },
+        message: error instanceof Error ? error.message : 'Variant image upload failed'
+      }
+    }
+  }
+
+  async getVariantImages(variantId: string): Promise<{ success: boolean; data: any[]; message: string }> {
+    const response = await this.request<{ success: boolean; data: any[]; message: string }>(`/api/products/variants/${variantId}/images`);
+    return response.data;
+  }
+
+  async updateVariantImagePrimary(variantId: string, imageId: string): Promise<{ success: boolean; message: string }> {
+    const response = await this.request<{ success: boolean; message: string }>(`/api/products/variants/${variantId}/images/${imageId}/primary`, {
+      method: 'PUT',
+    });
+    return response;
+  }
+
+  async deleteVariantImage(variantId: string, imageId: string): Promise<{ success: boolean; message: string }> {
+    const response = await this.request<{ success: boolean; message: string }>(`/api/products/variants/${variantId}/images/${imageId}`, {
+      method: 'DELETE',
+    });
+    return response;
+  }
+
   async convertBlobToS3(blobUrl: string, fileName: string): Promise<{ success: boolean; data: { s3Url: string }; message: string }> {
     const response = await this.request<{ success: boolean; data: { s3Url: string }; message: string }>('/api/products/convert-blob-to-s3', {
       method: 'POST',

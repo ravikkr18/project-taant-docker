@@ -59,13 +59,8 @@ export default function VariantImageUploadManager({
       const formData = new FormData()
       formData.append('file', file)
 
-      // Upload to backend
-      const response = await fetch(`http://94.136.187.1:4000/api/products/variants/${variantId}/upload-image`, {
-        method: 'POST',
-        body: formData
-      })
-
-      const result = await response.json()
+      // Upload to backend using apiClient
+      const result = await apiClient.uploadVariantImage(variantId, formData)
 
       if (result.success) {
         // Add new image to the list
@@ -115,11 +110,7 @@ export default function VariantImageUploadManager({
       // If image needs to be saved, update backend
       const imageToSave = updatedImages.find(img => img.id === imageId)
       if (imageToSave && !imageToSave.id.startsWith('new-')) {
-        const response = await fetch(`http://94.136.187.1:4000/api/products/variants/${variantId}/images/${imageId}/primary`, {
-          method: 'PUT'
-        })
-
-        const result = await response.json()
+        const result = await apiClient.updateVariantImagePrimary(variantId, imageId)
         if (result.success) {
           message.success('Primary image updated successfully')
         } else {
@@ -150,11 +141,7 @@ export default function VariantImageUploadManager({
     try {
       // If image needs to be saved, delete from backend
       if (imageToRemove && !imageToRemove.id.startsWith('new-')) {
-        const response = await fetch(`http://94.136.187.1:4000/api/products/variants/${variantId}/images/${imageId}`, {
-          method: 'DELETE'
-        })
-
-        const result = await response.json()
+        const result = await apiClient.deleteVariantImage(variantId, imageId)
         if (!result.success) {
           message.error(result.message || 'Failed to delete image')
           return
