@@ -106,7 +106,7 @@ const DraggableImageCard: React.FC<{
             {!image.is_primary && (
               <Tooltip title="Set as primary">
                 <Button
-                  type="primary"
+                  type="default"
                   size="small"
                   icon={<StarOutlined />}
                   onClick={() => onSetPrimary(image.id)}
