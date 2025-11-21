@@ -167,8 +167,24 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
   const [processingFiles, setProcessingFiles] = useState<Set<string>>(new Set())
   const [uploadCounter, setUploadCounter] = useState(0)
 
-  // Helper function to safely access images
-  const safeImages = Array.isArray(images) ? images : []
+  // Helper function to safely access images and ensure only one primary
+  const safeImages = useMemo(() => {
+    if (!Array.isArray(images)) return []
+
+    // Find all primary images
+    const primaryImages = images.filter(img => img.is_primary)
+
+    // If multiple images are marked as primary, only keep the first one as primary
+    if (primaryImages.length > 1) {
+      console.log('🔧 Fixing multiple primary images, keeping first one:', primaryImages.length)
+      return images.map((img, index) => ({
+        ...img,
+        is_primary: img.is_primary && primaryImages.indexOf(img) === 0 // Only first primary stays true
+      }))
+    }
+
+    return images
+  }, [images])
   const imagesCount = safeImages.length
 
   // Load existing variant images on mount
@@ -241,10 +257,12 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
 
   // Set primary image
   const setPrimaryImage = useCallback((id: string) => {
+    console.log('🌟 Setting primary image:', id)
     const updatedImages = safeImages.map(img => ({
       ...img,
       is_primary: img.id === id
     }))
+    console.log('✅ Updated images with primary status:', updatedImages.map(img => ({ id: img.id, file_name: img.file_name, is_primary: img.is_primary })))
     onChange(updatedImages)
 
     // Update backend if it has a real ID
@@ -417,6 +435,8 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
   // Sort images by position with useMemo for performance and reactivity
   const sortedImages = useMemo(() => {
     console.log('🔄 VariantImageUploadManager: safeImages changed, re-sorting', safeImages.length, 'images')
+    const primaryImages = safeImages.filter(img => img.is_primary)
+    console.log('🎯 Primary images found:', primaryImages.length, primaryImages.map(img => ({ id: img.id, file_name: img.file_name })))
     return [...safeImages].sort((a, b) => a.position - b.position)
   }, [safeImages])
 
