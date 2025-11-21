@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { Upload, Button, Card, Image, Tag, Input, Space, message, Modal, Tooltip, Typography } from 'antd'
 import {
   UploadOutlined,
@@ -47,13 +47,42 @@ export default function VariantImageUploadManager({
   const [previewTitle, setPreviewTitle] = useState('')
   const [uploading, setUploading] = useState(false)
 
+  // Load existing variant images on mount
+  useEffect(() => {
+    const loadVariantImages = async () => {
+      if (!variantId || images.length > 0) {
+        return // Don't reload if we already have images or no variantId
+      }
+
+      try {
+        const result = await apiClient.getVariantImages(variantId)
+        if (result.success && result.data.length > 0) {
+          const loadedImages: VariantImage[] = result.data.map((img: any) => ({
+            id: img.id,
+            url: img.url,
+            alt_text: img.alt_text || '',
+            position: img.position,
+            is_primary: img.is_primary,
+            file_name: img.file_name,
+            file_size: img.file_size,
+            file_type: img.file_type,
+          }))
+          onChange(loadedImages)
+        }
+      } catch (error) {
+        console.error('Failed to load variant images:', error)
+      }
+    }
+
+    loadVariantImages()
+  }, [variantId])
+
   const handleUpload = async (file: File) => {
     if (!variantId) {
       message.error('Variant ID is required for image upload')
       return false
     }
 
-    setUploading(true)
     try {
       // Create FormData for file upload
       const formData = new FormData()
@@ -65,19 +94,18 @@ export default function VariantImageUploadManager({
       if (result.success) {
         // Add new image to the list
         const newImage: VariantImage = {
-          id: result.data.key || `new-${Date.now()}`,
+          id: result.data.id || result.data.key || `new-${Date.now()}`,
           url: result.data.url,
           alt_text: result.data.originalName || '',
-          position: images.length,
-          is_primary: images.length === 0, // First image is primary by default
+          position: result.data.position || images.length,
+          is_primary: result.data.is_primary || (images.length === 0), // First image is primary by default
           file_name: result.data.originalName,
           file_size: result.data.size,
           file_type: result.data.mimetype,
-          needsSave: true
         }
 
         onChange([...images, newImage])
-        message.success('Variant image uploaded successfully')
+        message.success(`Variant image "${file.name}" uploaded successfully`)
         return false // Prevent default upload behavior
       } else {
         message.error(result.message || 'Failed to upload image')
@@ -85,8 +113,74 @@ export default function VariantImageUploadManager({
       }
     } catch (error) {
       console.error('Upload error:', error)
-      message.error('Failed to upload image')
+      message.error(`Failed to upload image "${file.name}"`)
       return false
+    }
+  }
+
+  const handleMultipleUpload = async (fileList: File[]) => {
+    if (!variantId) {
+      message.error('Variant ID is required for image upload')
+      return
+    }
+
+    const totalFiles = fileList.length
+    const availableSlots = maxImages - images.length
+
+    if (totalFiles > availableSlots) {
+      message.error(`Can only upload ${availableSlots} more images (max: ${maxImages})`)
+      return
+    }
+
+    setUploading(true)
+    let successCount = 0
+    let errorCount = 0
+
+    try {
+      // Process files one by one to avoid overwhelming the server
+      for (const file of fileList) {
+        try {
+          const formData = new FormData()
+          formData.append('file', file)
+
+          const result = await apiClient.uploadVariantImage(variantId, formData)
+
+          if (result.success) {
+            const newImage: VariantImage = {
+              id: result.data.id || result.data.key || `new-${Date.now()}-${Math.random()}`,
+              url: result.data.url,
+              alt_text: result.data.originalName || '',
+              position: result.data.position || (images.length + successCount),
+              is_primary: result.data.is_primary || (images.length === 0 && successCount === 0),
+              file_name: result.data.originalName,
+              file_size: result.data.size,
+              file_type: result.data.mimetype,
+            }
+
+            // Update images list immediately
+            onChange(prev => [...prev, newImage])
+            successCount++
+          } else {
+            errorCount++
+            console.error(`Upload failed for ${file.name}:`, result.message)
+          }
+        } catch (error) {
+          errorCount++
+          console.error(`Upload error for ${file.name}:`, error)
+        }
+      }
+
+      // Show final status
+      if (successCount > 0 && errorCount === 0) {
+        message.success(`Successfully uploaded ${successCount} images`)
+      } else if (successCount > 0 && errorCount > 0) {
+        message.warning(`Uploaded ${successCount} images, ${errorCount} failed`)
+      } else {
+        message.error(`Failed to upload all ${totalFiles} images`)
+      }
+    } catch (error) {
+      message.error('Upload process failed')
+      console.error('Multiple upload error:', error)
     } finally {
       setUploading(false)
     }
@@ -194,7 +288,20 @@ export default function VariantImageUploadManager({
         return false
       }
 
-      handleUpload(file)
+      // Handle multiple files at once
+      // Only process the first file's fileList to avoid duplicate processing
+      if (fileList.length > 0 && file === fileList[0]) {
+        const validFiles = fileList.filter(f => {
+          const isValidSize = f.size / 1024 / 1024 < 10
+          const isValidType = f.type.startsWith('image/')
+          return isValidSize && isValidType
+        })
+
+        if (validFiles.length > 0) {
+          handleMultipleUpload(validFiles)
+        }
+      }
+
       return false // Prevent default upload behavior
     },
     fileList: [],

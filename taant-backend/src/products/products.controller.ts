@@ -831,14 +831,27 @@ export class ProductsController {
       // Upload to S3 with folder structure for variant images
       const s3Url = await this.s3Service.uploadVariantImage(file, userId, variantId);
 
+      // Save image to database
+      const imageData = {
+        url: s3Url,
+        alt_text: file.originalname,
+        position: 0, // Will be updated based on existing images
+        is_primary: false // Will be set to true for first image
+      };
+
+      const savedImage = await this.productsService.createVariantImage(variantId, imageData, userId);
+
       return {
         success: true,
         data: {
-          url: s3Url,
+          id: savedImage.id,
+          url: savedImage.url,
           key: `variant-images/${userId}/${variantId}/${file.originalname}`,
           originalName: file.originalname,
           size: file.size,
-          mimetype: file.mimetype
+          mimetype: file.mimetype,
+          position: savedImage.position,
+          is_primary: savedImage.is_primary
         },
         message: 'Variant image uploaded successfully'
       };
