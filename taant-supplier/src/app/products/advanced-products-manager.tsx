@@ -248,13 +248,6 @@ const AdvancedProductManager: React.FC = () => {
     calculateVolume()
   }, [form.getFieldsValue(['length', 'width', 'height']), calculateVolume])
 
-  // Sync form features with textarea format
-  useEffect(() => {
-    form.setFieldsValue({
-      features: features.filter(f => f.trim() !== '').join('\n')
-    })
-  }, [features, form])
-
   // Helper function to check if variants have been modified
   const areVariantsModified = (newVariants: ProductVariant[], originalVariants: ProductVariant[]): boolean => {
     if (newVariants.length !== originalVariants.length) return true
@@ -1298,51 +1291,20 @@ const AdvancedProductManager: React.FC = () => {
               border: '1px solid #d9d9d9',
               borderRadius: '6px',
               padding: '12px',
-              backgroundColor: '#fafafa',
-              minHeight: '120px'
+              backgroundColor: '#fafafa'
             }}>
               <div style={{ marginBottom: '8px', fontSize: '12px', color: '#666' }}>
-                💡 Add product features as bullet points (press Enter to add each point)
+                💡 Enter one feature per line (press Enter for new line)
               </div>
-              <Form.Item name="features" noStyle>
-                <Input.TextArea
-                  onChange={(e) => {
-                    const newFeatures = e.target.value.split('\n').filter(f => f.trim() !== '')
-                    setFeatures(newFeatures.length > 0 ? newFeatures : [''])
-                  }}
-                  placeholder="• Premium quality material&#10;• Easy to install&#10;• Energy efficient design&#10;• 2-year warranty included"
-                  rows={6}
-                  style={{
-                    border: 'none',
-                    boxShadow: 'none',
-                    backgroundColor: 'transparent',
-                    resize: 'none'
-                  }}
-                />
-              </Form.Item>
-              <div style={{
-                marginTop: '8px',
-                fontSize: '12px',
-                color: '#1890ff',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span>{features.filter(f => f.trim() !== '').length} feature(s) added</span>
-                {features.filter(f => f.trim() !== '').length > 0 && (
-                  <Button
-                    size="small"
-                    type="link"
-                    onClick={() => {
-                      setFeatures([''])
-                      form.setFieldsValue({ features: [] })
-                    }}
-                    style={{ padding: '0', height: 'auto' }}
-                  >
-                    Clear all
-                  </Button>
-                )}
-              </div>
+              <Input.TextArea
+                placeholder="• Premium quality material&#10;• Easy to install&#10;• Energy efficient design&#10;• 2-year warranty included"
+                rows={6}
+                style={{
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '4px',
+                  backgroundColor: '#fff'
+                }}
+              />
             </div>
           </Form.Item>
 
@@ -2009,7 +1971,7 @@ const AdvancedProductManager: React.FC = () => {
         a_plus_content: values.a_plus_content || '',
         a_plus_sections: aPlusSections,
         specifications,
-        features: features.filter(f => f.trim() !== ''),
+        features: values.features ? values.features.split('\n').filter(f => f.trim() !== '') : [],
         // Ensure new fields are included
         weight: values.weight || null,
         length: values.length || null,
@@ -2117,7 +2079,7 @@ const AdvancedProductManager: React.FC = () => {
     // Set all fields including the new ones
     const formValues = {
       ...product,
-      features: product.features || [],
+      features: (product.features || []).join('\n'),
       tags: product.tags || [],
       // Product Details fields with defaults
       weight: product.weight || null,
@@ -2154,8 +2116,7 @@ const AdvancedProductManager: React.FC = () => {
     setProductFAQs(product.faqs || [])
     setAPlusSections(product.a_plus_sections || [])
 
-    setFeatures(product.features?.length > 0 ? product.features : [''])
-    setSpecifications(product.specifications || {})
+        setSpecifications(product.specifications || {})
     setSimpleFields(product.simple_fields || [])
     setInformationSections(product.information_sections || [])
 
