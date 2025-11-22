@@ -17,6 +17,7 @@ export interface Product {
   length?: number;
   width?: number;
   height?: number;
+  dimensions?: any;
   a_plus_content?: string;
   a_plus_sections?: any;
   faqs?: any[];
@@ -66,6 +67,16 @@ export interface Product {
     updated_at: string;
     product_id: string;
     tax_code?: string;
+    variant_images?: {
+      id: string;
+      url: string;
+      alt_text?: string;
+      file_name?: string;
+      file_size?: number;
+      file_type?: string;
+      position: number;
+      is_primary: boolean;
+    }[];
   }[];
   created_at: string;
   updated_at: string;
@@ -91,6 +102,7 @@ export interface ProductVariant {
   inStock?: boolean;
   color?: string;
   image?: string;
+  variant_images?: any[];
 }
 
 export interface ProductImage {
@@ -129,34 +141,51 @@ export interface PaginatedProductsResponse {
 
 // Helper function to transform API product to frontend format
 export const transformProductForFrontend = (apiProduct: Product) => {
-  return {
-    id: apiProduct.id,
-    name: apiProduct.title,
-    slug: apiProduct.slug,
-    description: apiProduct.description,
-    short_description: apiProduct.short_description,
-    price: apiProduct.base_price,
-    originalPrice: apiProduct.compare_price,
-    image: apiProduct.product_images?.find(img => img.is_primary)?.url || apiProduct.product_images?.[0]?.url || '',
-    images: apiProduct.product_images?.map(img => img.url) || [],
-    category: apiProduct.categories?.name || '',
-    categoryId: apiProduct.categories?.id || '',
-    rating: apiProduct.rating || 0,
-    reviews: apiProduct.reviews || 0,
-    inStock: apiProduct.status === 'active',
-    badge: apiProduct.rating > 4.5 ? 'Top Rated' : undefined,
-    brand: apiProduct.brand || apiProduct.suppliers?.business_name,
-    sku: apiProduct.sku,
-    variants: apiProduct.product_variants?.map((variant) => ({
+  // Get main product images from product_images, sorted by position and primary first
+  const mainProductImages = apiProduct.product_images?.sort((a: any, b: any) => {
+    // Primary image always comes first (position 0)
+    if (a.is_primary && !b.is_primary) return -1;
+    if (!a.is_primary && b.is_primary) return 1;
+    // Then sort by position
+    return a.position - b.position;
+  }) || [];
+
+  const primaryImage = mainProductImages.find((img: any) => img.is_primary)?.url || mainProductImages[0]?.url || '';
+
+  // Transform product_variants to include proper variant images
+  const variants = apiProduct.product_variants?.map((variant) => {
+    // Use variant-specific images from variant_images array
+    let variantImageUrl = primaryImage;
+    let variantSpecificImages: any[] = [];
+
+    // Check if variant has its own variant_images
+    if (variant.variant_images && Array.isArray(variant.variant_images) && variant.variant_images.length > 0) {
+      // Sort variant images: primary first, then by position
+      const sortedVariantImages = variant.variant_images.sort((a: any, b: any) => {
+        if (a.is_primary && !b.is_primary) return -1;
+        if (!a.is_primary && b.is_primary) return 1;
+        return a.position - b.position;
+      });
+
+      variantSpecificImages = sortedVariantImages;
+      variantImageUrl = sortedVariantImages[0]?.url || primaryImage;
+
+      console.log(`✅ Variant "${variant.title}" has ${sortedVariantImages.length} variant images, primary image: ${variantImageUrl}`);
+    } else {
+      // No variant-specific images, fall back to main product images
+      console.warn(`⚠️ Variant "${variant.title}" has no variant_images, falling back to main product images`);
+      variantSpecificImages = [...mainProductImages];
+      variantImageUrl = primaryImage;
+    }
+
+    return {
       id: variant.id,
       name: variant.title,
       price: variant.price,
       originalPrice: variant.compare_price || undefined,
       inStock: variant.inventory_quantity > 0 && variant.is_active,
       color: variant.title,
-      image: variant.image_id
-        ? (apiProduct.product_images?.find((img: any) => img.id === variant.image_id)?.url || apiProduct.product_images?.[0]?.url)
-        : apiProduct.product_images?.[0]?.url,
+      image: variantImageUrl,
       sku: variant.sku,
       options: variant.options || [],
       // Additional database fields
@@ -170,12 +199,37 @@ export const transformProductForFrontend = (apiProduct: Product) => {
       taxable: variant.taxable || true,
       tax_code: variant.tax_code || null,
       is_active: variant.is_active || true,
-      image_id: variant.image_id || null
-    })) || [],
+      image_id: variant.image_id || null,
+      // Store variant-specific image gallery
+      variant_images: variantSpecificImages
+    };
+  }) || [];
+
+  return {
+    id: apiProduct.id,
+    name: apiProduct.title,
+    slug: apiProduct.slug,
+    description: apiProduct.description,
+    short_description: apiProduct.short_description,
+    price: apiProduct.base_price,
+    originalPrice: apiProduct.compare_price,
+    image: primaryImage,
+    images: mainProductImages.map((img: any) => img.url) || [],
+    category: apiProduct.categories?.name || '',
+    categoryId: apiProduct.categories?.id || '',
+    rating: apiProduct.rating || 0,
+    reviews: apiProduct.reviews || 0,
+    inStock: apiProduct.status === 'active',
+    badge: apiProduct.rating > 4.5 ? 'Top Rated' : undefined,
+    brand: apiProduct.brand || apiProduct.suppliers?.business_name,
+    sku: apiProduct.sku,
+    variants: variants,
+    // Main product details (not variant details)
     weight: apiProduct.weight,
-    dimensions: apiProduct.width && apiProduct.height && apiProduct.length
-      ? { length: apiProduct.length, width: apiProduct.width, height: apiProduct.height }
-      : undefined,
+    dimensions: apiProduct.dimensions ||
+      (apiProduct.width && apiProduct.height && apiProduct.length
+        ? { length: apiProduct.length, width: apiProduct.width, height: apiProduct.height }
+        : undefined),
     specifications: apiProduct,
     aPlusSections: apiProduct.a_plus_sections || [],
     faqs: apiProduct.faqs || []

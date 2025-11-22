@@ -1251,6 +1251,16 @@ export class ProductsService {
           option3_value,
           options,
           image_id,
+          variant_images (
+            id,
+            url,
+            alt_text,
+            file_name,
+            file_size,
+            file_type,
+            position,
+            is_primary
+          ),
           is_active,
           created_at,
           updated_at

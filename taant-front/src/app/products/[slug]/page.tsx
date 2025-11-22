@@ -76,7 +76,7 @@ const getFallbackProducts = () => [
 
 const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [selectedColor, setSelectedColor] = useState<ProductVariant | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -99,6 +99,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const [addToCartAnimation, setAddToCartAnimation] = useState(false);
   const [buyNowAnimation, setBuyNowAnimation] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string }>({});
+  const [currentProductImages, setCurrentProductImages] = useState<string[]>([]);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const addToCartRef = useRef<HTMLDivElement>(null);
   const { pincode, city } = useLocation();
@@ -117,6 +118,10 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
           const productData = transformProductForFrontend(apiProduct);
           setProduct(productData);
 
+          // Initialize with main product images
+          setCurrentProductImages(productData.images || []);
+          setSelectedImageIndex(0);
+
           // Temporarily skip related products to isolate issue
           setRelatedProducts([]);
         } else {
@@ -131,10 +136,11 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
     loadProduct();
   }, [params]);
 
-  // Initialize selected color/variant on component mount
+  // Initialize selected variant on component mount (but don't auto-select main product)
   useEffect(() => {
-    if (product && product.variants && product.variants.length > 0) {
-      setSelectedColor(product.variants[0]);
+    if (product) {
+      // Don't auto-select any variant - let user choose or default to main product
+      setSelectedVariant(null);
     }
   }, [product]);
 
@@ -252,7 +258,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   }, [product]);
 
   // Get currently selected variant based on selected options
-  const selectedVariant = React.useMemo(() => {
+  const selectedVariantFromOptions = React.useMemo(() => {
     return findMatchingVariant(selectedOptions);
   }, [selectedOptions, findMatchingVariant]);
 
@@ -262,6 +268,40 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
       ...prev,
       [optionName]: optionValue
     }));
+  };
+
+  // Handle variant selection
+  const handleVariantSelect = (variant: any) => {
+    setSelectedVariant(variant);
+    setSelectedOptions({}); // Clear all selected options when switching variants
+
+    // Update image gallery to variant-specific images if they exist
+    if (variant.variant_images && variant.variant_images.length > 0) {
+      const variantImageUrls = variant.variant_images.map((img: any) => img.url);
+      setCurrentProductImages(variantImageUrls);
+      setSelectedImageIndex(0); // Start with the variant's primary image
+    } else {
+      // Fallback to main product images
+      setCurrentProductImages(product.images || []);
+      setSelectedImageIndex(0);
+    }
+  };
+
+  // Handle deselection of variant (go back to main product)
+  const handleVariantDeselect = () => {
+    setSelectedVariant(null);
+    setSelectedOptions({});
+    setCurrentProductImages(product.images || []);
+    setSelectedImageIndex(0);
+  };
+
+  // Handle main product selection
+  const handleMainProductSelect = () => {
+    setSelectedVariant(null);
+    setSelectedOptions({});
+    // Use main product images (primary image is already first due to sorting)
+    setCurrentProductImages(product.images || []);
+    setSelectedImageIndex(0); // Primary image should be at index 0
   };
 
   // Show loading state while fetching data
@@ -344,7 +384,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
     },
   ];
 
-  const currentPrice = selectedColor?.price || selectedVariant?.price || product.price;
+  const currentPrice = selectedVariant?.price || product.price;
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isZoomed || !imageContainerRef.current) return;
@@ -357,11 +397,15 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   };
 
   const nextImage = () => {
-    setSelectedImageIndex((prev) => (prev + 1) % product.images!.length);
+    if (currentProductImages.length > 0) {
+      setSelectedImageIndex((prev) => (prev + 1) % currentProductImages.length);
+    }
   };
 
   const prevImage = () => {
-    setSelectedImageIndex((prev) => (prev - 1 + product.images!.length) % product.images!.length);
+    if (currentProductImages.length > 0) {
+      setSelectedImageIndex((prev) => (prev - 1 + currentProductImages.length) % currentProductImages.length);
+    }
   };
 
   const openReviewImages = (images: string[], index: number = 0) => {
@@ -414,20 +458,21 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
       const cartItem = {
         id: product.id,
         name: product.name,
-        price: selectedColor?.price || product.price,
-        image: product.images?.[0] || product.image,
+        price: selectedVariant?.price || product.price,
+        image: currentProductImages[0] || product.image,
         slug: product.slug,
         quantity: quantity,
-        variant: selectedColor?.name || '',
+        variant: selectedVariant?.name || '',
+        variantId: selectedVariant?.id || null,
         size: selectedSize,
-        color: selectedColor?.color || '',
+        color: selectedVariant?.color || '',
         timestamp: new Date().toISOString()
       };
 
       // Check if item already exists in cart
       const existingItemIndex = cart.findIndex((item: any) =>
         item.id === product.id &&
-        item.variant === cartItem.variant &&
+        item.variantId === cartItem.variantId &&
         item.size === cartItem.size
       );
 
@@ -511,7 +556,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
           <div className="flex gap-3 lg:sticky lg:top-16 lg:self-start lg:max-h-[calc(100vh-4rem)] lg:z-10 lg:transition-all lg:duration-300 hover:lg:shadow-lg">
             {/* Thumbnail Gallery - Left Side */}
             <div className="flex flex-col gap-1 lg:overflow-y-auto lg:max-h-[calc(100vh-6rem)] lg:pr-1">
-              {product.images?.map((image: string, index: number) => (
+              {currentProductImages?.map((image: string, index: number) => (
                 <button
                   key={index}
                   onClick={() => setSelectedImageIndex(index)}
@@ -543,7 +588,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                 onMouseLeave={() => setIsZoomed(false)}
               >
                 <ImageWithFallback
-                  src={product.images[selectedImageIndex]}
+                  src={currentProductImages[selectedImageIndex]}
                   alt={product.name}
                   width={600}
                   height={600}
@@ -659,13 +704,14 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
               <span className="text-2xl font-bold text-gray-900">
                 ₹{Math.round(currentPrice).toLocaleString('en-IN')}
               </span>
-              {product.originalPrice && product.originalPrice > product.price && (
+              {((selectedVariant?.originalPrice && selectedVariant.originalPrice > currentPrice) ||
+                (product.originalPrice && product.originalPrice > (selectedVariant?.price || product.price))) && (
                 <>
                   <span className="text-lg text-gray-500 line-through">
-                    ₹{Math.round(product.originalPrice).toLocaleString('en-IN')}
+                    ₹{Math.round(selectedVariant?.originalPrice || product.originalPrice).toLocaleString('en-IN')}
                   </span>
                   <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-                    {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+                    {Math.round(((selectedVariant?.originalPrice || product.originalPrice) - currentPrice) / (selectedVariant?.originalPrice || product.originalPrice) * 100)}% OFF
                   </span>
                 </>
               )}
@@ -683,24 +729,51 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
               </div>
             )}
 
-            {/* Product Variants */}
-            {displayVariants && displayVariants.length > 0 && (
+            {/* Product Options: Main Product and Variants */}
+            {(product.variants && product.variants.length > 0) && (
               <div>
-                <h3 className="text-xs font-semibold text-gray-900 mb-2">Variants:</h3>
-                <div className="flex flex-wrap gap-0">
-                  {displayVariants.map((variant) => (
+                <h3 className="text-xs font-semibold text-gray-900 mb-2">Options:</h3>
+                <div className="flex flex-wrap gap-2">
+                  {/* Main Product Option */}
+                  <button
+                    onClick={() => handleMainProductSelect()}
+                    className={`relative group transition-all duration-200 rounded-lg border-2 overflow-hidden w-16 h-20 ${
+                      !selectedVariant
+                        ? 'border-orange-500 ring-2 ring-orange-200 scale-105'
+                        : 'border-gray-200 hover:border-gray-400 hover:scale-105'
+                    }`}
+                  >
+                    <div className="aspect-square bg-gray-100">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="p-1 bg-white">
+                      <h4 className="text-[8px] font-medium text-gray-900 truncate leading-tight">Main Product</h4>
+                      <p className="text-[8px] font-bold text-orange-800 leading-tight">
+                        ₹{Math.round(product.price || 0).toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                    {!selectedVariant && (
+                      <div className="absolute top-1 right-1 bg-orange-500 rounded-full p-0.5">
+                        <Check className="w-2 h-2 text-white" />
+                      </div>
+                    )}
+                  </button>
+
+                  {/* Variant Options */}
+                  {product.variants.map((variant: any) => (
                     <button
                       key={variant.id}
-                      onClick={() => {
-                        setSelectedColor(variant);
-                        setSelectedOptions({}); // Clear all selected options when switching variants
-                      }}
+                      onClick={() => handleVariantSelect(variant)}
                       disabled={!variant.inStock}
-                      className={`relative group transition-all duration-200 rounded border-2 overflow-hidden w-14 h-18 ${
+                      className={`relative group transition-all duration-200 rounded-lg border-2 overflow-hidden w-16 h-20 ${
                         !variant.inStock ? 'opacity-50 cursor-not-allowed' : ''
                       } ${
-                        selectedColor?.id === variant.id
-                          ? 'border-orange-500 ring-1 ring-orange-200 scale-105'
+                        selectedVariant?.id === variant.id
+                          ? 'border-orange-500 ring-2 ring-orange-200 scale-105'
                           : 'border-gray-200 hover:border-gray-400 hover:scale-105'
                       }`}
                     >
@@ -713,12 +786,12 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                       </div>
                       <div className="p-1 bg-white">
                         <h4 className="text-[8px] font-medium text-gray-900 truncate leading-tight">{variant.name}</h4>
-                        <p className="text-[8px] font-bold text-orange-800-muted leading-tight">
+                        <p className="text-[8px] font-bold text-orange-800 leading-tight">
                           ₹{Math.round(variant.price).toLocaleString('en-IN')}
                         </p>
                       </div>
-                      {selectedColor?.id === variant.id && (
-                        <div className="absolute top-1 right-1 bg-orange-500-light0 rounded-full p-0.5">
+                      {selectedVariant?.id === variant.id && (
+                        <div className="absolute top-1 right-1 bg-orange-500 rounded-full p-0.5">
                           <Check className="w-2 h-2 text-white" />
                         </div>
                       )}
@@ -734,13 +807,13 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
             )}
 
             {/* Product Options - Show only selected variant's options */}
-            {selectedColor && selectedColor.options && selectedColor.options.length > 0 && (
+            {selectedVariant && selectedVariant.options && selectedVariant.options.length > 0 && (
               <div className="space-y-4">
                 {(() => {
                   // Normalize option names and group options by key
                   const groupedOptions: { [key: string]: string[] } = {};
 
-                  selectedColor.options
+                  selectedVariant.options
                     .filter((option: any) => option.name && option.value && option.value.trim() !== '')
                     .forEach((option: any) => {
                       // Normalize option name: capitalize first letter, lowercase rest
