@@ -225,9 +225,10 @@ const AdvancedProductManager: React.FC = () => {
 
   // Calculate volume instantly when dimensions change
   const calculateVolume = useCallback(() => {
-    const length = form.getFieldValue('length') || 0
-    const width = form.getFieldValue('width') || 0
-    const height = form.getFieldValue('height') || 0
+    const formValues = form.getFieldsValue(['length', 'width', 'height'])
+    const length = formValues.length || 0
+    const width = formValues.width || 0
+    const height = formValues.height || 0
 
     const volume = (length * width * height) / 1000000 // Convert cm³ to m³
     const volumeLiters = (length * width * height) / 1000 // Convert cm³ to liters
@@ -243,10 +244,12 @@ const AdvancedProductManager: React.FC = () => {
     }
   }, [form])
 
-  // Calculate volume when form values change (for initial load and updates)
+  // Calculate volume when product is loaded
   useEffect(() => {
-    calculateVolume()
-  }, [form.getFieldsValue(['length', 'width', 'height']), calculateVolume])
+    if (editingProduct) {
+      calculateVolume()
+    }
+  }, [editingProduct, calculateVolume])
 
   // Helper function to check if variants have been modified
   const areVariantsModified = (newVariants: ProductVariant[], originalVariants: ProductVariant[]): boolean => {
@@ -1129,7 +1132,7 @@ const AdvancedProductManager: React.FC = () => {
                         size="small"
                         style={{ width: '100%', fontWeight: '500' }}
                         addonBefore="L"
-                        onChange={calculateVolume}
+                        onBlur={calculateVolume}
                       />
                     </Form.Item>
                     <span style={{
@@ -1148,7 +1151,7 @@ const AdvancedProductManager: React.FC = () => {
                         size="small"
                         style={{ width: '100%', fontWeight: '500' }}
                         addonBefore="W"
-                        onChange={calculateVolume}
+                        onBlur={calculateVolume}
                       />
                     </Form.Item>
                     <span style={{
@@ -1167,7 +1170,7 @@ const AdvancedProductManager: React.FC = () => {
                         size="small"
                         style={{ width: '100%', fontWeight: '500' }}
                         addonBefore="H"
-                        onChange={calculateVolume}
+                        onBlur={calculateVolume}
                       />
                     </Form.Item>
                     <span style={{
