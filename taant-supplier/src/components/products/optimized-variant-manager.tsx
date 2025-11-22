@@ -634,19 +634,19 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
       key: 'pricing',
       render: (_: any, record: ProductVariant) => (
         <div>
-          <div style={{ fontWeight: 'bold', color: '#52c41a' }}>${record.price}</div>
+          <div style={{ fontWeight: 'bold', color: '#52c41a' }}>₹{record.price}</div>
           {record.compare_price && (
             <div style={{
               color: '#999',
               fontSize: '12px',
               textDecoration: 'line-through'
             }}>
-              ${record.compare_price}
+              ₹{record.compare_price}
             </div>
           )}
           {record.cost_price && (
             <div style={{ color: '#ff4d4f', fontSize: '11px' }}>
-              Cost: ${record.cost_price}
+              Cost: ₹{record.cost_price}
             </div>
           )}
         </div>

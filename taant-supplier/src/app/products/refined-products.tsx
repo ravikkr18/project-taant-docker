@@ -33,7 +33,6 @@ import {
   DownloadOutlined,
   ReloadOutlined,
   ShopOutlined,
-  DollarOutlined,
   InboxOutlined,
   StarOutlined,
   ShoppingCartOutlined,
@@ -148,7 +147,7 @@ const ProductModal = ({
             >
               <AntInput
                 type="number"
-                prefix={<DollarOutlined />}
+                addonBefore="₹"
                 placeholder="0.00"
               />
             </Form.Item>
@@ -156,7 +155,7 @@ const ProductModal = ({
             <Form.Item name="compare_price" label="Compare Price">
               <AntInput
                 type="number"
-                prefix={<DollarOutlined />}
+                addonBefore="₹"
                 placeholder="0.00"
               />
             </Form.Item>

@@ -5,7 +5,6 @@ import { Card, Row, Col, Statistic, Typography, Progress, Tag } from 'antd'
 import {
   ShopOutlined,
   ShoppingCartOutlined,
-  DollarOutlined,
   InboxOutlined,
   RiseOutlined,
   EyeOutlined,
@@ -42,8 +41,8 @@ export default function RefinedDashboard() {
     {
       title: 'Total Revenue',
       value: 284750,
-      icon: <DollarOutlined className="text-2xl text-green-600" />,
-      prefix: '$',
+      icon: <InboxOutlined className="text-2xl text-green-600" />,
+      prefix: '₹',
       color: '#52c41a'
     },
     {
@@ -218,7 +217,7 @@ export default function RefinedDashboard() {
                     <div className="text-sm text-gray-500">{order.id}</div>
                   </div>
                   <div className="text-right">
-                    <div className="font-medium">${order.amount}</div>
+                    <div className="font-medium">₹{order.amount}</div>
                     <Tag color={getStatusColor(order.status)}>
                       {order.status}
                     </Tag>
@@ -236,7 +235,7 @@ export default function RefinedDashboard() {
                   <div className="flex-1">
                     <div className="font-medium">{product.name}</div>
                     <div className="text-sm text-gray-500">
-                      {product.sales} sold • ${product.revenue.toLocaleString()}
+                      {product.sales} sold • ₹{product.revenue.toLocaleString()}
                     </div>
                   </div>
                   <div className="text-right">

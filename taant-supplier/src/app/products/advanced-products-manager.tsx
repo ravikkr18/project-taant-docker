@@ -530,8 +530,8 @@ const AdvancedProductManager: React.FC = () => {
               >
                 <InputNumber
                   style={{ width: '100%' }}
-                  formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => Number(value!.replace(/\$\s?|(,*)/g, '')) as any}
+                  formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => Number(value!.replace(/₹\s?|(,*)/g, '')) as any}
                   placeholder="0.00"
                   min={0}
                   precision={2}
@@ -549,8 +549,8 @@ const AdvancedProductManager: React.FC = () => {
               >
                 <InputNumber
                   style={{ width: '100%' }}
-                  formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => Number(value!.replace(/\$\s?|(,*)/g, '')) as any}
+                  formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => Number(value!.replace(/₹\s?|(,*)/g, '')) as any}
                   placeholder="0.00"
                   min={0}
                   precision={2}
@@ -561,8 +561,8 @@ const AdvancedProductManager: React.FC = () => {
               <Form.Item name="compare_price" label="MRP">
                 <InputNumber
                   style={{ width: '100%' }}
-                  formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => Number(value!.replace(/\$\s?|(,*)/g, '')) as any}
+                  formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => Number(value!.replace(/₹\s?|(,*)/g, '')) as any}
                   placeholder="0.00"
                   min={0}
                   precision={2}
@@ -717,7 +717,6 @@ const AdvancedProductManager: React.FC = () => {
           <APlusContentImagesManager
             key={`content-images-${editingProduct?.id || 'new'}`}
             productId={editingProduct?.id || ''}
-            contentImages={contentImages}
             onChange={setContentImagesWithLogging}
           />
             </>
@@ -1668,7 +1667,7 @@ const AdvancedProductManager: React.FC = () => {
         ...(editingProduct ? (variantsWereModified ? {
           variants: productVariants.map(variant => {
             // For existing variants, preserve the original SKU
-            const originalVariant = originalProduct?.product_variants?.find(v => v.id === variant.id);
+            const originalVariant = editingProduct?.product_variants?.find(v => v.id === variant.id);
             return {
               ...variant,
               sku: originalVariant?.sku || variant.sku || `VAR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
@@ -1751,12 +1750,7 @@ const AdvancedProductManager: React.FC = () => {
       length: product.length || null,
       width: product.width || null,
       height: product.height || null,
-      quantity: product.quantity || 0,
-      options: product.options || [],
-      manufacturer: product.manufacturer || '',
-      model_number: product.model_number || '',
-      warranty_text: product.warranty_text || '',
-      shipping_requirements: product.shipping_requirements || '',
+          shipping_requirements: product.shipping_requirements || '',
       origin_country: product.origin_country || null,
       // Pricing fields with defaults
       cost_price: product.cost_price || 0,
@@ -1859,14 +1853,14 @@ const AdvancedProductManager: React.FC = () => {
       key: 'price',
       render: (_: any, record: Product) => (
         <div>
-          <div style={{ fontWeight: 'bold' }}>${record.base_price}</div>
+          <div style={{ fontWeight: 'bold' }}>₹{record.base_price}</div>
           {record.compare_price && (
             <div style={{
               color: '#999',
               fontSize: '12px',
               textDecoration: 'line-through'
             }}>
-              ${record.compare_price}
+              ₹{record.compare_price}
             </div>
           )}
         </div>
@@ -1897,7 +1891,7 @@ const AdvancedProductManager: React.FC = () => {
       render: (_: any, record: Product) => (
         <Space direction="vertical" size="small">
           <div style={{ fontSize: '11px', color: '#666' }}>
-            <div>💰 Revenue: ${record.total_revenue?.toFixed(2) || '0.00'}</div>
+            <div>💰 Revenue: ₹${record.total_revenue?.toFixed(2) || '0.00'}</div>
             <div>📊 Sales: {record.total_sales || 0}</div>
             <div>⭐ Rating: {record.rating || '0.0'} ({record.total_reviews || 0} reviews)</div>
             <div>👁️ Views: {record.view_count?.toLocaleString() || 0}</div>

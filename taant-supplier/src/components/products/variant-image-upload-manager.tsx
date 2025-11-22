@@ -325,7 +325,7 @@ const VariantImageUploadManager: React.FC<VariantImageUploadManagerProps> = ({
 
     // Mark this file as being processed and increment upload counter
     const currentUploadCounter = uploadCounter
-    setProcessingFiles(prev => new Set([...prev, fileKey]))
+    setProcessingFiles(prev => new Set(Array.from(prev).concat([fileKey])))
     setUploadCounter(prev => prev + 1)
 
     try {

@@ -314,7 +314,7 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
 
     // Mark this file as being processed and increment upload counter
     const currentUploadCounter = uploadCounter
-    setProcessingFiles(prev => new Set([...prev, fileKey]))
+    setProcessingFiles(prev => new Set(Array.from(prev).concat([fileKey])))
     setUploadCounter(prev => prev + 1)
 
     try {
@@ -371,36 +371,15 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
             is_primary: uploadedImage.is_primary,
           }
 
-          const response = await apiClient.createProductImage(productId, imageData)
+          const response = await apiClient.createProductImage(productId!, imageData)
           if (response) {
             console.log(`✅ Image saved to database: ${response.id} (replacing temp ID: ${uploadedImage.id})`)
 
             // Use functional update to ensure we get the latest state
             const finalImage = { ...response, file: uploadedImage.file, needsSave: false }
-            onChange(prevImages => {
-              // Check if this image is already in the state (avoid duplicates)
-              const alreadyExists = prevImages.some(img =>
-                img.file_name === finalImage.file_name ||
-                img.id === finalImage.id
-              )
 
-              if (alreadyExists) {
-                console.log(`⏭️ Image ${finalImage.file_name} already exists in state, skipping...`)
-                return prevImages
-              }
-
-              // Check if there's already a primary image in the current state
-              const hasPrimaryInState = prevImages.some(img => img.is_primary)
-
-              // If there's already a primary and this image is marked as primary, remove primary flag
-              if (hasPrimaryInState && finalImage.is_primary) {
-                console.log(`🔄 Removing primary flag from ${finalImage.file_name} - primary already exists`)
-                finalImage.is_primary = false
-              }
-
-              console.log(`➕ Adding image ${finalImage.file_name} to state (primary: ${finalImage.is_primary})`)
-              return [...prevImages, finalImage]
-            })
+            // Simple approach - just add the image to existing array
+            onChange([...images, finalImage])
 
             message.success(`Image "${uploadedImage.file_name}" uploaded and saved`)
           } else {
@@ -409,30 +388,7 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
         } catch (error) {
           console.error(`❌ Failed to save image to database: ${uploadedImage.id}`, error)
           // If database save fails, still add the uploaded image to state
-          onChange(prevImages => {
-            // Check if this temp image is already in the state
-            const alreadyExists = prevImages.some(img =>
-              img.file_name === uploadedImage.file_name ||
-              (img.id.startsWith('temp-') && img.id === uploadedImage.id)
-            )
-
-            if (alreadyExists) {
-              console.log(`⏭️ Temp image ${uploadedImage.file_name} already exists in state, skipping...`)
-              return prevImages
-            }
-
-            // Check if there's already a primary image in the current state
-            const hasPrimaryInState = prevImages.some(img => img.is_primary)
-
-            // If there's already a primary and this temp image is marked as primary, remove primary flag
-            if (hasPrimaryInState && uploadedImage.is_primary) {
-              console.log(`🔄 Removing primary flag from temp image ${uploadedImage.file_name} - primary already exists`)
-              uploadedImage.is_primary = false
-            }
-
-            console.log(`➕ Adding temp image ${uploadedImage.file_name} to state (primary: ${uploadedImage.is_primary})`)
-            return [...prevImages, uploadedImage]
-          })
+          onChange([...images, uploadedImage])
 
           message.warning(`Image uploaded to S3 but failed to save to database`)
         }

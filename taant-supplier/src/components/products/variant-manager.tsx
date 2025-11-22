@@ -435,19 +435,19 @@ const VariantManager: React.FC<VariantManagerProps> = ({
       key: 'pricing',
       render: (_: any, record: ProductVariant) => (
         <div>
-          <div style={{ fontWeight: 'bold', color: '#52c41a' }}>${record.price}</div>
+          <div style={{ fontWeight: 'bold', color: '#52c41a' }}>₹{record.price}</div>
           {record.compare_price && (
             <div style={{
               color: '#999',
               fontSize: '12px',
               textDecoration: 'line-through'
             }}>
-              ${record.compare_price}
+              ₹{record.compare_price}
             </div>
           )}
           {record.cost_price && (
             <div style={{ color: '#ff4d4f', fontSize: '11px' }}>
-              Cost: ${record.cost_price}
+              Cost: ₹{record.cost_price}
             </div>
           )}
         </div>
@@ -759,8 +759,8 @@ const VariantManager: React.FC<VariantManagerProps> = ({
               <Form.Item name="price" label="Price" rules={[{ required: true }]}>
                 <InputNumber
                   style={{ width: '100%' }}
-                  formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value!.replace(/₹\s?|(,*)/g, '')}
                   placeholder="0.00"
                 />
               </Form.Item>
@@ -769,8 +769,8 @@ const VariantManager: React.FC<VariantManagerProps> = ({
               <Form.Item name="compare_price" label="Compare Price">
                 <InputNumber
                   style={{ width: '100%' }}
-                  formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value!.replace(/₹\s?|(,*)/g, '')}
                   placeholder="0.00"
                 />
               </Form.Item>
@@ -779,8 +779,8 @@ const VariantManager: React.FC<VariantManagerProps> = ({
               <Form.Item name="cost_price" label="Cost Price">
                 <InputNumber
                   style={{ width: '100%' }}
-                  formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value!.replace(/₹\s?|(,*)/g, '')}
                   placeholder="0.00"
                 />
               </Form.Item>

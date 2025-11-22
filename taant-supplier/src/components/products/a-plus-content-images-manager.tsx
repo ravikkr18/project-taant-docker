@@ -32,6 +32,7 @@ interface APlusContentImage {
   height?: number
   created_at: string
   updated_at: string
+  needsSave?: boolean // Add this property
   file?: File // Add local file storage
 }
 
@@ -207,7 +208,7 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
   const [localImages, setLocalImages] = useState<APlusContentImage[]>([])
   const [isUploading, setIsUploading] = useState(false) // Track upload state to prevent duplicates
   const [orphanedImagesModal, setOrphanedImagesModal] = useState(false)
-  const [orphanedImages, setOrphanedImages] = useState([])
+  const [orphanedImages, setOrphanedImages] = useState<any[]>([])
   const [loadingOrphaned, setLoadingOrphaned] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
@@ -336,9 +337,9 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
       }
     } catch (error) {
       console.error('S3 upload error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : 'Unknown'
       })
       throw error
     }
