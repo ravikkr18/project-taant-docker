@@ -155,7 +155,7 @@ export default function ProductOptionsManager({ value = [], onChange }: ProductO
                     <ColorPicker
                       showText
                       allowClear
-                      value={option.value && option.value.startsWith('#') ? option.value : COMMON_COLORS.find(c => c.label === option.value)?.value}
+                      value={option.value || undefined}
                       presets={[
                         {
                           label: 'Common Colors',
@@ -163,9 +163,8 @@ export default function ProductOptionsManager({ value = [], onChange }: ProductO
                         },
                       ]}
                       onChange={(color, hex) => {
-                        if (color && hex) {
-                          const colorName = COMMON_COLORS.find(c => c.value === hex)?.label || hex
-                          updateOption(option.id, 'value', colorName)
+                        if (hex) {
+                          updateOption(option.id, 'value', hex)
                         }
                       }}
                       format="hex"
