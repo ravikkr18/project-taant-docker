@@ -189,8 +189,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set()); // No sections expanded by default
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
-  const [stockCount] = useState(14); // Fixed stock count
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+    const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [slug, setSlug] = useState<string>('');
   const [product, setProduct] = useState<any>(null);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
@@ -203,6 +202,21 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const [currentProductImages, setCurrentProductImages] = useState<string[]>([]);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const addToCartRef = useRef<HTMLDivElement>(null);
+
+  // Helper function to format stock count into ranges
+  const formatStockCount = (quantity: number): string => {
+    if (quantity < 10) {
+      return `Less than 10 in stock`;
+    } else if (quantity >= 10 && quantity < 20) {
+      return '10+ in stock';
+    } else if (quantity >= 20 && quantity < 50) {
+      return '20+ in stock';
+    } else if (quantity >= 50 && quantity < 100) {
+      return '50+ in stock';
+    } else {
+      return '100+ in stock';
+    }
+  };
   const { pincode, city } = useLocation();
 
   // Unwrap params promise and load product data
@@ -838,19 +852,19 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                   {/* Show current selection */}
                   <div className="text-xs text-gray-600 ml-2">
                     {selectedVariant ? (
-                      <span className="font-medium text-orange-600">
+                      <span className="font-medium text-black">
                         {selectedVariant.name}
                         {selectedVariant.inventory_quantity !== undefined && (
-                          <span className="text-gray-500 font-normal ml-1">
-                            ({selectedVariant.inventory_quantity} in stock)
+                          <span className={`font-normal ml-1 ${selectedVariant.inventory_quantity < 10 ? 'text-red-500' : 'text-gray-500'}`}>
+                            ({formatStockCount(selectedVariant.inventory_quantity)})
                           </span>
                         )}
                       </span>
                     ) : (
-                      <span className="font-medium text-orange-600">
+                      <span className="font-medium text-black">
                         Current
-                        <span className="text-gray-500 font-normal ml-1">
-                          ({stockCount} in stock)
+                        <span className={`font-normal ml-1 ${(product.quantity || 0) < 10 ? 'text-red-500' : 'text-gray-500'}`}>
+                          ({formatStockCount(product.quantity || 0)})
                         </span>
                       </span>
                     )}
@@ -936,9 +950,9 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                       {variant.inStock && (
                         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-10">
                           {variant.name}
-                          <div className="text-xs text-gray-300">
+                          <div className={`text-xs ${variant.inventory_quantity !== undefined && variant.inventory_quantity < 10 ? 'text-red-300' : 'text-gray-300'}`}>
                             {variant.inventory_quantity !== undefined ? (
-                              `${variant.inventory_quantity} in stock`
+                              formatStockCount(variant.inventory_quantity)
                             ) : (
                               'In stock'
                             )}

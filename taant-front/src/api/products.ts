@@ -13,6 +13,7 @@ export interface Product {
   rating: number;
   brand?: string;
   sku?: string;
+  quantity?: number;
   weight?: number;
   length?: number;
   width?: number;
@@ -223,6 +224,7 @@ export const transformProductForFrontend = (apiProduct: Product) => {
     badge: apiProduct.rating > 4.5 ? 'Top Rated' : undefined,
     brand: apiProduct.brand || apiProduct.suppliers?.business_name,
     sku: apiProduct.sku,
+    quantity: apiProduct.quantity,
     variants: variants,
     // Main product details (not variant details)
     weight: apiProduct.weight,
