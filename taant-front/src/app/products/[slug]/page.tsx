@@ -141,19 +141,37 @@ const getColorFromValue = (value: string): string | null => {
   return null;
 };
 
-const ColorDot: React.FC<{ color: string; size?: 'small' | 'medium' | 'large' }> = ({ color, size = 'small' }) => {
+const ColorDot: React.FC<{
+  color: string;
+  size?: 'small' | 'medium' | 'large';
+  isSelected?: boolean;
+  showRing?: boolean;
+}> = ({ color, size = 'medium', isSelected = false, showRing = true }) => {
   const sizeClasses = {
-    small: 'w-4 h-4',
-    medium: 'w-5 h-5',
-    large: 'w-6 h-6'
+    small: 'w-6 h-6',
+    medium: 'w-8 h-8',
+    large: 'w-10 h-10'
   };
 
   return (
-    <div
-      className={`${sizeClasses[size]} rounded-full border-2 border-gray-300 shadow-sm`}
-      style={{ backgroundColor: color }}
-      title={color}
-    />
+    <div className="relative">
+      <div
+        className={`${sizeClasses[size]} rounded-full border-2 transition-all duration-200 ${
+          isSelected
+            ? 'border-orange-500 ring-2 ring-orange-200 shadow-lg scale-110'
+            : showRing
+              ? 'border-gray-400 shadow-md hover:border-gray-600 hover:shadow-lg hover:scale-105'
+              : 'border-transparent shadow-md hover:shadow-lg hover:scale-105'
+        }`}
+        style={{ backgroundColor: color }}
+        title={color}
+      />
+      {isSelected && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-2 h-2 bg-white rounded-full shadow-sm"></div>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -969,12 +987,35 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
 
                         {/* Only show as clickable buttons if multiple options exist */}
                         {!hasSingleOption && (
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-3">
                             {uniqueValues.map((optionValue, index) => {
                               const isSelected = selectedOptions[optionName] === optionValue;
                               const isColor = isColorOption && isColorValue(optionValue);
                               const colorValue = isColor ? getColorFromValue(optionValue) : null;
 
+                              // For color options, show only beautiful color circles
+                              if (isColor && colorValue) {
+                                return (
+                                  <button
+                                    key={`${optionName}-${index}`}
+                                    onClick={() => setSelectedOptions(prev => ({
+                                      ...prev,
+                                      [optionName]: optionValue
+                                    }))}
+                                    className="transition-all duration-200 transform hover:scale-110"
+                                    title={optionValue}
+                                  >
+                                    <ColorDot
+                                      color={colorValue}
+                                      size="medium"
+                                      isSelected={isSelected}
+                                      showRing={true}
+                                    />
+                                  </button>
+                                );
+                              }
+
+                              // For non-color options, show regular buttons
                               return (
                                 <button
                                   key={`${optionName}-${index}`}
@@ -982,25 +1023,16 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                                     ...prev,
                                     [optionName]: optionValue
                                   }))}
-                                  className={`px-3 py-2 border-2 rounded text-sm font-medium transition-all duration-200 relative overflow-hidden group flex items-center gap-2 ${
+                                  className={`px-3 py-2 border-2 rounded text-sm font-medium transition-all duration-200 relative overflow-hidden group ${
                                     isSelected
                                       ? 'border-orange-500 bg-orange-50 text-orange-800'
                                       : 'border-gray-300 hover:border-gray-400 text-gray-700 hover:bg-gray-50'
                                   }`}
                                 >
                                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-200/30 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-all duration-500"></div>
-
-                                  {/* Show color dot for color options */}
-                                  {isColor && colorValue && (
-                                    <ColorDot color={colorValue} size="small" />
-                                  )}
-
-                                  <span className="relative z-10 capitalize">
-                                    {isColor && colorValue ? optionValue : optionValue}
-                                  </span>
-
+                                  <span className="relative z-10 capitalize">{optionValue}</span>
                                   {isSelected && (
-                                    <Check className="w-3 h-3 inline-block text-orange-600" />
+                                    <Check className="w-3 h-3 inline-block ml-1 text-orange-600" />
                                   )}
                                 </button>
                               );
