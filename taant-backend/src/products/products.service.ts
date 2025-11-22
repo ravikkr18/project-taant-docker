@@ -197,6 +197,9 @@ export class ProductsService {
       variantCount: productData.variants?.length || 0,
       variantKeys: productData.variants ? Object.keys(productData.variants[0] || {}) : [],
       allKeys: Object.keys(productData),
+      slug: productData.slug,
+      sku: productData.sku,
+      title: productData.title,
       aPlusContent: !!productData.a_plus_content,
       aPlusSections: !!productData.a_plus_sections
     });
@@ -227,12 +230,20 @@ export class ProductsService {
     };
 
     // Remove fields that shouldn't be updated directly
-    const fieldsToRemove = ['id', 'created_at', 'categories', 'suppliers', 'variant_count', 'total_revenue', 'total_sales', 'rating', 'total_reviews', 'view_count', 'wishlist_count'];
+    const fieldsToRemove = ['id', 'created_at', 'categories', 'suppliers', 'variant_count', 'total_revenue', 'total_sales', 'rating', 'total_reviews', 'view_count', 'wishlist_count', 'slug'];
 
     fieldsToRemove.forEach(field => {
       if (updateData[field] !== undefined) {
+        console.log(`🗑️ Removing protected field from update: ${field} = ${updateData[field]}`);
         delete updateData[field];
       }
+    });
+
+    console.log('📋 Final updateData after removing protected fields:', {
+      allKeys: Object.keys(updateData),
+      hasSlug: !!updateData.slug,
+      hasSku: !!updateData.sku,
+      hasTitle: !!updateData.title
     });
 
     // Update the main product
