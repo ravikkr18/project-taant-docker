@@ -585,46 +585,6 @@ export class ProductsService {
       throw new Error(`Failed to update variant: ${error.message}`);
     }
 
-    // Handle variant images if provided
-    if (variantData.variant_images && Array.isArray(variantData.variant_images)) {
-      // First, delete existing variant images for this variant
-      const { error: deleteError } = await supabase
-        .from('variant_images')
-        .delete()
-        .eq('variant_id', variantId);
-
-      if (deleteError) {
-        console.error('Failed to delete existing variant images:', deleteError);
-      }
-
-      // Then insert the new variant images
-      const variantImagesToInsert = variantData.variant_images
-        .filter(img => img.url && !img.id.startsWith('temp-')) // Only save real images with URLs and non-temp IDs
-        .map(img => ({
-          variant_id: variantId,
-          url: img.url,
-          alt_text: img.alt_text || img.file_name || '',
-          position: img.position || 0,
-          is_primary: img.is_primary || false,
-          file_name: img.file_name || '',
-          file_size: img.file_size || 0,
-          file_type: img.file_type || '',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }));
-
-      if (variantImagesToInsert.length > 0) {
-        const { error: imagesError } = await supabase
-          .from('variant_images')
-          .insert(variantImagesToInsert);
-
-        if (imagesError) {
-          // Don't fail the variant update, but log the error
-          console.error('Failed to update variant images:', imagesError);
-        }
-      }
-    }
-
     // Transform to frontend format (remove old columns, use JSON options)
     return transformVariantData(data);
   }
@@ -1557,76 +1517,73 @@ export class ProductsService {
       .update({ is_primary: false, updated_at: new Date().toISOString() })
       .eq('variant_id', variantId);
 
-    // Then set the specified image as primary
-    const { data, error } = await supabase
+    // First, try to get all records without .single() to handle potential duplicates
+    const { data: allRecords, error: fetchError } = await supabase
       .from('variant_images')
-      .update({
-        is_primary: true,
-        updated_at: new Date().toISOString()
-      })
+      .select('*')
       .eq('id', imageId)
-      .eq('variant_id', variantId)
-      .select()
-      .single();
+      .eq('variant_id', variantId);
 
-    if (error) {
-      // If we get a "Cannot coerce to single JSON object" error, it means multiple rows were affected
-      if (error.message.includes('Cannot coerce') || error.message.includes('multiple rows')) {
-        // Handle duplicates by first deleting all duplicates, then reinserting one
-        const { data: allDuplicates, error: fetchError } = await supabase
-          .from('variant_images')
-          .select('*')
-          .eq('id', imageId)
-          .eq('variant_id', variantId);
-
-        if (fetchError) {
-          throw new Error(`Failed to fetch duplicate records: ${fetchError.message}`);
-        }
-
-        if (allDuplicates && allDuplicates.length > 1) {
-          console.warn(`Found ${allDuplicates.length} duplicate image records for image ${imageId}, cleaning up...`);
-
-          // Keep the first one (most recent or first created) and delete the rest
-          const recordToKeep = allDuplicates[0];
-          const duplicatesToDelete = allDuplicates.slice(1);
-
-          // Delete duplicates
-          if (duplicatesToDelete.length > 0) {
-            const { error: deleteError } = await supabase
-              .from('variant_images')
-              .delete()
-              .in('id', duplicatesToDelete.map(d => d.id));
-
-            if (deleteError) {
-              console.error('Failed to delete duplicate images:', deleteError);
-            }
-          }
-
-          // Update the kept record
-          const { data: finalData, error: updateError } = await supabase
-            .from('variant_images')
-            .update({
-              is_primary: true,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', recordToKeep.id)
-            .select()
-            .single();
-
-          if (updateError) {
-            throw new Error(`Failed to update primary image after cleanup: ${updateError.message}`);
-          }
-
-          return finalData;
-        } else {
-          throw new Error(`Failed to update variant primary image - unexpected duplicate condition: ${error.message}`);
-        }
-      } else {
-        throw new Error(`Failed to update variant primary image: ${error.message}`);
-      }
+    if (fetchError) {
+      throw new Error(`Failed to fetch existing records: ${fetchError.message}`);
     }
 
-    return data;
+    if (allRecords && allRecords.length > 1) {
+      console.warn(`Found ${allRecords.length} duplicate records for image ${imageId}, cleaning up...`);
+
+      // Keep the first record, delete the rest
+      const recordToKeep = allRecords[0];
+      const duplicatesToDelete = allRecords.slice(1);
+
+      // Delete duplicates
+      if (duplicatesToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('variant_images')
+          .delete()
+          .in('id', duplicatesToDelete.map(d => d.id));
+
+        if (deleteError) {
+          console.error('Failed to delete duplicate images:', deleteError);
+          throw new Error(`Failed to clean up duplicate images: ${deleteError.message}`);
+        }
+      }
+
+      // Now set the kept record as primary
+      const { data, error } = await supabase
+        .from('variant_images')
+        .update({
+          is_primary: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', recordToKeep.id)
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to update primary image after cleanup: ${error.message}`);
+      }
+
+      return data;
+    } else if (allRecords && allRecords.length === 1) {
+      // Normal case: exactly one record found
+      const { data, error } = await supabase
+        .from('variant_images')
+        .update({
+          is_primary: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', allRecords[0].id)
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to update primary image: ${error.message}`);
+      }
+
+      return data;
+    } else {
+      throw new Error(`No image found with id ${imageId} for variant ${variantId}`);
+    }
   }
 
   async deleteVariantImage(variantId: string, imageId: string, userId: string) {
