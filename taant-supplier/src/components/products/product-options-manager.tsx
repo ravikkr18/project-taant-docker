@@ -145,31 +145,24 @@ export default function ProductOptionsManager({ value = [], onChange }: ProductO
               </Col>
               <Col span={10}>
                 {option.name?.toLowerCase() === 'color' ? (
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <Input
-                      value={option.value}
-                      placeholder="Color value"
-                      onChange={(e) => updateOption(option.id, 'value', e.target.value)}
-                      style={{ flex: 1 }}
-                    />
-                    <ColorPicker
-                      showText
-                      allowClear
-                      value={option.value || undefined}
-                      presets={[
-                        {
-                          label: 'Common Colors',
-                          colors: COMMON_COLORS.map(c => c.value),
-                        },
-                      ]}
-                      onChange={(color, hex) => {
-                        if (hex) {
-                          updateOption(option.id, 'value', hex)
-                        }
-                      }}
-                      format="hex"
-                    />
-                  </div>
+                  <ColorPicker
+                    showText
+                    allowClear
+                    value={option.value || undefined}
+                    presets={[
+                      {
+                        label: 'Common Colors',
+                        colors: COMMON_COLORS.map(c => c.value),
+                      },
+                    ]}
+                    onChange={(color, hex) => {
+                      if (hex) {
+                        updateOption(option.id, 'value', hex)
+                      }
+                    }}
+                    format="hex"
+                    style={{ width: '100%' }}
+                  />
                 ) : (
                   <Input
                     value={option.value}
