@@ -1289,27 +1289,17 @@ const AdvancedProductManager: React.FC = () => {
             />
           </Form.Item>
 
-          <Form.Item name="features" label="Key Features">
-            <div style={{
-              border: '1px solid #d9d9d9',
-              borderRadius: '6px',
-              padding: '12px',
-              backgroundColor: '#fafafa'
-            }}>
-              <div style={{ marginBottom: '8px', fontSize: '12px', color: '#666' }}>
-                💡 Enter one feature per line (press Enter for new line)
-              </div>
+          <div>
+            <Form.Item name="features" label="Key Features">
               <Input.TextArea
                 placeholder="• Premium quality material&#10;• Easy to install&#10;• Energy efficient design&#10;• 2-year warranty included"
                 rows={6}
-                style={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '4px',
-                  backgroundColor: '#fff'
-                }}
               />
+            </Form.Item>
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              💡 Enter one feature per line (press Enter for new line)
             </div>
-          </Form.Item>
+          </div>
 
           <InformationSectionsManager
             sections={informationSections}
