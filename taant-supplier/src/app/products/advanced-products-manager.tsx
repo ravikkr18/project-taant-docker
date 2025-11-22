@@ -476,7 +476,14 @@ const AdvancedProductManager: React.FC = () => {
                   }
                 ]}
               >
-                <AntInput placeholder="Auto-generated if empty" readOnly />
+                <AntInput
+                  placeholder="Auto-generated if empty"
+                  disabled={editingProduct?.sku !== ''}
+                  title={editingProduct?.sku ?
+                    "SKU cannot be modified once generated" :
+                    "Enter SKU or leave empty to auto-generate"
+                  }
+                />
               </Form.Item>
             </Col>
           </Row>
