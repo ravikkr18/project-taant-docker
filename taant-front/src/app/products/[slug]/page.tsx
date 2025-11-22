@@ -74,6 +74,89 @@ const getFallbackProducts = () => [
   }
 ];
 
+// Color utility functions
+const isColorValue = (value: string): boolean => {
+  // Check if value is a color (RGB, hex, or color word)
+  const colorPatterns = [
+    /^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$/i, // RGB format
+    /^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[\d.]+\s*\)$/i, // RGBA format
+    /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/i, // Hex format
+    /^[a-zA-Z]+$/ // Color names (will be checked against known colors)
+  ];
+
+  return colorPatterns.some(pattern => pattern.test(value.trim()));
+};
+
+const getColorFromValue = (value: string): string | null => {
+  const trimmedValue = value.trim().toLowerCase();
+
+  // Handle RGB format
+  const rgbMatch = trimmedValue.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+  if (rgbMatch) {
+    return trimmedValue;
+  }
+
+  // Handle RGBA format
+  const rgbaMatch = trimmedValue.match(/^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*[\d.]+\s*\)$/i);
+  if (rgbaMatch) {
+    return trimmedValue;
+  }
+
+  // Handle hex format
+  if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/i.test(trimmedValue)) {
+    return trimmedValue;
+  }
+
+  // Handle common color names
+  const colorNames: { [key: string]: string } = {
+    'red': '#FF0000',
+    'green': '#008000',
+    'blue': '#0000FF',
+    'yellow': '#FFFF00',
+    'orange': '#FFA500',
+    'purple': '#800080',
+    'pink': '#FFC0CB',
+    'brown': '#964B00',
+    'black': '#000000',
+    'white': '#FFFFFF',
+    'gray': '#808080',
+    'grey': '#808080',
+    'lime': '#00FF00',
+    'cyan': '#00FFFF',
+    'magenta': '#FF00FF',
+    'navy': '#000080',
+    'teal': '#008080',
+    'gold': '#FFD700',
+    'silver': '#C0C0C0',
+    'maroon': '#800000',
+    'olive': '#808000',
+    'aqua': '#00FFFF',
+    'fuchsia': '#FF00FF'
+  };
+
+  if (colorNames[trimmedValue]) {
+    return colorNames[trimmedValue];
+  }
+
+  return null;
+};
+
+const ColorDot: React.FC<{ color: string; size?: 'small' | 'medium' | 'large' }> = ({ color, size = 'small' }) => {
+  const sizeClasses = {
+    small: 'w-4 h-4',
+    medium: 'w-5 h-5',
+    large: 'w-6 h-6'
+  };
+
+  return (
+    <div
+      className={`${sizeClasses[size]} rounded-full border-2 border-gray-300 shadow-sm`}
+      style={{ backgroundColor: color }}
+      title={color}
+    />
+  );
+};
+
 const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
@@ -872,6 +955,9 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                     const hasSingleOption = optionValues.length === 1;
                     const uniqueValues = [...new Set(optionValues)]; // Remove duplicates
 
+                    // Check if this is a color option (case-insensitive)
+                    const isColorOption = optionName.toLowerCase() === 'color';
+
                     return (
                       <div key={optionName}>
                         <h3 className="text-sm font-semibold text-gray-900 mb-2">
@@ -886,6 +972,9 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                           <div className="flex flex-wrap gap-2">
                             {uniqueValues.map((optionValue, index) => {
                               const isSelected = selectedOptions[optionName] === optionValue;
+                              const isColor = isColorOption && isColorValue(optionValue);
+                              const colorValue = isColor ? getColorFromValue(optionValue) : null;
+
                               return (
                                 <button
                                   key={`${optionName}-${index}`}
@@ -893,16 +982,25 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                                     ...prev,
                                     [optionName]: optionValue
                                   }))}
-                                  className={`px-3 py-2 border-2 rounded text-sm font-medium transition-all duration-200 relative overflow-hidden group ${
+                                  className={`px-3 py-2 border-2 rounded text-sm font-medium transition-all duration-200 relative overflow-hidden group flex items-center gap-2 ${
                                     isSelected
                                       ? 'border-orange-500 bg-orange-50 text-orange-800'
                                       : 'border-gray-300 hover:border-gray-400 text-gray-700 hover:bg-gray-50'
                                   }`}
                                 >
                                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-200/30 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-all duration-500"></div>
-                                  <span className="relative z-10 capitalize">{optionValue}</span>
+
+                                  {/* Show color dot for color options */}
+                                  {isColor && colorValue && (
+                                    <ColorDot color={colorValue} size="small" />
+                                  )}
+
+                                  <span className="relative z-10 capitalize">
+                                    {isColor && colorValue ? optionValue : optionValue}
+                                  </span>
+
                                   {isSelected && (
-                                    <Check className="w-3 h-3 inline-block ml-1 text-orange-600" />
+                                    <Check className="w-3 h-3 inline-block text-orange-600" />
                                   )}
                                 </button>
                               );
