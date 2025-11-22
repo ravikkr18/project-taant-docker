@@ -155,6 +155,7 @@ export default function ProductOptionsManager({ value = [], onChange }: ProductO
                     <ColorPicker
                       showText
                       allowClear
+                      value={option.value && option.value.startsWith('#') ? option.value : COMMON_COLORS.find(c => c.label === option.value)?.value}
                       presets={[
                         {
                           label: 'Common Colors',

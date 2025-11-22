@@ -218,6 +218,7 @@ const AdvancedProductManager: React.FC = () => {
   const [features, setFeatures] = useState<string[]>([''])
   const [specifications, setSpecifications] = useState<Record<string, string>>({})
   const [contentImages, setContentImages] = useState<Array<any>>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [originalVariants, setOriginalVariants] = useState<ProductVariant[]>([])
   const [variantsWereModified, setVariantsWereModified] = useState(false)
 
@@ -291,6 +292,19 @@ const AdvancedProductManager: React.FC = () => {
   useEffect(() => {
     console.log('📋 TAB CHANGED - activeTab:', activeTab, 'for product:', editingProduct?.title || 'null')
   }, [activeTab, editingProduct])
+
+  // Load categories on component mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categoriesData = await apiClient.getCategories()
+        setCategories(categoriesData)
+      } catch (error) {
+        console.error('Failed to load categories:', error)
+      }
+    }
+    loadCategories()
+  }, [])
 
   // Custom tab change handler with variant refresh logic
   const handleTabChange = (tabKey: string) => {
@@ -462,7 +476,7 @@ const AdvancedProductManager: React.FC = () => {
                   }
                 ]}
               >
-                <AntInput placeholder="Auto-generated if empty" />
+                <AntInput placeholder="Auto-generated if empty" readOnly />
               </Form.Item>
             </Col>
           </Row>
@@ -492,22 +506,15 @@ const AdvancedProductManager: React.FC = () => {
                 rules={[{ required: true, message: 'Please select a category' }]}
               >
                 <Select placeholder="Select category">
-                  <Select.Option value="electronics">Electronics</Select.Option>
-                  <Select.Option value="clothing">Clothing</Select.Option>
-                  <Select.Option value="home">Home & Garden</Select.Option>
+                  {categories.map(category => (
+                    <Select.Option key={category.id} value={category.id}>
+                      {category.name}
+                    </Select.Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={6}>
-              <Form.Item name="brand_id" label="Brand">
-                <Select placeholder="Select brand" allowClear>
-                  <Select.Option value="apple">Apple</Select.Option>
-                  <Select.Option value="samsung">Samsung</Select.Option>
-                  <Select.Option value="sony">Sony</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={6}>
+                        <Col span={12}>
               <Form.Item name="status" label="Status" initialValue="draft">
                 <Select>
                   <Select.Option value="draft">Draft</Select.Option>
@@ -569,17 +576,7 @@ const AdvancedProductManager: React.FC = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
-              <Form.Item name="tags" label="Tags">
-                <Select
-                  mode="tags"
-                  style={{ width: '100%' }}
-                  placeholder="Add tags"
-                  tokenSeparators={[',']}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+            </Row>
 
           <Divider>Product Inventory & Options</Divider>
 
