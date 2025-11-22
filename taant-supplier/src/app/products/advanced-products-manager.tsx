@@ -1621,7 +1621,7 @@ const AdvancedProductManager: React.FC = () => {
         }
       }
 
-      const slug = await generateUniqueSlug(values.title, sku)
+      const slug = editingProduct?.slug || await generateUniqueSlug(values.title, sku)
 
       // Use current productImages state - ImageUploadManager keeps it in sync with database
       const finalImages = productImages
