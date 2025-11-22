@@ -945,31 +945,24 @@ const OptimizedVariantManager: React.FC<OptimizedVariantManagerProps> = ({
                     </Col>
                     <Col span={9}>
                       {option.name?.toLowerCase() === 'color' ? (
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <Input
-                            value={option.value}
-                            placeholder="Color value"
-                            onChange={(e) => updateVariantOption(option.id, 'value', e.target.value, editingVariant!)}
-                            style={{ flex: 1 }}
-                          />
-                          <ColorPicker
-                            showText
-                            allowClear
-                            presets={[
-                              {
-                                label: 'Common Colors',
-                                colors: COMMON_COLORS.map(c => c.value),
-                              },
-                            ]}
-                            onChange={(color, hex) => {
-                              if (color && hex) {
-                                const colorName = COMMON_COLORS.find(c => c.value === hex)?.label || hex
-                                updateVariantOption(option.id, 'value', colorName, editingVariant!)
-                              }
-                            }}
-                            format="hex"
-                          />
-                        </div>
+                        <ColorPicker
+                          showText
+                          allowClear
+                          value={option.value || undefined}
+                          presets={[
+                            {
+                              label: 'Common Colors',
+                              colors: COMMON_COLORS.map(c => c.value),
+                            },
+                          ]}
+                          onChange={(color, hex) => {
+                            if (hex) {
+                              updateVariantOption(option.id, 'value', hex, editingVariant!)
+                            }
+                          }}
+                          format="hex"
+                          style={{ width: '100%' }}
+                        />
                       ) : (
                         <Input
                           value={option.value}
