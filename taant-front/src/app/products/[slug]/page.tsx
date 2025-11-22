@@ -732,75 +732,117 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
             {/* Product Options: Main Product and Variants */}
             {(product.variants && product.variants.length > 0) && (
               <div>
-                <h3 className="text-xs font-semibold text-gray-900 mb-2">Options:</h3>
+                <div className="flex items-center mb-3">
+                  <h3 className="text-xs font-semibold text-gray-900">Options:</h3>
+                  {/* Show current selection */}
+                  <div className="text-xs text-gray-600 ml-2">
+                    {selectedVariant ? (
+                      <span className="font-medium text-orange-600">
+                        {selectedVariant.name}
+                        {selectedVariant.inventory_quantity !== undefined && (
+                          <span className="text-gray-500 font-normal ml-1">
+                            ({selectedVariant.inventory_quantity} in stock)
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="font-medium text-orange-600">Current</span>
+                    )}
+                  </div>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {/* Main Product Option */}
-                  <button
-                    onClick={() => handleMainProductSelect()}
-                    className={`relative group transition-all duration-200 rounded-lg border-2 overflow-hidden w-16 h-20 ${
-                      !selectedVariant
-                        ? 'border-orange-500 ring-2 ring-orange-200 scale-105'
-                        : 'border-gray-200 hover:border-gray-400 hover:scale-105'
-                    }`}
-                  >
-                    <div className="aspect-square bg-gray-100">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="p-1 bg-white">
-                      <h4 className="text-[8px] font-medium text-gray-900 truncate leading-tight">Main Product</h4>
-                      <p className="text-[8px] font-bold text-orange-800 leading-tight">
-                        ₹{Math.round(product.price || 0).toLocaleString('en-IN')}
-                      </p>
-                    </div>
-                    {!selectedVariant && (
-                      <div className="absolute top-1 right-1 bg-orange-500 rounded-full p-0.5">
-                        <Check className="w-2 h-2 text-white" />
-                      </div>
-                    )}
-                  </button>
-
-                  {/* Variant Options */}
-                  {product.variants.map((variant: any) => (
+                  <div className="relative group">
                     <button
-                      key={variant.id}
-                      onClick={() => handleVariantSelect(variant)}
-                      disabled={!variant.inStock}
-                      className={`relative group transition-all duration-200 rounded-lg border-2 overflow-hidden w-16 h-20 ${
-                        !variant.inStock ? 'opacity-50 cursor-not-allowed' : ''
-                      } ${
-                        selectedVariant?.id === variant.id
-                          ? 'border-orange-500 ring-2 ring-orange-200 scale-105'
-                          : 'border-gray-200 hover:border-gray-400 hover:scale-105'
+                      onClick={() => handleMainProductSelect()}
+                      className={`relative transition-all duration-200 rounded-lg border-2 overflow-hidden w-20 h-28 ${
+                        !selectedVariant
+                          ? 'border-orange-500 ring-2 ring-orange-200 scale-105 shadow-lg'
+                          : 'border-gray-200 hover:border-gray-400 hover:scale-105 hover:shadow-md'
                       }`}
                     >
-                      <div className="aspect-square bg-gray-100">
+                      <div className="aspect-square bg-gray-100 h-20">
                         <img
-                          src={variant.image || product.image}
-                          alt={variant.name}
+                          src={product.image}
+                          alt={product.name}
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <div className="p-1 bg-white">
-                        <h4 className="text-[8px] font-medium text-gray-900 truncate leading-tight">{variant.name}</h4>
-                        <p className="text-[8px] font-bold text-orange-800 leading-tight">
-                          ₹{Math.round(variant.price).toLocaleString('en-IN')}
+                      <div className="p-2 bg-white">
+                        <p className="text-[10px] font-bold text-orange-800 text-center leading-tight">
+                          ₹{Math.round(product.price || 0).toLocaleString('en-IN')}
                         </p>
                       </div>
-                      {selectedVariant?.id === variant.id && (
+                      {!selectedVariant && (
                         <div className="absolute top-1 right-1 bg-orange-500 rounded-full p-0.5">
-                          <Check className="w-2 h-2 text-white" />
-                        </div>
-                      )}
-                      {!variant.inStock && (
-                        <div className="absolute inset-0 bg-gray-900/50 flex items-center justify-center">
-                          <span className="text-white text-[6px] font-medium">Out of Stock</span>
+                          <Check className="w-3 h-3 text-white" />
                         </div>
                       )}
                     </button>
+                    {/* Hover tooltip */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-10">
+                      Main Product
+                      <div className="text-xs text-gray-300">Always in stock</div>
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                        <div className="border-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Variant Options */}
+                  {product.variants.map((variant: any) => (
+                    <div key={variant.id} className="relative group">
+                      <button
+                        onClick={() => handleVariantSelect(variant)}
+                        disabled={!variant.inStock}
+                        className={`relative transition-all duration-200 rounded-lg border-2 overflow-hidden w-20 h-28 ${
+                          !variant.inStock ? 'opacity-50 cursor-not-allowed' : ''
+                        } ${
+                          selectedVariant?.id === variant.id
+                            ? 'border-orange-500 ring-2 ring-orange-200 scale-105 shadow-lg'
+                            : 'border-gray-200 hover:border-gray-400 hover:scale-105 hover:shadow-md'
+                        }`}
+                      >
+                        <div className="aspect-square bg-gray-100 h-20">
+                          <img
+                            src={variant.image || product.image}
+                            alt={variant.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="p-2 bg-white">
+                          <p className="text-[10px] font-bold text-orange-800 text-center leading-tight">
+                            ₹{Math.round(variant.price).toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                        {selectedVariant?.id === variant.id && (
+                          <div className="absolute top-1 right-1 bg-orange-500 rounded-full p-0.5">
+                            <Check className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                        {!variant.inStock && (
+                          <div className="absolute inset-0 bg-gray-900/50 flex items-center justify-center">
+                            <span className="text-white text-[8px] font-medium">Out of Stock</span>
+                          </div>
+                        )}
+                      </button>
+                      {/* Hover tooltip */}
+                      {variant.inStock && (
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-10">
+                          {variant.name}
+                          <div className="text-xs text-gray-300">
+                            {variant.inventory_quantity !== undefined ? (
+                              `${variant.inventory_quantity} in stock`
+                            ) : (
+                              'In stock'
+                            )}
+                          </div>
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                            <div className="border-4 border-transparent border-t-gray-900"></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
