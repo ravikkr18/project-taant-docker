@@ -207,10 +207,7 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
   const [uploading, setUploading] = useState(false)
   const [localImages, setLocalImages] = useState<APlusContentImage[]>([])
   const [isUploading, setIsUploading] = useState(false) // Track upload state to prevent duplicates
-  const [orphanedImagesModal, setOrphanedImagesModal] = useState(false)
-  const [orphanedImages, setOrphanedImages] = useState<any[]>([])
-  const [loadingOrphaned, setLoadingOrphaned] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+    const [isLoading, setIsLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
 
   // Load content images fresh every time component mounts or productId changes
@@ -249,38 +246,7 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
   // Remove the second useEffect to prevent race conditions
   // The first useEffect already handles state updates properly
 
-  // Handle orphaned images management
-  const handleViewOrphanedImages = async () => {
-    setLoadingOrphaned(true)
-    try {
-      const response = await apiClient.getOrphanedImages()
-      if (response.success) {
-        setOrphanedImages(response.data.orphanedImages)
-        setOrphanedImagesModal(true)
-        message.info(`Found ${response.data.orphanedCount} orphaned images out of ${response.data.totalS3Images} total S3 images`)
-      }
-    } catch (error) {
-      console.error('Failed to fetch orphaned images:', error)
-      message.error('Failed to fetch orphaned images')
-    } finally {
-      setLoadingOrphaned(false)
-    }
-  }
-
-  const handleCleanupOrphanedImages = async (selectedKeys: string[]) => {
-    try {
-      const response = await apiClient.cleanupOrphanedImages(selectedKeys)
-      if (response.success) {
-        message.success(`Successfully deleted ${response.data.deletedCount} orphaned images`)
-        // Refresh the orphaned images list
-        await handleViewOrphanedImages()
-      }
-    } catch (error) {
-      console.error('Failed to cleanup orphaned images:', error)
-      message.error('Failed to cleanup orphaned images')
-    }
-  }
-
+  
   // Save any unsaved temp images (cleanup mechanism)
   React.useEffect(() => {
     const unsavedImages = localImages.filter(img => img.needsSave && img.id.startsWith('temp-'))
@@ -606,14 +572,7 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
             </Text>
           </div>
           <Space>
-            <Button
-              icon={<DeleteOutlined />}
-              loading={loadingOrphaned}
-              onClick={handleViewOrphanedImages}
-            >
-              Manage Orphaned Images
-            </Button>
-            <Upload {...uploadProps}>
+              <Upload {...uploadProps}>
               <Button
                 type="primary"
                 icon={<UploadOutlined />}
@@ -690,99 +649,6 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
             )}
           </>
         )}
-
-        {/* Orphaned Images Management Modal */}
-        <Modal
-          title="Manage Orphaned Images"
-          open={orphanedImagesModal}
-          onCancel={() => setOrphanedImagesModal(false)}
-          width={800}
-          footer={[
-            <Button key="cancel" onClick={() => setOrphanedImagesModal(false)}>
-              Close
-            </Button>,
-            <Button
-              key="cleanup"
-              type="primary"
-              danger
-              onClick={() => {
-                const selectedKeys = orphanedImages.map(img => img.key)
-                if (selectedKeys.length > 0) {
-                  Modal.confirm({
-                    title: 'Delete Orphaned Images',
-                    content: `Are you sure you want to delete ${selectedKeys.length} orphaned images? This action cannot be undone.`,
-                    onOk: () => handleCleanupOrphanedImages(selectedKeys),
-                  })
-                } else {
-                  message.info('No orphaned images to delete')
-                }
-              }}
-            >
-              Delete All Orphaned Images ({orphanedImages.length})
-            </Button>,
-          ]}
-        >
-          <div>
-            <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-              Orphaned images are files in S3 that are not registered in the database. These are typically from failed uploads or abandoned sessions.
-            </Text>
-
-            {orphanedImages.length > 0 ? (
-              <Table
-                dataSource={orphanedImages}
-                rowKey="key"
-                size="small"
-                pagination={{ pageSize: 10 }}
-                columns={[
-                  {
-                    title: 'S3 Key',
-                    dataIndex: 'key',
-                    key: 'key',
-                    ellipsis: true,
-                    render: (text) => (
-                      <Text code style={{ fontSize: '11px' }}>{text}</Text>
-                    )
-                  },
-                  {
-                    title: 'Size',
-                    dataIndex: 'size',
-                    key: 'size',
-                    render: (size) => size ? `${(size / 1024 / 1024).toFixed(2)} MB` : 'Unknown'
-                  },
-                  {
-                    title: 'Last Modified',
-                    dataIndex: 'lastModified',
-                    key: 'lastModified',
-                    render: (date) => date ? new Date(date).toLocaleString() : 'Unknown'
-                  },
-                  {
-                    title: 'Actions',
-                    key: 'actions',
-                    render: (_, record) => (
-                      <Button
-                        size="small"
-                        danger
-                        onClick={() => {
-                          Modal.confirm({
-                            title: 'Delete Image',
-                            content: `Are you sure you want to delete ${record.key}?`,
-                            onOk: () => handleCleanupOrphanedImages([record.key]),
-                          })
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    )
-                  }
-                ]}
-              />
-            ) : (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <Text type="secondary">No orphaned images found. Your S3 storage is clean!</Text>
-              </div>
-            )}
-          </div>
-        </Modal>
       </div>
     </DndProvider>
   )
