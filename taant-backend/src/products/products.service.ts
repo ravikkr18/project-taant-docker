@@ -555,8 +555,31 @@ export class ProductsService {
       .update(updateData)
       .eq('id', variantId)
       .eq('product_id', productId)
-      .select()
+      .select(`
+        *,
+        variant_images (
+          id,
+          url,
+          alt_text,
+          file_name,
+          file_size,
+          file_type,
+          width,
+          height,
+          position,
+          is_primary
+        )
+      `)
       .single();
+
+    // Sort variant_images to ensure primary images come first
+    if (data && data.variant_images) {
+      data.variant_images.sort((a, b) => {
+        if (a.is_primary && !b.is_primary) return -1;
+        if (!a.is_primary && b.is_primary) return 1;
+        return a.position - b.position;
+      });
+    }
 
     if (error) {
       throw new Error(`Failed to update variant: ${error.message}`);
@@ -1547,7 +1570,60 @@ export class ProductsService {
       .single();
 
     if (error) {
-      throw new Error(`Failed to update variant primary image: ${error.message}`);
+      // If we get a "Cannot coerce to single JSON object" error, it means multiple rows were affected
+      if (error.message.includes('Cannot coerce') || error.message.includes('multiple rows')) {
+        // Handle duplicates by first deleting all duplicates, then reinserting one
+        const { data: allDuplicates, error: fetchError } = await supabase
+          .from('variant_images')
+          .select('*')
+          .eq('id', imageId)
+          .eq('variant_id', variantId);
+
+        if (fetchError) {
+          throw new Error(`Failed to fetch duplicate records: ${fetchError.message}`);
+        }
+
+        if (allDuplicates && allDuplicates.length > 1) {
+          console.warn(`Found ${allDuplicates.length} duplicate image records for image ${imageId}, cleaning up...`);
+
+          // Keep the first one (most recent or first created) and delete the rest
+          const recordToKeep = allDuplicates[0];
+          const duplicatesToDelete = allDuplicates.slice(1);
+
+          // Delete duplicates
+          if (duplicatesToDelete.length > 0) {
+            const { error: deleteError } = await supabase
+              .from('variant_images')
+              .delete()
+              .in('id', duplicatesToDelete.map(d => d.id));
+
+            if (deleteError) {
+              console.error('Failed to delete duplicate images:', deleteError);
+            }
+          }
+
+          // Update the kept record
+          const { data: finalData, error: updateError } = await supabase
+            .from('variant_images')
+            .update({
+              is_primary: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', recordToKeep.id)
+            .select()
+            .single();
+
+          if (updateError) {
+            throw new Error(`Failed to update primary image after cleanup: ${updateError.message}`);
+          }
+
+          return finalData;
+        } else {
+          throw new Error(`Failed to update variant primary image - unexpected duplicate condition: ${error.message}`);
+        }
+      } else {
+        throw new Error(`Failed to update variant primary image: ${error.message}`);
+      }
     }
 
     return data;
