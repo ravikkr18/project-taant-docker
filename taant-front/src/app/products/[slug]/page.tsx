@@ -847,7 +847,12 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                         )}
                       </span>
                     ) : (
-                      <span className="font-medium text-orange-600">Current</span>
+                      <span className="font-medium text-orange-600">
+                        Current
+                        <span className="text-gray-500 font-normal ml-1">
+                          ({stockCount} in stock)
+                        </span>
+                      </span>
                     )}
                   </div>
                 </div>
