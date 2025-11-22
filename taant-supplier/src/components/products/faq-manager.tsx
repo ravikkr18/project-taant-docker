@@ -88,49 +88,49 @@ const DraggableFAQItem: React.FC<{
         opacity: isDragging ? 0.5 : 1,
         cursor: 'move',
         transition: 'all 0.3s ease',
-        marginBottom: 8,
+        marginBottom: 6,
       }}
     >
-      <Row gutter={16} align="top">
+      <Row gutter={12} align="top">
         <Col span={1}>
           <div style={{
-            width: 24,
-            height: 24,
+            width: 20,
+            height: 20,
             borderRadius: '50%',
             background: '#1890ff',
             color: 'white',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '12px',
+            fontSize: '11px',
             fontWeight: 'bold',
-            marginTop: 4
+            marginTop: 2
           }}>
             {index + 1}
           </div>
         </Col>
-        <Col span={11}>
-          <div style={{ marginBottom: 8 }}>
-            <Input
-              placeholder="Question"
-              value={faq.question}
-              onChange={(e) => onUpdate(faq.id, 'question', e.target.value)}
-              style={{ fontWeight: 'bold' }}
-              prefix={<QuestionCircleOutlined style={{ color: '#1890ff' }} />}
-            />
-          </div>
+        <Col span={12}>
+          <Input
+            placeholder="Question"
+            value={faq.question}
+            onChange={(e) => onUpdate(faq.id, 'question', e.target.value)}
+            style={{ fontWeight: 'bold', marginBottom: 4 }}
+            size="small"
+            prefix={<QuestionCircleOutlined style={{ color: '#1890ff', fontSize: '12px' }} />}
+          />
           <TextArea
             placeholder="Answer"
             value={faq.answer}
             onChange={(e) => onUpdate(faq.id, 'answer', e.target.value)}
             rows={2}
             style={{ resize: 'none' }}
+            size="small"
           />
         </Col>
         <Col span={11}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Space>
-              <Text type="secondary">Status:</Text>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Space size="small">
+              <Text type="secondary" style={{ fontSize: '12px' }}>Status:</Text>
               <Switch
                 size="small"
                 checked={faq.is_active}
@@ -138,30 +138,27 @@ const DraggableFAQItem: React.FC<{
                 checkedChildren="Active"
                 unCheckedChildren="Hidden"
               />
-            </Space>
-            <Space>
-              <Tag color={faq.is_active ? 'success' : 'default'}>
+              <Tag color={faq.is_active ? 'success' : 'default'} size="small">
                 {faq.is_active ? 'Visible' : 'Hidden'}
               </Tag>
-              <Button
-                size="small"
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => onRemove(faq.id)}
-              />
+              {faq.question && faq.answer && (
+                <Tag color="green" icon={<StarOutlined />} size="small">
+                  Complete
+                </Tag>
+              )}
             </Space>
+            <Button
+              size="small"
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => onRemove(faq.id)}
+            />
           </div>
-          <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
-            <DragOutlined /> Drag to reorder • Position: {index + 1}/{MAX_FAQS}
+          <div style={{ marginTop: 6, fontSize: '11px', color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <DragOutlined style={{ fontSize: '10px' }} />
+            <span>Drag • Pos: {index + 1}/{MAX_FAQS}</span>
           </div>
-          {faq.question && faq.answer && (
-            <div style={{ marginTop: 4 }}>
-              <Tag color="green" icon={<StarOutlined />}>
-                Complete
-              </Tag>
-            </div>
-          )}
         </Col>
       </Row>
     </Card>
@@ -236,11 +233,11 @@ const FAQManager: React.FC<FAQManagerProps> = ({ faqs, onChange }) => {
     <DndProvider backend={HTML5Backend}>
       <div>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div>
-            <Title level={4}>Frequently Asked Questions</Title>
-            <Text type="secondary">
-              Manage customer Q&A with a maximum of {MAX_FAQS} items
+            <Title level={5} style={{ margin: 0, marginBottom: 2 }}>Frequently Asked Questions</Title>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              Manage customer Q&A • Max {MAX_FAQS} items
             </Text>
           </div>
           <Button
@@ -248,78 +245,63 @@ const FAQManager: React.FC<FAQManagerProps> = ({ faqs, onChange }) => {
             icon={<PlusOutlined />}
             onClick={addFAQ}
             disabled={faqs.length >= MAX_FAQS}
+            size="small"
           >
             Add FAQ ({faqs.length}/{MAX_FAQS})
           </Button>
         </div>
 
-        {/* Statistics */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 16 }}>
-          <Card size="small">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text type="secondary">Total FAQs</Text>
-              <Text strong>{faqs.length}</Text>
-            </div>
-          </Card>
-          <Card size="small">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text type="secondary">Active</Text>
-              <Text strong style={{ color: '#52c41a' }}>{activeFAQs.length}</Text>
-            </div>
-          </Card>
-          <Card size="small">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text type="secondary">Complete</Text>
-              <Text strong style={{ color: '#1890ff' }}>{completeFAQs.length}</Text>
-            </div>
-          </Card>
-          <Card size="small">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text type="secondary">Incomplete</Text>
-              <Text strong style={{ color: '#faad14' }}>
-                {faqs.length - completeFAQs.length}
-              </Text>
-            </div>
-          </Card>
-        </div>
-
-        {/* Progress Bar */}
+        {/* Compact Statistics & Progress */}
         {faqs.length > 0 && (
-          <Alert
-            message={`FAQ Progress: ${completeFAQs.length} of ${faqs.length} completed`}
-            description={
-              <div style={{ marginTop: 8 }}>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
+              <Space split={<span style={{ color: '#d9d9d9' }}>|</span>}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  Total: <Text strong>{faqs.length}</Text>
+                </Text>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  Active: <Text strong style={{ color: '#52c41a' }}>{activeFAQs.length}</Text>
+                </Text>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  Complete: <Text strong style={{ color: '#1890ff' }}>{completeFAQs.length}</Text>
+                </Text>
+                {faqs.length - completeFAQs.length > 0 && (
+                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                    Incomplete: <Text strong style={{ color: '#faad14' }}>{faqs.length - completeFAQs.length}</Text>
+                  </Text>
+                )}
+              </Space>
+            </div>
+
+            {/* Compact Progress Bar */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div
+                style={{
+                  flex: 1,
+                  height: 6,
+                  backgroundColor: '#f0f0f0',
+                  borderRadius: 3,
+                  overflow: 'hidden'
+                }}
+              >
                 <div
                   style={{
-                    width: '100%',
-                    height: 8,
-                    backgroundColor: '#f0f0f0',
-                    borderRadius: 4,
-                    overflow: 'hidden'
+                    height: '100%',
+                    width: `${(completeFAQs.length / faqs.length) * 100}%`,
+                    backgroundColor: completeFAQs.length === faqs.length ? '#52c41a' : '#1890ff',
+                    transition: 'width 0.3s ease'
                   }}
-                >
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${(completeFAQs.length / faqs.length) * 100}%`,
-                      backgroundColor: '#52c41a',
-                      transition: 'width 0.3s ease'
-                    }}
-                  />
-                </div>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  {Math.round((completeFAQs.length / faqs.length) * 100)}% Complete
-                </Text>
+                />
               </div>
-            }
-            type={completeFAQs.length === faqs.length ? 'success' : 'info'}
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
+              <Text type="secondary" style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>
+                {Math.round((completeFAQs.length / faqs.length) * 100)}% Complete
+              </Text>
+            </div>
+          </div>
         )}
 
         {/* FAQ List */}
-        <div style={{ display: 'grid', gap: 8 }}>
+        <div style={{ display: 'grid', gap: 6 }}>
           {faqs.map((faq, index) => (
             <DraggableFAQItem
               key={faq.id}
@@ -335,14 +317,14 @@ const FAQManager: React.FC<FAQManagerProps> = ({ faqs, onChange }) => {
 
         {/* Empty State */}
         {faqs.length === 0 && (
-          <Card>
-            <div style={{ textAlign: 'center', padding: 32 }}>
-              <div style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }}>
+          <Card size="small">
+            <div style={{ textAlign: 'center', padding: 24 }}>
+              <div style={{ fontSize: 36, color: '#d9d9d9', marginBottom: 12 }}>
                 <QuestionCircleOutlined />
               </div>
-              <Text type="secondary">No FAQs created yet</Text>
-              <div style={{ marginTop: 16 }}>
-                <Button type="primary" icon={<PlusOutlined />} onClick={addFAQ}>
+              <Text type="secondary" style={{ fontSize: '14px' }}>No FAQs created yet</Text>
+              <div style={{ marginTop: 12 }}>
+                <Button type="primary" icon={<PlusOutlined />} onClick={addFAQ} size="small">
                   Add Your First FAQ
                 </Button>
               </div>
@@ -354,14 +336,15 @@ const FAQManager: React.FC<FAQManagerProps> = ({ faqs, onChange }) => {
         {faqs.length >= MAX_FAQS && (
           <Alert
             message="FAQ Limit Reached"
-            description={`You have reached the maximum limit of ${MAX_FAQS} FAQs. Consider removing or combining existing FAQs.`}
+            description={`Maximum ${MAX_FAQS} FAQs. Consider removing or combining existing FAQs.`}
             type="warning"
             showIcon
-            style={{ marginTop: 16 }}
+            size="small"
+            style={{ marginTop: 8 }}
           />
         )}
 
-          </div>
+      </div>
     </DndProvider>
   )
 }
