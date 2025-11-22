@@ -1073,13 +1073,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
               </div>
             </div>
 
-            {/* Stock Status */}
-            <div className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg border border-orange-200">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-orange-800 font-medium text-sm">In Stock</span>
-              <span className="text-orange-600 text-xs">• Only {stockCount} left</span>
-            </div>
-
+  
             {/* Estimated Delivery Time */}
             {pincode && (
               <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
