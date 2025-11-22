@@ -841,43 +841,57 @@ const AdvancedProductManager: React.FC = () => {
 
           <Card title="Dimensions (cm)" style={{ marginBottom: 16 }}>
             <Row gutter={[12, 8]}>
-              <Col xs={24} sm={12} md={6}>
-                <Form.Item name="length" label="Length" style={{ marginBottom: 8 }}>
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    placeholder="0.0"
-                    step={0.1}
-                    min={0}
-                                      />
+              <Col xs={24} md={16}>
+                <Form.Item label="Dimensions (L × W × H)" style={{ marginBottom: 8 }}>
+                  <Input.Group compact>
+                    <Form.Item name="length" noStyle>
+                      <InputNumber
+                        style={{ width: '30%' }}
+                        placeholder="Length"
+                        step={0.1}
+                        min={0}
+                        size="small"
+                      />
+                    </Form.Item>
+                    <Input
+                      style={{ width: '5%', textAlign: 'center', borderLeft: 0, borderRight: 0, pointerEvents: 'none', backgroundColor: '#fff' }}
+                      placeholder="×"
+                      readOnly
+                    />
+                    <Form.Item name="width" noStyle>
+                      <InputNumber
+                        style={{ width: '30%', borderLeft: 0 }}
+                        placeholder="Width"
+                        step={0.1}
+                        min={0}
+                        size="small"
+                      />
+                    </Form.Item>
+                    <Input
+                      style={{ width: '5%', textAlign: 'center', borderLeft: 0, borderRight: 0, pointerEvents: 'none', backgroundColor: '#fff' }}
+                      placeholder="×"
+                      readOnly
+                    />
+                    <Form.Item name="height" noStyle>
+                      <InputNumber
+                        style={{ width: '30%', borderLeft: 0 }}
+                        placeholder="Height"
+                        step={0.1}
+                        min={0}
+                        size="small"
+                      />
+                    </Form.Item>
+                  </Input.Group>
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12} md={6}>
-                <Form.Item name="width" label="Width" style={{ marginBottom: 8 }}>
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    placeholder="0.0"
-                    step={0.1}
-                    min={0}
-                                      />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={6}>
-                <Form.Item name="height" label="Height" style={{ marginBottom: 8 }}>
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    placeholder="0.0"
-                    step={0.1}
-                    min={0}
-                                      />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={6}>
+              <Col xs={24} md={8}>
                 <Form.Item label="Volume" style={{ marginBottom: 8 }}>
                   <Input
-                    value="Auto"
+                    value="Auto-calculated"
                     readOnly
-                                        style={{ backgroundColor: '#f5f5f5', color: '#666' }}
-                    placeholder="Calculated automatically"
+                    size="small"
+                    style={{ backgroundColor: '#f5f5f5', color: '#666' }}
+                    placeholder="Auto"
                   />
                 </Form.Item>
               </Col>
