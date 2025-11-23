@@ -39,6 +39,7 @@ export interface Product {
     created_at: string;
     updated_at: string;
   }[];
+  features?: string[];
   faqs?: any[];
   product_details?: {
     // Basic Specifications from Product Details tab
@@ -276,6 +277,7 @@ export const transformProductForFrontend = (apiProduct: Product) => {
         ? { length: apiProduct.length, width: apiProduct.width, height: apiProduct.height }
         : undefined),
     specifications: apiProduct,
+    features: apiProduct.features || [],
     a_plus_content_images: apiProduct.a_plus_content_images || [],
     faqs: apiProduct.faqs || [],
     product_details: apiProduct.product_details || null
