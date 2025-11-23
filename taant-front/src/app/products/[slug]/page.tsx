@@ -1430,8 +1430,8 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
               .sort((a: any, b: any) => a.position - b.position)
               .map((contentImage: any, index: number) => (
                 <div key={contentImage.id} className="mb-12 last:mb-0">
-                  {/* Full-width image - extends beyond container */}
-                  <div className="w-full -mx-6 lg:-mx-8 mb-6">
+                  {/* Full-width image - extends to browser edges */}
+                  <div className="w-screen -ml-[50vw] left-[50vw] relative mb-6">
                     <img
                       src={contentImage.url}
                       alt={contentImage.alt_text || `Product image ${index + 1}`}
