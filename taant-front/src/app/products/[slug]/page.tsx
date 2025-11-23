@@ -1435,11 +1435,11 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
               .map((contentImage: any, index: number) => (
                 <div key={contentImage.id} className=" last:mb-0">
                   {/* Full-width image - true browser width with height limit */}
-                  <div className="w-full max-h-[60vh] lg:max-h-[70vh]">
+                  <div className="w-full mb-6">
                     <img
                       src={contentImage.url}
                       alt={contentImage.alt_text || `Product image ${index + 1}`}
-                      className="w-full h-auto object-contain"
+                      className="w-full max-h-[60vh] lg:max-h-[70vh] h-auto object-contain block"
                     />
                   </div>
 
