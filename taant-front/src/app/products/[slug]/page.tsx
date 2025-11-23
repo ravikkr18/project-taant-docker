@@ -1462,27 +1462,19 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
           <h3 className="text-xl font-bold text-gray-900 mb-4">Description</h3>
           <div className="text-gray-700">
             <p className="mb-4">{product.description}</p>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-3">Key Features:</h4>
-              <ul className="space-y-2">
-                <li className="flex items-start gap-2">
-                  <span className="text-orange-800 mt-1">•</span>
-                  <span>Premium 40mm drivers deliver exceptional sound quality with deep bass and crystal-clear highs</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-orange-800 mt-1">•</span>
-                  <span>Industry-leading Active Noise Cancellation blocks out ambient noise for immersive listening</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-orange-800 mt-1">•</span>
-                  <span>Up to 30 hours of battery life with quick charge support</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-orange-800 mt-1">•</span>
-                  <span>Memory foam ear cushions provide premium comfort for extended wear</span>
-                </li>
-              </ul>
-            </div>
+            {product.features && product.features.length > 0 && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-gray-900 mb-3">Key Features:</h4>
+                <ul className="space-y-2">
+                  {product.features.map((feature: string, index: number) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <span className="text-orange-800 mt-1">•</span>
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
         </div>
