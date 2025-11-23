@@ -1420,34 +1420,36 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
 
         {/* A+ Content Section - Dynamic */}
         {product.a_plus_content_images && product.a_plus_content_images.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm mb-6 p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-8">Product Details</h2>
+          <>
+            <div className="bg-white rounded-lg shadow-sm mb-6 p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-8">Product Details</h2>
+            </div>
 
             {/* Dynamic A+ Content Images */}
             {product.a_plus_content_images
               .sort((a: any, b: any) => a.position - b.position)
               .map((contentImage: any, index: number) => (
                 <div key={contentImage.id} className="mb-12 last:mb-0">
-                  {/* Full-width image */}
-                  <div className="mb-6">
+                  {/* Full-width image - extends beyond container */}
+                  <div className="w-full -mx-6 lg:-mx-8 mb-6">
                     <img
                       src={contentImage.url}
                       alt={contentImage.alt_text || `Product image ${index + 1}`}
-                      className="w-full h-auto rounded-lg shadow-sm"
+                      className="w-full h-auto"
                     />
                   </div>
 
-                  {/* Description text */}
+                  {/* Description text - left-aligned in container */}
                   {contentImage.alt_text && (
-                    <div className="text-center">
-                      <p className="text-gray-700 leading-relaxed max-w-4xl mx-auto">
+                    <div className="px-6 lg:px-8">
+                      <p className="text-gray-700 leading-relaxed max-w-4xl">
                         {contentImage.alt_text}
                       </p>
                     </div>
                   )}
                 </div>
               ))}
-          </div>
+          </>
         )}
 
         {/* Description Section */}
