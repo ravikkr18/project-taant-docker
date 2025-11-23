@@ -1211,7 +1211,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                     {/* Basic Specifications from Product Details Tab */}
 
                     {/* Weight from product_details */}
-                    {product.product_details?.weight && (
+                    {product.product_details?.weight !== undefined && product.product_details?.weight !== null && (
                       <tr className="border-b border-gray-200">
                         <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Weight</td>
                         <td className="py-3 px-4 text-gray-700">{product.product_details.weight} kg</td>
@@ -1253,7 +1253,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                     )}
 
                     {/* Warranty from product_details */}
-                    {product.product_details?.warranty_months && (
+                    {product.product_details?.warranty_months !== undefined && product.product_details?.warranty_months !== null && (
                       <tr className="border-b border-gray-200">
                         <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Warranty</td>
                         <td className="py-3 px-4 text-gray-700">
