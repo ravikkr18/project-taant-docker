@@ -41,6 +41,16 @@ export interface Product {
   }[];
   features?: string[];
   faqs?: any[];
+  information_sections?: {
+    id: string;
+    title: string;
+    items: {
+      id: string;
+      key: string;
+      value: string;
+    }[];
+    isExpanded: boolean;
+  }[];
   product_details?: {
     // Basic Specifications from Product Details tab
     weight?: number;
@@ -280,6 +290,7 @@ export const transformProductForFrontend = (apiProduct: Product) => {
     features: apiProduct.features || [],
     a_plus_content_images: apiProduct.a_plus_content_images || [],
     faqs: apiProduct.faqs || [],
+    information_sections: apiProduct.information_sections || [],
     product_details: apiProduct.product_details || null
   };
 };

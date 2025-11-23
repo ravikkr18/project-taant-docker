@@ -1479,372 +1479,42 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
         </div>
         </div>
 
-          {/* Product Information - Two Column Layout */}
-        <div className="bg-white rounded-lg shadow-sm mb-6 p-4">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Product Information</h2>
+          {/* Product Information - Dynamic */}
+          {product.information_sections && product.information_sections.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm mb-6 p-4">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Product Information</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Left Column */}
-            <div className="space-y-3">
-              {/* Item Details */}
-              <div className="border border-gray-200 rounded">
-                <button
-                  onClick={() => toggleSection('item-details')}
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <h3 className="font-medium text-gray-900 text-sm">Item details</h3>
-                  <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has('item-details') ? 'rotate-90' : ''}`} />
-                </button>
-                {expandedSections.has('item-details') && (
-                  <div className="px-3 pb-3 border-t border-gray-200">
-                    <table className="w-full text-xs">
-                      <tbody>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900 w-1/3">Brand</td>
-                          <td className="py-2 text-gray-700">{product.brand || 'Premium Audio'}</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Model</td>
-                          <td className="py-2 text-gray-700">ATH-WHP500</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Color</td>
-                          <td className="py-2 text-gray-700">Multiple colors</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 font-medium text-gray-900">Material</td>
-                          <td className="py-2 text-gray-700">Premium plastic/metal</td>
-                        </tr>
-                      </tbody>
-                    </table>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {product.information_sections.map((section: any, index: number) => (
+                  <div key={section.id} className="space-y-3">
+                    <div className="border border-gray-200 rounded">
+                      <button
+                        onClick={() => toggleSection(section.id)}
+                        className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
+                      >
+                        <h3 className="font-medium text-gray-900 text-sm">{section.title}</h3>
+                        <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has(section.id) ? 'rotate-90' : ''}`} />
+                      </button>
+                      {expandedSections.has(section.id) && (
+                        <div className="px-3 pb-3 border-t border-gray-200">
+                          <table className="w-full text-xs">
+                            <tbody>
+                              {section.items.map((item: any, itemIndex: number) => (
+                                <tr key={item.id} className={itemIndex < section.items.length - 1 ? "border-b border-gray-100" : ""}>
+                                  <td className="py-2 font-medium text-gray-900 w-1/3">{item.key}</td>
+                                  <td className="py-2 text-gray-700">{item.value}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {/* Design */}
-              <div className="border border-gray-200 rounded">
-                <button
-                  onClick={() => toggleSection('design')}
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <h3 className="font-medium text-gray-900 text-sm">Design</h3>
-                  <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has('design') ? 'rotate-90' : ''}`} />
-                </button>
-                {expandedSections.has('design') && (
-                  <div className="px-3 pb-3 border-t border-gray-200">
-                    <table className="w-full text-xs">
-                      <tbody>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900 w-1/3">Style</td>
-                          <td className="py-2 text-gray-700">Over-ear</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Fit</td>
-                          <td className="py-2 text-gray-700">Adjustable headband</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Weight</td>
-                          <td className="py-2 text-gray-700">254 grams</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 font-medium text-gray-900">Dimensions</td>
-                          <td className="py-2 text-gray-700">18 x 16 x 8 cm</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Controls */}
-              <div className="border border-gray-200 rounded">
-                <button
-                  onClick={() => toggleSection('controls')}
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <h3 className="font-medium text-gray-900 text-sm">Controls</h3>
-                  <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has('controls') ? 'rotate-90' : ''}`} />
-                </button>
-                {expandedSections.has('controls') && (
-                  <div className="px-3 pb-3 border-t border-gray-200">
-                    <table className="w-full text-xs">
-                      <tbody>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900 w-1/3">Touch</td>
-                          <td className="py-2 text-gray-700">Yes</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Voice</td>
-                          <td className="py-2 text-gray-700">Siri/Google</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Playback</td>
-                          <td className="py-2 text-gray-700">Play/pause, volume</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 font-medium text-gray-900">Mic</td>
-                          <td className="py-2 text-gray-700">Noise-cancelling</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Battery */}
-              <div className="border border-gray-200 rounded">
-                <button
-                  onClick={() => toggleSection('battery')}
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <h3 className="font-medium text-gray-900 text-sm">Battery</h3>
-                  <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has('battery') ? 'rotate-90' : ''}`} />
-                </button>
-                {expandedSections.has('battery') && (
-                  <div className="px-3 pb-3 border-t border-gray-200">
-                    <table className="w-full text-xs">
-                      <tbody>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900 w-1/3">Life</td>
-                          <td className="py-2 text-gray-700">30 hours</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Charge</td>
-                          <td className="py-2 text-gray-700">2.5 hours</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Quick</td>
-                          <td className="py-2 text-gray-700">15 min = 3 hours</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 font-medium text-gray-900">Port</td>
-                          <td className="py-2 text-gray-700">USB-C</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Audio */}
-              <div className="border border-gray-200 rounded">
-                <button
-                  onClick={() => toggleSection('audio')}
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <h3 className="font-medium text-gray-900 text-sm">Audio</h3>
-                  <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has('audio') ? 'rotate-90' : ''}`} />
-                </button>
-                {expandedSections.has('audio') && (
-                  <div className="px-3 pb-3 border-t border-gray-200">
-                    <table className="w-full text-xs">
-                      <tbody>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900 w-1/3">Driver</td>
-                          <td className="py-2 text-gray-700">40mm</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Freq</td>
-                          <td className="py-2 text-gray-700">20Hz - 20kHz</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Imp</td>
-                          <td className="py-2 text-gray-700">32 Ohms</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Sens</td>
-                          <td className="py-2 text-gray-700">105dB</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 font-medium text-gray-900">Codecs</td>
-                          <td className="py-2 text-gray-700">SBC, AAC, aptX</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                ))}
               </div>
             </div>
-
-            {/* Right Column */}
-            <div className="space-y-3">
-              {/* Connectivity */}
-              <div className="border border-gray-200 rounded">
-                <button
-                  onClick={() => toggleSection('connectivity')}
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <h3 className="font-medium text-gray-900 text-sm">Connectivity</h3>
-                  <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has('connectivity') ? 'rotate-90' : ''}`} />
-                </button>
-                {expandedSections.has('connectivity') && (
-                  <div className="px-3 pb-3 border-t border-gray-200">
-                    <table className="w-full text-xs">
-                      <tbody>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900 w-1/3">Bluetooth</td>
-                          <td className="py-2 text-gray-700">5.0</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Range</td>
-                          <td className="py-2 text-gray-700">10 meters</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">3.5mm</td>
-                          <td className="py-2 text-gray-700">Yes</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 font-medium text-gray-900">Multi</td>
-                          <td className="py-2 text-gray-700">2 devices</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Additional Details */}
-              <div className="border border-gray-200 rounded">
-                <button
-                  onClick={() => toggleSection('additional-details')}
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <h3 className="font-medium text-gray-900 text-sm">Additional</h3>
-                  <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has('additional-details') ? 'rotate-90' : ''}`} />
-                </button>
-                {expandedSections.has('additional-details') && (
-                  <div className="px-3 pb-3 border-t border-gray-200">
-                    <table className="w-full text-xs">
-                      <tbody>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900 w-1/3">Warranty</td>
-                          <td className="py-2 text-gray-700">1 year</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Box</td>
-                          <td className="py-2 text-gray-700">HPs, case, cables</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Compat</td>
-                          <td className="py-2 text-gray-700">iOS, Android, Win, Mac</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 font-medium text-gray-900">Made</td>
-                          <td className="py-2 text-gray-700">China</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Style */}
-              <div className="border border-gray-200 rounded">
-                <button
-                  onClick={() => toggleSection('style')}
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <h3 className="font-medium text-gray-900 text-sm">Style</h3>
-                  <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has('style') ? 'rotate-90' : ''}`} />
-                </button>
-                {expandedSections.has('style') && (
-                  <div className="px-3 pb-3 border-t border-gray-200">
-                    <table className="w-full text-xs">
-                      <tbody>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900 w-1/3">Finish</td>
-                          <td className="py-2 text-gray-700">Matte premium</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Colors</td>
-                          <td className="py-2 text-gray-700">Black, Silver, Blue, Rose</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Look</td>
-                          <td className="py-2 text-gray-700">Modern minimal</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 font-medium text-gray-900">Users</td>
-                          <td className="py-2 text-gray-700">Music lovers, pros</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Measurements */}
-              <div className="border border-gray-200 rounded">
-                <button
-                  onClick={() => toggleSection('measurements')}
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <h3 className="font-medium text-gray-900 text-sm">Measurements</h3>
-                  <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has('measurements') ? 'rotate-90' : ''}`} />
-                </button>
-                {expandedSections.has('measurements') && (
-                  <div className="px-3 pb-3 border-t border-gray-200">
-                    <table className="w-full text-xs">
-                      <tbody>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900 w-1/3">Band</td>
-                          <td className="py-2 text-gray-700">3.5cm</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Cup</td>
-                          <td className="py-2 text-gray-700">10cm</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Cable</td>
-                          <td className="py-2 text-gray-700">1.2m</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 font-medium text-gray-900">Case</td>
-                          <td className="py-2 text-gray-700">20 x 18 x 10 cm</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Case Battery */}
-              <div className="border border-gray-200 rounded">
-                <button
-                  onClick={() => toggleSection('case-battery')}
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <h3 className="font-medium text-gray-900 text-sm">Case Battery</h3>
-                  <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has('case-battery') ? 'rotate-90' : ''}`} />
-                </button>
-                {expandedSections.has('case-battery') && (
-                  <div className="px-3 pb-3 border-t border-gray-200">
-                    <table className="w-full text-xs">
-                      <tbody>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900 w-1/3">Cap</td>
-                          <td className="py-2 text-gray-700">600mAh</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Charges</td>
-                          <td className="py-2 text-gray-700">2 full charges</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 font-medium text-gray-900">Method</td>
-                          <td className="py-2 text-gray-700">USB-C</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 font-medium text-gray-900">LED</td>
-                          <td className="py-2 text-gray-700">Status lights</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+          )}
 
         {/* More Related Products */}
         <div className="mb-6">
