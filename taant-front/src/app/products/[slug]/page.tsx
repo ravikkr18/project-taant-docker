@@ -1257,7 +1257,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                       <tr className="border-b border-gray-200">
                         <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Warranty</td>
                         <td className="py-3 px-4 text-gray-700">
-                          {product.product_details.warranty_months} months
+                          {product.product_details.warranty_months === 0 ? 'No warranty' : `${product.product_details.warranty_months} months`}
                           {product.product_details?.warranty_text && (
                             <div className="text-sm text-gray-600 mt-1">{product.product_details.warranty_text}</div>
                           )}
