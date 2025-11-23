@@ -1417,6 +1417,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
             </div>
           </div>
         </div>
+        </div>
 
         {/* A+ Content Section - Dynamic */}
         {product.a_plus_content_images && product.a_plus_content_images.length > 0 && (
@@ -1432,9 +1433,9 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
             {product.a_plus_content_images
               .sort((a: any, b: any) => a.position - b.position)
               .map((contentImage: any, index: number) => (
-                <div key={contentImage.id} className="mb-12 last:mb-0">
+                <div key={contentImage.id} className=" last:mb-0">
                   {/* Full-width image - true browser width */}
-                  <div className="w-full mb-6">
+                  <div className="w-full ">
                     <img
                       src={contentImage.url}
                       alt={contentImage.alt_text || `Product image ${index + 1}`}
@@ -1454,9 +1455,9 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
               ))}
           </>
         )}
-
+<div className='container py-2'>
         {/* Description Section - back inside container */}
-        <div className="container py-2">
+        <div className="mt-6">
         <div className="bg-white rounded-lg shadow-sm mb-6 p-4">
           <h3 className="text-xl font-bold text-gray-900 mb-4">Description</h3>
           <div className="text-gray-700">
