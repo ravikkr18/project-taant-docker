@@ -1484,6 +1484,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
             </div>
           </div>
         </div>
+        </div>
 
           {/* Product Information - Two Column Layout */}
         <div className="bg-white rounded-lg shadow-sm mb-6 p-4">
