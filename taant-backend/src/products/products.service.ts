@@ -1247,8 +1247,6 @@ export class ProductsService {
         care_instructions,
         simple_fields,
         information_sections,
-        a_plus_content,
-        a_plus_sections,
         faqs,
         seo_title,
         seo_description,
@@ -1364,6 +1362,22 @@ export class ProductsService {
 
       // Add product_details to the response object
       (data as any).product_details = productDetails;
+    }
+
+    // Add A+ content images to the response
+    if (data && data.id) {
+      const { data: aPlusContentImages, error: aPlusError } = await supabase
+        .from('a_plus_content_images')
+        .select('*')
+        .eq('product_id', data.id)
+        .eq('is_active', true)
+        .order('position', { ascending: true });
+
+      if (!aPlusError) {
+        (data as any).a_plus_content_images = aPlusContentImages || [];
+      } else {
+        (data as any).a_plus_content_images = [];
+      }
     }
 
     // Transform variant options to ensure compatibility with frontend
@@ -1803,6 +1817,35 @@ export class ProductsService {
 
     if (error) {
       throw new Error(`Failed to fetch product variants: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  async getAPlusContentImagesPublic(productId: string) {
+    const supabase = this.createServiceClient();
+
+    // First check if product is active
+    const { data: product } = await supabase
+      .from('products')
+      .select('id, status')
+      .eq('id', productId)
+      .eq('status', 'active')
+      .single();
+
+    if (!product) {
+      throw new Error('Product not found or not available');
+    }
+
+    const { data, error } = await supabase
+      .from('a_plus_content_images')
+      .select('*')
+      .eq('product_id', productId)
+      .eq('is_active', true)
+      .order('position', { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch A+ content images: ${error.message}`);
     }
 
     return data || [];
