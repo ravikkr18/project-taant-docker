@@ -1196,7 +1196,69 @@ export class ProductsService {
     const { data, error } = await supabase
       .from('products')
       .select(`
-        *,
+        id,
+        title,
+        slug,
+        short_description,
+        description,
+        base_price,
+        compare_price,
+        cost_price,
+        profit_margin,
+        low_stock_threshold,
+        allow_backorder,
+        requires_tax_calculation,
+        tax_code,
+        supplier_product_code,
+        barcode,
+        sku,
+        weight,
+        length,
+        width,
+        height,
+        dimensions,
+        model_number,
+        origin_country,
+        manufacturer,
+        shipping_requirements,
+        selling_policy,
+        quantity,
+        tags,
+        specifications,
+        features,
+        warranty_months,
+        warranty_text,
+        visibility,
+        is_featured,
+        is_digital,
+        requires_shipping,
+        track_inventory,
+        rating,
+        total_reviews,
+        total_sales,
+        total_revenue,
+        view_count,
+        wishlist_count,
+        status,
+        product_type,
+        included_items,
+        compatibility,
+        safety_warnings,
+        care_instructions,
+        simple_fields,
+        information_sections,
+        a_plus_content,
+        a_plus_sections,
+        faqs,
+        seo_title,
+        seo_description,
+        seo_keywords,
+        meta_title,
+        meta_description,
+        canonical_url,
+        published_at,
+        created_at,
+        updated_at,
         categories:category_id (
           id,
           name,
@@ -1275,6 +1337,33 @@ export class ProductsService {
         return null; // Product not found
       }
       throw new Error(`Failed to fetch product by slug: ${error.message}`);
+    }
+
+    // Create structured product_details object with only Product Details tab fields
+    if (data) {
+      const productDetails: any = {
+        // Basic Specifications from Product Details tab
+        weight: data.weight,
+        warranty_months: data.warranty_months,
+        origin_country: data.origin_country,
+        model_number: data.model_number,
+
+        // Dimensions
+        length: data.length,
+        width: data.width,
+        height: data.height,
+
+        // Additional fields from Product Details tab
+        manufacturer: data.manufacturer,
+        warranty_text: data.warranty_text,
+        shipping_requirements: data.shipping_requirements,
+
+        // Additional Product Details section
+        simple_fields: data.simple_fields
+      };
+
+      // Add product_details to the response object
+      (data as any).product_details = productDetails;
     }
 
     // Transform variant options to ensure compatibility with frontend

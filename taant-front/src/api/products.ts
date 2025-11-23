@@ -14,6 +14,11 @@ export interface Product {
   brand?: string;
   sku?: string;
   quantity?: number;
+  product_type?: string;
+  visibility?: string;
+  warranty_months?: number;
+  barcode?: string;
+  model_number?: string;
   weight?: number;
   length?: number;
   width?: number;
@@ -22,6 +27,26 @@ export interface Product {
   a_plus_content?: string;
   a_plus_sections?: any;
   faqs?: any[];
+  product_details?: {
+    // Basic Specifications from Product Details tab
+    weight?: number;
+    warranty_months?: number;
+    origin_country?: string;
+    model_number?: string;
+
+    // Dimensions
+    length?: number;
+    width?: number;
+    height?: number;
+
+    // Additional fields from Product Details tab
+    manufacturer?: string;
+    warranty_text?: string;
+    shipping_requirements?: string;
+
+    // Additional Product Details section
+    simple_fields?: any[];
+  };
   categories: {
     id: string;
     name: string;
@@ -220,11 +245,16 @@ export const transformProductForFrontend = (apiProduct: Product) => {
     categoryId: apiProduct.categories?.id || '',
     rating: apiProduct.rating || 0,
     reviews: apiProduct.reviews || 0,
-    inStock: apiProduct.status === 'active',
+    inStock: (apiProduct.status === 'active' || apiProduct.status === 'published'),
     badge: apiProduct.rating > 4.5 ? 'Top Rated' : undefined,
     brand: apiProduct.brand || apiProduct.suppliers?.business_name,
     sku: apiProduct.sku,
     quantity: apiProduct.quantity,
+    product_type: apiProduct.product_type,
+    visibility: apiProduct.visibility,
+    warranty_months: apiProduct.warranty_months,
+    barcode: apiProduct.barcode,
+    model_number: apiProduct.model_number,
     variants: variants,
     // Main product details (not variant details)
     weight: apiProduct.weight,
@@ -234,7 +264,8 @@ export const transformProductForFrontend = (apiProduct: Product) => {
         : undefined),
     specifications: apiProduct,
     aPlusSections: apiProduct.a_plus_sections || [],
-    faqs: apiProduct.faqs || []
+    faqs: apiProduct.faqs || [],
+    product_details: apiProduct.product_details || null
   };
 };
 

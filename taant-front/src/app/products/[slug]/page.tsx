@@ -1156,20 +1156,20 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
             {/* FAQ Section */}
             {product.faqs && product.faqs.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
+                <h2 className="text-lg font-bold text-gray-900 mb-3">Frequently Asked Questions</h2>
                 <div className="space-y-2">
                   {product.faqs.map((faq: any, index: number) => (
-                    <div key={faq.id} className="border border-gray-200 rounded-lg">
+                    <div key={faq.id} className="border border-gray-200 rounded-lg overflow-hidden">
                       <button
                         onClick={() => toggleSection(`faq-${index}`)}
-                        className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
+                        className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors duration-200"
                       >
-                        <h3 className="font-medium text-gray-900 text-sm">{faq.question}</h3>
-                        <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedSections.has(`faq-${index}`) ? 'rotate-90' : ''}`} />
+                        <h3 className="font-medium text-gray-900 text-sm pr-3 leading-tight">{faq.question}</h3>
+                        <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 flex-shrink-0 ${expandedSections.has(`faq-${index}`) ? 'rotate-90' : ''}`} />
                       </button>
                       {expandedSections.has(`faq-${index}`) && (
-                        <div className="px-3 pb-3 text-xs text-gray-700 border-t border-gray-200">
-                          {faq.answer}
+                        <div className="px-3 pb-3 text-xs text-gray-700 border-t border-gray-200 bg-gray-50/30">
+                          <div className="pt-2 leading-relaxed">{faq.answer}</div>
                         </div>
                       )}
                     </div>
@@ -1178,36 +1178,184 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
               </div>
             )}
 
-            {/* Product Details Section */}
+            {/* Product Details Section - Only Product Details Tab Fields */}
             <div className="bg-white rounded-lg shadow-sm mb-6 p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6">Product Details</h2>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <tbody>
+                    {/* SKU - Dynamic for both main product and variant */}
                     <tr className="border-b border-gray-200">
-                      <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900 w-1/3">Brand</td>
-                      <td className="py-3 px-4 text-gray-700">{product.brand || 'Premium Audio'}</td>
+                      <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900 w-1/3">SKU</td>
+                      <td className="py-3 px-4 text-gray-700 font-mono text-sm">
+                        {selectedVariant ? selectedVariant.sku : (product.sku || 'N/A')}
+                      </td>
                     </tr>
+
+                    {/* Brand */}
+                    {product.brand && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Brand</td>
+                        <td className="py-3 px-4 text-gray-700">{product.brand}</td>
+                      </tr>
+                    )}
+
+                    {/* Category */}
+                    {product.category && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Category</td>
+                        <td className="py-3 px-4 text-gray-700">{product.category.trim()}</td>
+                      </tr>
+                    )}
+
+                    {/* Basic Specifications from Product Details Tab */}
+
+                    {/* Weight from product_details */}
+                    {product.product_details?.weight && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Weight</td>
+                        <td className="py-3 px-4 text-gray-700">{product.product_details.weight} kg</td>
+                      </tr>
+                    )}
+
+                    {/* Model Number from product_details */}
+                    {product.product_details?.model_number && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Model Number</td>
+                        <td className="py-3 px-4 text-gray-700">{product.product_details.model_number}</td>
+                      </tr>
+                    )}
+
+                    {/* Origin Country from product_details */}
+                    {product.product_details?.origin_country && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Country of Origin</td>
+                        <td className="py-3 px-4 text-gray-700">{product.product_details.origin_country}</td>
+                      </tr>
+                    )}
+
+                    {/* Dimensions from product_details */}
+                    {(product.product_details?.length && product.product_details?.width && product.product_details?.height) && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Dimensions</td>
+                        <td className="py-3 px-4 text-gray-700">
+                          {product.product_details.length}L × {product.product_details.width}W × {product.product_details.height}H cm
+                        </td>
+                      </tr>
+                    )}
+
+                    {/* Manufacturer from product_details */}
+                    {product.product_details?.manufacturer && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Manufacturer</td>
+                        <td className="py-3 px-4 text-gray-700">{product.product_details.manufacturer}</td>
+                      </tr>
+                    )}
+
+                    {/* Warranty from product_details */}
+                    {product.product_details?.warranty_months && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Warranty</td>
+                        <td className="py-3 px-4 text-gray-700">
+                          {product.product_details.warranty_months} months
+                          {product.product_details?.warranty_text && (
+                            <div className="text-sm text-gray-600 mt-1">{product.product_details.warranty_text}</div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+
+                    {/* Shipping Requirements from product_details */}
+                    {product.product_details?.shipping_requirements && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Shipping Requirements</td>
+                        <td className="py-3 px-4 text-gray-700 text-sm">{product.product_details.shipping_requirements}</td>
+                      </tr>
+                    )}
+
+                    {/* Simple Fields from product_details */}
+                    {product.product_details?.simple_fields && product.product_details.simple_fields.length > 0 && (
+                      <>
+                        {product.product_details.simple_fields
+                          .filter((field: any) => field.value && field.option)
+                          .map((field: any) => (
+                            <tr key={field.id} className="border-b border-gray-200">
+                              <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">{field.option}</td>
+                              <td className="py-3 px-4 text-gray-700">{field.value}</td>
+                            </tr>
+                          ))}
+                      </>
+                    )}
+
+                    {/* Main Product Price */}
                     <tr className="border-b border-gray-200">
-                      <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Model Number</td>
-                      <td className="py-3 px-4 text-gray-700">ATH-WHP500</td>
+                      <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Price</td>
+                      <td className="py-3 px-4 text-gray-700 font-semibold">
+                        ₹{selectedVariant ? selectedVariant.price : product.price}
+                        {selectedVariant?.originalPrice && (
+                          <span className="ml-2 text-gray-400 line-through text-sm">
+                            ₹{selectedVariant.originalPrice}
+                          </span>
+                        )}
+                        {product.originalPrice && !selectedVariant && (
+                          <span className="ml-2 text-gray-400 line-through text-sm">
+                            ₹{product.originalPrice}
+                          </span>
+                        )}
+                      </td>
                     </tr>
+
+                    {/* Stock Status */}
                     <tr className="border-b border-gray-200">
-                      <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Connectivity</td>
-                      <td className="py-3 px-4 text-gray-700">Bluetooth 5.0, 3.5mm jack</td>
+                      <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Availability</td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          (selectedVariant ? selectedVariant.inStock : product.inStock)
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {(selectedVariant ? selectedVariant.inStock : product.inStock) ? 'In Stock' : 'Out of Stock'}
+                        </span>
+                      </td>
                     </tr>
-                    <tr className="border-b border-gray-200">
-                      <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Battery Life</td>
-                      <td className="py-3 px-4 text-gray-700">Up to 30 hours</td>
-                    </tr>
-                    <tr className="border-b border-gray-200">
-                      <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Noise Cancellation</td>
-                      <td className="py-3 px-4 text-gray-700">Active Noise Cancelling (ANC)</td>
-                    </tr>
-                    <tr className="border-b border-gray-200">
-                      <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Weight</td>
-                      <td className="py-3 px-4 text-gray-700">254 grams</td>
-                    </tr>
+
+                    {/* Product Rating */}
+                    {product.rating > 0 && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Rating</td>
+                        <td className="py-3 px-4 text-gray-700">
+                          <div className="flex items-center">
+                            <span className="mr-2">⭐</span>
+                            <span>{product.rating.toFixed(1)}</span>
+                            <span className="ml-1 text-gray-500">({product.reviews} reviews)</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+
+                    {/* Product Type */}
+                    {product.product_type && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Product Type</td>
+                        <td className="py-3 px-4 text-gray-700 capitalize">{product.product_type}</td>
+                      </tr>
+                    )}
+
+                    {/* Visibility */}
+                    {product.visibility && (
+                      <tr>
+                        <td className="py-3 px-4 bg-gray-50 font-medium text-gray-900">Visibility</td>
+                        <td className="py-3 px-4 text-gray-700">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
+                            product.visibility === 'public'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {product.visibility}
+                          </span>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
