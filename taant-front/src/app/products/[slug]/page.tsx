@@ -1421,27 +1421,30 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
         {/* A+ Content Section - Dynamic */}
         {product.a_plus_content_images && product.a_plus_content_images.length > 0 && (
           <>
-            <div className="bg-white rounded-lg shadow-sm mb-6 p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-8">Product Details</h2>
+            {/* Section Header - inside container */}
+            <div className="container py-2">
+              <div className="bg-white rounded-lg shadow-sm mb-6 p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-8">Product Details</h2>
+              </div>
             </div>
 
-            {/* Dynamic A+ Content Images */}
+            {/* Full-width content - outside container */}
             {product.a_plus_content_images
               .sort((a: any, b: any) => a.position - b.position)
               .map((contentImage: any, index: number) => (
                 <div key={contentImage.id} className="mb-12 last:mb-0">
-                  {/* Full-width image - extends to browser edges */}
-                  <div className="w-screen -ml-[50vw] left-[50vw] relative mb-6">
+                  {/* Full-width image - true browser width */}
+                  <div className="w-full mb-6">
                     <img
                       src={contentImage.url}
                       alt={contentImage.alt_text || `Product image ${index + 1}`}
-                      className="w-full h-auto"
+                      className="w-full h-auto block"
                     />
                   </div>
 
-                  {/* Description text - left-aligned in container */}
+                  {/* Description text - back inside container */}
                   {contentImage.alt_text && (
-                    <div className="px-6 lg:px-8">
+                    <div className="container py-2">
                       <p className="text-gray-700 leading-relaxed max-w-4xl">
                         {contentImage.alt_text}
                       </p>
@@ -1452,7 +1455,8 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
           </>
         )}
 
-        {/* Description Section */}
+        {/* Description Section - back inside container */}
+        <div className="container py-2">
         <div className="bg-white rounded-lg shadow-sm mb-6 p-4">
           <h3 className="text-xl font-bold text-gray-900 mb-4">Description</h3>
           <div className="text-gray-700">
