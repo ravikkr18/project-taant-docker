@@ -1418,88 +1418,37 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
           </div>
         </div>
 
-        {/* A+ Content Section - Amazon Style */}
-        <div className="bg-white rounded-lg shadow-sm mb-6 p-6">
-          {/* A+ Content Block 1 - Image Left, Text Right */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 items-center">
-            <div className="order-2 md:order-1">
-              <img
-                src="https://picsum.photos/seed/headphones-lifestyle/600/400.jpg"
-                alt="Premium headphones in use"
-                className="w-full h-auto rounded-lg"
-              />
-            </div>
-            <div className="order-1 md:order-2">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Experience Premium Sound Quality</h2>
-              <p className="text-gray-700 mb-4 leading-relaxed">
-                Immerse yourself in crystal-clear audio with our premium headphones. Custom-tuned 40mm drivers deliver deep, powerful bass and crisp, detailed highs that bring your music to life.
-              </p>
-              <p className="text-gray-700 leading-relaxed">
-                Whether you're listening to your favorite tracks, watching movies, or taking calls, experience audio the way it was meant to be heard. Our advanced acoustic engineering ensures every note is reproduced with stunning clarity and precision.
-              </p>
-            </div>
-          </div>
+        {/* A+ Content Section - Dynamic */}
+        {product.a_plus_content_images && product.a_plus_content_images.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm mb-6 p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-8">Product Details</h2>
 
-          {/* A+ Content Block 2 - Text Left, Image Right */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Advanced Noise Cancellation</h2>
-              <p className="text-gray-700 mb-4 leading-relaxed">
-                Block out the world and focus on what matters. Our industry-leading Active Noise Cancellation (ANC) technology eliminates ambient noise, creating a sanctuary of sound wherever you are.
-              </p>
-              <p className="text-gray-700 leading-relaxed">
-                Perfect for busy commutes, noisy offices, or simply finding your quiet space. Switch between transparency mode and full noise cancellation with a simple touch, staying aware of your surroundings when needed.
-              </p>
-            </div>
-            <div>
-              <img
-                src="https://picsum.photos/seed/noise-cancellation/600/400.jpg"
-                alt="Noise cancellation technology"
-                className="w-full h-auto rounded-lg"
-              />
-            </div>
-          </div>
+            {/* Dynamic A+ Content Images */}
+            {product.a_plus_content_images
+              .sort((a: any, b: any) => a.position - b.position)
+              .map((contentImage: any, index: number) => (
+                <div key={contentImage.id} className="mb-12 last:mb-0">
+                  {/* Full-width image */}
+                  <div className="mb-6">
+                    <img
+                      src={contentImage.url}
+                      alt={contentImage.alt_text || `Product image ${index + 1}`}
+                      className="w-full h-auto rounded-lg shadow-sm"
+                    />
+                  </div>
 
-          {/* A+ Content Block 3 - Image Left, Text Right */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 items-center">
-            <div className="order-2 md:order-1">
-              <img
-                src="https://picsum.photos/seed/comfort-design/600/400.jpg"
-                alt="Comfortable headphones design"
-                className="w-full h-auto rounded-lg"
-              />
-            </div>
-            <div className="order-1 md:order-2">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">All-Day Comfort</h2>
-              <p className="text-gray-700 mb-4 leading-relaxed">
-                Designed for extended wear, our headphones feature premium memory foam ear cushions and a lightweight, adjustable headband. Enjoy hours of comfortable listening without fatigue.
-              </p>
-              <p className="text-gray-700 leading-relaxed">
-                The ergonomic design distributes weight evenly, while soft, breathable materials keep you comfortable even during long listening sessions. Perfect for work, travel, or relaxation.
-              </p>
-            </div>
+                  {/* Description text */}
+                  {contentImage.alt_text && (
+                    <div className="text-center">
+                      <p className="text-gray-700 leading-relaxed max-w-4xl mx-auto">
+                        {contentImage.alt_text}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
           </div>
-
-          {/* A+ Content Block 4 - Text Left, Image Right */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Extended Battery Life</h2>
-              <p className="text-gray-700 mb-4 leading-relaxed">
-                Keep the music playing all day long with up to 30 hours of continuous playback on a single charge. Our efficient power management ensures you're never without your favorite tunes.
-              </p>
-              <p className="text-gray-700 leading-relaxed">
-                Quick charge technology gives you hours of playback with just minutes of charging. The included carrying case protects your headphones and provides additional power on the go.
-              </p>
-            </div>
-            <div>
-              <img
-                src="https://picsum.photos/seed/battery-life/600/400.jpg"
-                alt="Long battery life indicator"
-                className="w-full h-auto rounded-lg"
-              />
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Description Section */}
         <div className="bg-white rounded-lg shadow-sm mb-6 p-4">

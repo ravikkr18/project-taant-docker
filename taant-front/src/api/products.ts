@@ -24,8 +24,21 @@ export interface Product {
   width?: number;
   height?: number;
   dimensions?: any;
-  a_plus_content?: string;
-  a_plus_sections?: any;
+  a_plus_content_images?: {
+    id: string;
+    product_id: string;
+    url: string;
+    alt_text?: string;
+    file_name?: string;
+    file_size?: number;
+    file_type?: string;
+    width?: number;
+    height?: number;
+    position: number;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+  }[];
   faqs?: any[];
   product_details?: {
     // Basic Specifications from Product Details tab
@@ -263,7 +276,7 @@ export const transformProductForFrontend = (apiProduct: Product) => {
         ? { length: apiProduct.length, width: apiProduct.width, height: apiProduct.height }
         : undefined),
     specifications: apiProduct,
-    aPlusSections: apiProduct.a_plus_sections || [],
+    a_plus_content_images: apiProduct.a_plus_content_images || [],
     faqs: apiProduct.faqs || [],
     product_details: apiProduct.product_details || null
   };
