@@ -69,6 +69,15 @@ interface ProductUpdateDto {
   width?: number;
   height?: number;
   status?: string;
+  // CORE ISSUE FIX: Add missing fields that actually exist in database
+  quantity?: number;
+  options?: any[];
+  warranty_months?: number;
+  warranty_text?: string;
+  // Other fields that should be filtered/handled separately
+  variants?: any[]; // For variant handling
+  features?: string[]; // Will be handled as JSON
+  specifications?: any; // Will be handled as JSON
 }
 
 @Controller('api/products')

@@ -230,7 +230,8 @@ export class ProductsService {
     };
 
     // Remove fields that shouldn't be updated directly
-    const fieldsToRemove = ['id', 'created_at', 'categories', 'suppliers', 'variant_count', 'total_revenue', 'total_sales', 'rating', 'total_reviews', 'view_count', 'wishlist_count', 'slug'];
+    // FIXED: Allow quantity, options, warranty_months, warranty_text, features, specifications
+    const fieldsToRemove = ['id', 'created_at', 'categories', 'suppliers', 'variant_count', 'total_revenue', 'total_sales', 'rating', 'total_reviews', 'view_count', 'wishlist_count'];
 
     fieldsToRemove.forEach(field => {
       if (updateData[field] !== undefined) {
