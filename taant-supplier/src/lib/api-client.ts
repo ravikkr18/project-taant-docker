@@ -297,10 +297,17 @@ class ApiClient {
   }
 
   async createAPlusContentImage(productId: string, imageData: any): Promise<any> {
+    console.log('🔍 API Client: Creating A+ content image for product:', productId);
+    console.log('🔍 API Client: Image data being sent:', imageData);
+
     const response = await this.request<any>(`/api/products/${productId}/content-images`, {
       method: 'POST',
       body: JSON.stringify(imageData),
     });
+
+    console.log('🔍 API Client: Raw response from backend:', response);
+    console.log('🔍 API Client: Response data:', response.data);
+
     return response.data;
   }
 
