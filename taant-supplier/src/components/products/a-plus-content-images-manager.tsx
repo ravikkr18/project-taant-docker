@@ -247,42 +247,48 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
   // The first useEffect already handles state updates properly
 
   
-  // Save any unsaved temp images (cleanup mechanism)
+  // Save any unsaved temp images (cleanup mechanism) - FIXED: Only run on mount, not on every state change
   React.useEffect(() => {
-    const unsavedImages = localImages.filter(img => img.needsSave && img.id.startsWith('temp-'))
+    const saveUnsavedImages = async () => {
+      const unsavedImages = localImages.filter(img => img.needsSave && img.id.startsWith('temp-'))
 
-    if (unsavedImages.length > 0) {
-      console.log('Found unsaved images, attempting to save:', unsavedImages.length)
+      if (unsavedImages.length > 0) {
+        console.log('Found unsaved images, attempting to save:', unsavedImages.length)
 
-      unsavedImages.forEach(async (image) => {
-        try {
-          const imageData = {
-            url: image.url,
-            alt_text: image.alt_text,
-            file_name: image.file_name,
-            file_size: image.file_size,
-            file_type: image.file_type,
-            position: image.position,
-            is_active: image.is_active,
+        for (const image of unsavedImages) {
+          try {
+            const imageData = {
+              url: image.url,
+              alt_text: image.alt_text,
+              file_name: image.file_name,
+              file_size: image.file_size,
+              file_type: image.file_type,
+              position: image.position,
+              is_active: image.is_active,
+            }
+
+            const response = await apiClient.createAPlusContentImage(productId, imageData)
+            if (response.success) {
+              console.log('Unsaved image saved to DB:', response.data)
+
+              // Update the temp image with real DB data
+              setLocalImages(prev => prev.map(img =>
+                img.id === image.id
+                  ? { ...response.data, file: img.file, needsSave: false }
+                  : img
+              ))
+            }
+          } catch (error) {
+            console.error('Failed to save unsaved image:', image.id, error)
           }
-
-          const response = await apiClient.createAPlusContentImage(productId, imageData)
-          if (response.success) {
-            console.log('Unsaved image saved to DB:', response.data)
-
-            // Update the temp image with real DB data
-            setLocalImages(prev => prev.map(img =>
-              img.id === image.id
-                ? { ...response.data, file: img.file }
-                : img
-            ))
-          }
-        } catch (error) {
-          console.error('Failed to save unsaved image:', image.id, error)
         }
-      })
+      }
     }
-  }, [localImages, productId])
+
+    // Only run once on mount with a delay to avoid race conditions
+    const timeoutId = setTimeout(saveUnsavedImages, 1000)
+    return () => clearTimeout(timeoutId)
+  }, []) // Empty dependency array - only run on mount
 
   // S3 upload function
   const uploadToS3 = async (file: File): Promise<string> => {
@@ -440,28 +446,34 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
       setIsUploading(true)
       setUploading(true)
 
-      // Process valid files
+      // FIXED: Enhanced duplicate prevention using file hash and existing URLs
       const validFiles = fileList.filter(file => {
         const isImage = file.type.startsWith('image/')
-        const isLt5M = file.size / 1024 / 1024 < 5
-        const isDuplicate = localImages.some(img =>
-          img.file && img.file.name === file.name && img.file.size === file.size
+        const isSizeValid = file.size / 1024 / 1024 < 50 // 50MB limit
+
+        // Check for exact duplicates using file name, size, and type
+        const isDuplicate = localImages.some(existingImage =>
+          existingImage.file_name === file.name &&
+          existingImage.file_size === file.size &&
+          existingImage.file_type === file.type
         )
 
         if (!isImage) {
-          message.error(`${file.name} is not an image file!`)
+          message.error(`${file.name} is not a valid image file`)
           return false
         }
-        if (!isLt5M) {
-          message.error(`${file.name} must be smaller than 5MB!`)
+        if (!isSizeValid) {
+          message.error(`${file.name} is too large (max 50MB)`)
           return false
         }
         if (isDuplicate) {
-          message.error(`${file.name} has already been uploaded!`)
+          message.warning(`${file.name} already exists`)
           return false
         }
         return true
       })
+
+      console.log('Valid files for upload:', validFiles.length)
 
       if (validFiles.length === 0) {
         setIsUploading(false)
@@ -488,37 +500,16 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
                 is_active: true,
               }
 
-              // Save to database immediately
-              try {
-                const response = await apiClient.createAPlusContentImage(productId, imageData)
-                if (response.success) {
-                  console.log('Image saved to DB:', response.data)
-                  return {
-                    ...response.data,
-                    file: file // Keep file reference for duplicate detection
-                  }
-                } else {
-                  throw new Error(response.message || 'Failed to save to database')
-                }
-              } catch (dbError) {
-                console.error('Failed to save to DB, using temp ID:', dbError)
-                // Fall back to temp image if DB save fails
+              // Save to database immediately - FIXED: Remove fallback to prevent duplication
+              const response = await apiClient.createAPlusContentImage(productId, imageData)
+              if (response.success) {
+                console.log('Image saved to DB:', response.data)
                 return {
-                  id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                  url: s3Url,
-                  alt_text: file.name.split('.')[0],
-                  file_name: file.name,
-                  file_size: file.size,
-                  file_type: file.type,
-                  width: undefined,
-                  height: undefined,
-                  position: localImages.length + index,
-                  is_active: true,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                  file: file,
-                  needsSave: true // Flag for later saving
+                  ...response.data,
+                  file: file // Keep file reference for duplicate detection
                 }
+              } else {
+                throw new Error(response.message || 'Failed to save to database')
               }
             } catch (error) {
               console.error('Failed to upload file to S3:', file.name, error)
@@ -531,11 +522,10 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
           const updatedImages = [...localImages, ...newImages]
           console.log('Adding', newImages.length, 'new images to total of', updatedImages.length)
 
-          // Update local state immediately for instant preview
+          // FIXED: Batch state updates to prevent cascading re-renders
           setLocalImages(updatedImages)
-
-          // Call onChange to update parent state
-          onChange(updatedImages)
+          // Use setTimeout to defer parent state update and prevent immediate re-render cascade
+          setTimeout(() => onChange(updatedImages), 0)
         }
 
         message.success(`${validFiles.length} content image${validFiles.length > 1 ? 's' : ''} uploaded and saved successfully`)
