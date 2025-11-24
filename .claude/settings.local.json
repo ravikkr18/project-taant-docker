@@ -95,7 +95,9 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:jqAR0nTfRHArzkYt@db.lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres?sslmode=require\" psql:*)",
       "Bash(NODE_PATH=/www/ravi/project-taant-docker/taant-backend/node_modules node:*)",
       "Bash(npx next build:*)",
-      "Bash(./supabase/supabase:*)"
+      "Bash(./supabase/supabase:*)",
+      "Read(///**)",
+      "Bash(PORT=3001 pm2 start npm:*)"
     ],
     "deny": [],
     "ask": []

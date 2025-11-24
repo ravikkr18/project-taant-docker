@@ -412,17 +412,29 @@ class ApiClient {
       if (response && typeof response === 'object') {
         if (response.success && response.data && response.data.url) {
           // Normal case: response is wrapped
+          console.log('✅ API Client: Upload successful, structure validated:', response.success);
           return response;
         } else if (response.url) {
           // Direct case: response is the data itself
+          console.log('✅ API Client: Upload successful (direct response)');
           return {
             success: true,
             data: response,
             message: 'A+ content image uploaded successfully'
           };
+        } else {
+          // Log the actual response structure for debugging
+          console.error('❌ API Client: Invalid response structure:', {
+            response,
+            hasSuccess: !!response.success,
+            hasData: !!response.data,
+            hasDataUrl: !!(response.data && response.data.url),
+            hasDirectUrl: !!response.url
+          });
         }
       }
 
+      console.error('❌ API Client: Invalid response structure, throwing error');
       throw new Error('Invalid response structure');
     } catch (error) {
       console.error('API Client: Upload failed with error:', error)

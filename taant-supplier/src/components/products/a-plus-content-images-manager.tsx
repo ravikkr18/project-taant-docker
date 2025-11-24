@@ -501,15 +501,20 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
               }
 
               // Save to database immediately - FIXED: Remove fallback to prevent duplication
-              const response = await apiClient.createAPlusContentImage(productId, imageData)
-              if (response.success) {
-                console.log('Image saved to DB:', response.data)
-                return {
-                  ...response.data,
-                  file: file // Keep file reference for duplicate detection
+              try {
+                const response = await apiClient.createAPlusContentImage(productId, imageData)
+                if (response.success) {
+                  console.log('Image saved to DB:', response.data)
+                  return {
+                    ...response.data,
+                    file: file // Keep file reference for duplicate detection
+                  }
+                } else {
+                  throw new Error(`Database save failed: ${response.message || 'Unknown error'}`)
                 }
-              } else {
-                throw new Error(response.message || 'Failed to save to database')
+              } catch (dbError) {
+                console.error('Database save failed:', dbError)
+                throw new Error(`Database save failed: ${dbError.message}`)
               }
             } catch (error) {
               console.error('Failed to upload file to S3:', file.name, error)
@@ -531,7 +536,14 @@ const APlusContentImagesManager: React.FC<APlusContentImagesManagerProps> = ({ p
         message.success(`${validFiles.length} content image${validFiles.length > 1 ? 's' : ''} uploaded and saved successfully`)
       } catch (error) {
         console.error('Error during image upload:', error)
-        message.error('Failed to upload images')
+        // FIXED: Provide more specific error messages
+        if (error.message.includes('S3') || error.message.includes('uploadAPlusImage')) {
+          message.error('Failed to upload image to storage')
+        } else if (error.message.includes('database') || error.message.includes('createAPlusContentImage')) {
+          message.error('Image uploaded to storage but failed to save to database')
+        } else {
+          message.error('Failed to upload images')
+        }
       } finally {
         setIsUploading(false)
         setUploading(false)
