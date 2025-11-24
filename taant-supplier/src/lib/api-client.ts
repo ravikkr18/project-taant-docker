@@ -308,7 +308,8 @@ class ApiClient {
     console.log('🔍 API Client: Raw response from backend:', response);
     console.log('🔍 API Client: Response data:', response.data);
 
-    return response.data;
+    // FIXED: Return full response object to maintain success/message structure
+    return response;
   }
 
   async updateAPlusContentImage(productId: string, imageId: string, imageData: any): Promise<any> {
