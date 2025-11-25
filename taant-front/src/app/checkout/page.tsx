@@ -345,10 +345,45 @@ const CheckoutPage = () => {
                         />
                         <div className="flex-1">
                           <h4 className="font-medium text-sm text-gray-900">{item.name}</h4>
-                          {item.variant && (
-                            <p className="text-xs text-gray-600">Variant: {item.variant}</p>
-                          )}
-                          <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
+                          <div className="text-xs text-gray-600 mt-1">
+                            <div className="flex flex-wrap gap-x-1 gap-y-1">
+                              {/* Display variant if exists */}
+                              {item.variant && (
+                                <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 font-medium text-xs">
+                                  {item.variant}
+                                </span>
+                              )}
+
+                              {/* Display size if exists */}
+                              {item.size && (
+                                <span className="bg-blue-100 px-1.5 py-0.5 rounded text-blue-700 font-medium text-xs">
+                                  Size: {item.size}
+                                </span>
+                              )}
+
+                              {/* Display color if exists */}
+                              {item.color && (
+                                <span className="flex items-center gap-0.5 bg-purple-100 px-1.5 py-0.5 rounded text-purple-700 font-medium text-xs">
+                                  Color:
+                                  <span
+                                    className="w-2 h-2 rounded-full border border-gray-300 inline-block"
+                                    style={{ backgroundColor: item.color }}
+                                    title={item.color}
+                                  ></span>
+                                </span>
+                              )}
+
+                              {/* Display all selected options */}
+                              {item.selectedOptions && Object.entries(item.selectedOptions).map(([optionName, optionValue]) => (
+                                <span key={optionName} className="bg-orange-100 px-1.5 py-0.5 rounded text-orange-700 font-medium text-xs">
+                                  {optionName}: {optionValue}
+                                </span>
+                              ))}
+                            </div>
+                            <div className="mt-1">
+                              Qty: {item.quantity}
+                            </div>
+                          </div>
                         </div>
                         <div className="text-right">
                           <span className="font-semibold text-sm">₹{Math.round(item.price * item.quantity).toLocaleString('en-IN')}</span>
@@ -790,14 +825,47 @@ const CheckoutPage = () => {
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold text-sm text-gray-900 line-clamp-1">{item.name}</p>
-                          {item.variant && (
-                            <p className="text-xs text-gray-600">Variant: {item.variant}</p>
-                          )}
-                          <div className="flex justify-between mt-1">
-                            <span className="text-xs text-gray-600">Qty: {item.quantity}</span>
-                            <span className="font-bold text-sm text-gray-900">
-                              ₹{Math.round(item.price * item.quantity).toLocaleString('en-IN')}
-                            </span>
+                          <div className="text-xs text-gray-600 mt-1">
+                            <div className="flex flex-wrap gap-x-1 gap-y-1">
+                              {/* Display variant if exists */}
+                              {item.variant && (
+                                <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 font-medium text-xs">
+                                  {item.variant}
+                                </span>
+                              )}
+
+                              {/* Display size if exists */}
+                              {item.size && (
+                                <span className="bg-blue-100 px-1.5 py-0.5 rounded text-blue-700 font-medium text-xs">
+                                  Size: {item.size}
+                                </span>
+                              )}
+
+                              {/* Display color if exists */}
+                              {item.color && (
+                                <span className="flex items-center gap-0.5 bg-purple-100 px-1.5 py-0.5 rounded text-purple-700 font-medium text-xs">
+                                  Color:
+                                  <span
+                                    className="w-2 h-2 rounded-full border border-gray-300 inline-block"
+                                    style={{ backgroundColor: item.color }}
+                                    title={item.color}
+                                  ></span>
+                                </span>
+                              )}
+
+                              {/* Display all selected options */}
+                              {item.selectedOptions && Object.entries(item.selectedOptions).map(([optionName, optionValue]) => (
+                                <span key={optionName} className="bg-orange-100 px-1.5 py-0.5 rounded text-orange-700 font-medium text-xs">
+                                  {optionName}: {optionValue}
+                                </span>
+                              ))}
+                            </div>
+                            <div className="mt-2 flex justify-between">
+                              <span className="text-xs text-gray-600">Qty: {item.quantity}</span>
+                              <span className="font-bold text-xs text-gray-900">
+                                ₹{Math.round(item.price * item.quantity).toLocaleString('en-IN')}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>

@@ -581,6 +581,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
         variantId: selectedVariant?.id || null,
         size: selectedSize,
         color: selectedVariant?.color || '',
+        selectedOptions: { ...selectedOptions }, // Store all selected options
         timestamp: new Date().toISOString()
       };
 

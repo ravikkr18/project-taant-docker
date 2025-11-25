@@ -179,18 +179,39 @@ const CartPage = () => {
                             </button>
                           </div>
                           <div className="text-xs sm:text-sm text-gray-600 mb-2">
-                            <div className="flex flex-wrap gap-x-2 sm:gap-x-3">
-                              {item.variant && <span>Variant: {item.variant}</span>}
-                              {item.size && <span>Size: {item.size}</span>}
+                            <div className="flex flex-wrap gap-x-2 sm:gap-x-3 gap-y-1">
+                              {/* Display variant if exists */}
+                              {item.variant && (
+                                <span className="bg-gray-100 px-2 py-1 rounded text-gray-700 font-medium">
+                                  {item.variant}
+                                </span>
+                              )}
+
+                              {/* Display size if exists */}
+                              {item.size && (
+                                <span className="bg-blue-100 px-2 py-1 rounded text-blue-700 font-medium">
+                                  Size: {item.size}
+                                </span>
+                              )}
+
+                              {/* Display color if exists */}
                               {item.color && (
-                                <span className="flex items-center gap-1">
+                                <span className="flex items-center gap-1 bg-purple-100 px-2 py-1 rounded text-purple-700 font-medium">
                                   Color:
                                   <span
-                                    className="w-3 h-3 sm:w-4 sm:h-4 rounded-full border border-gray-300"
+                                    className="w-3 h-3 sm:w-4 sm:h-4 rounded-full border border-gray-300 inline-block"
                                     style={{ backgroundColor: item.color }}
+                                    title={item.color}
                                   ></span>
                                 </span>
                               )}
+
+                              {/* Display all selected options */}
+                              {item.selectedOptions && Object.entries(item.selectedOptions).map(([optionName, optionValue]) => (
+                                <span key={optionName} className="bg-orange-100 px-2 py-1 rounded text-orange-700 font-medium">
+                                  {optionName}: {optionValue}
+                                </span>
+                              ))}
                             </div>
                           </div>
                           <div className="flex justify-between items-end">
@@ -237,7 +258,7 @@ const CartPage = () => {
                     <span>Subtotal</span>
                     <span className="font-medium flex items-center gap-1">
                       <IndianRupee className="w-3 h-3" />
-                      {Math.round(subtotal * 83).toLocaleString('en-IN')}
+                      {Math.round(subtotal).toLocaleString('en-IN')}
                     </span>
                   </div>
 
@@ -246,7 +267,7 @@ const CartPage = () => {
                       <span>Bulk Discount (10%)</span>
                       <span className="font-medium flex items-center gap-1">
                         -<IndianRupee className="w-3 h-3" />
-                        {Math.round(bulkDiscount * 83).toLocaleString('en-IN')}
+                        {Math.round(bulkDiscount).toLocaleString('en-IN')}
                       </span>
                     </div>
                   )}
@@ -256,7 +277,7 @@ const CartPage = () => {
                       <span>Coupon ({appliedCoupon})</span>
                       <span className="font-medium flex items-center gap-1">
                         -<IndianRupee className="w-3 h-3" />
-                        {Math.round(couponDiscount * 83).toLocaleString('en-IN')}
+                        {Math.round(couponDiscount).toLocaleString('en-IN')}
                       </span>
                     </div>
                   )}
@@ -267,7 +288,7 @@ const CartPage = () => {
                       {shipping === 0 ? 'Free' : (
                         <span className="flex items-center gap-1">
                           <IndianRupee className="w-3 h-3" />
-                          {Math.round(shipping * 83).toLocaleString('en-IN')}
+                          {Math.round(shipping).toLocaleString('en-IN')}
                         </span>
                       )}
                     </span>
@@ -277,7 +298,7 @@ const CartPage = () => {
                     <span>GST (18%)</span>
                     <span className="font-medium flex items-center gap-1">
                       <IndianRupee className="w-3 h-3" />
-                      {Math.round(tax * 83).toLocaleString('en-IN')}
+                      {Math.round(tax).toLocaleString('en-IN')}
                     </span>
                   </div>
 
@@ -286,7 +307,7 @@ const CartPage = () => {
                       <span>Total</span>
                       <span className="flex items-center gap-1">
                         <IndianRupee className="w-4 h-4 sm:w-5 sm:h-5" />
-                        {Math.round(total * 83).toLocaleString('en-IN')}
+                        {Math.round(total).toLocaleString('en-IN')}
                       </span>
                     </div>
                   </div>
@@ -295,7 +316,7 @@ const CartPage = () => {
                 {(bulkDiscount > 0 || couponDiscount > 0) && (
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 sm:p-3 mb-4 sm:mb-6">
                     <p className="text-xs sm:text-sm text-green-800">
-                      🎉 You saved ₹{Math.round((bulkDiscount + couponDiscount) * 83).toLocaleString('en-IN')} with this order!
+                      🎉 You saved ₹{Math.round(bulkDiscount + couponDiscount).toLocaleString('en-IN')} with this order!
                     </p>
                   </div>
                 )}
@@ -320,7 +341,7 @@ const CartPage = () => {
                             Coupon {appliedCoupon} applied
                           </span>
                           <span className="text-xs text-green-600">
-                            (-₹{Math.round(couponDiscount * 83).toLocaleString('en-IN')})
+                            (-₹{Math.round(couponDiscount).toLocaleString('en-IN')})
                           </span>
                         </div>
                         <button
