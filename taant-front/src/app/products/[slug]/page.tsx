@@ -314,6 +314,18 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
     };
   }, [product]);
 
+  // Countdown timer for auto-hide
+  useEffect(() => {
+    if (successCountdown > 0) {
+      const timer = setTimeout(() => {
+        setSuccessCountdown(successCountdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (successCountdown === 0 && showSuccessMessage) {
+      setShowSuccessMessage(false);
+    }
+  }, [successCountdown, showSuccessMessage]);
+
   // Display only real variants from API
   const displayVariants = React.useMemo(() => {
     if (!product || !product.variants) return [];
@@ -552,18 +564,6 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
       behavior: 'smooth'
     });
   };
-
-  // Countdown timer for auto-hide
-  useEffect(() => {
-    if (successCountdown > 0) {
-      const timer = setTimeout(() => {
-        setSuccessCountdown(successCountdown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (successCountdown === 0 && showSuccessMessage) {
-      setShowSuccessMessage(false);
-    }
-  }, [successCountdown, showSuccessMessage]);
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => {
