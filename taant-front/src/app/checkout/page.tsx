@@ -106,8 +106,18 @@ const CheckoutPage = () => {
     }
   }, [formData]);
 
+  // Get cart data from localStorage
+  const [cartItems, setCartItems] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      setCartItems(cart);
+    }
+  }, []);
+
   // Cart calculations
-  const subtotal = 1500; // This would come from cart
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const tax = subtotal * 0.18;
   const shipping = subtotal > 2000 ? 0 : 99;
 
@@ -182,14 +192,16 @@ const CheckoutPage = () => {
       tax,
       shipping,
       total,
-      items: [
-        {
-          name: 'Sample Product',
-          variant: 'Large',
-          quantity: 1,
-          price: subtotal
-        }
-      ]
+      items: cartItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        variant: item.variant || '',
+        variantId: item.variantId || null,
+        quantity: item.quantity,
+        price: item.price,
+        image: item.image,
+        slug: item.slug
+      }))
     };
 
     setOrderData(order);
@@ -197,6 +209,12 @@ const CheckoutPage = () => {
 
     // Clear form data after successful order
     localStorage.removeItem('checkoutFormData');
+
+    // Clear cart after successful order
+    localStorage.removeItem('cart');
+
+    // Trigger cart update event
+    window.dispatchEvent(new Event('cartUpdate'));
   };
 
   const resetForm = () => {
@@ -314,6 +332,32 @@ const CheckoutPage = () => {
                   </div>
                 </div>
 
+                {/* Order Items */}
+                <div className="mb-6">
+                  <h3 className="font-semibold text-gray-900 mb-3">Order Items</h3>
+                  <div className="space-y-3">
+                    {orderData.items.map((item: any, index: number) => (
+                      <div key={index} className="flex items-center gap-3 p-3 bg-white rounded-lg">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm text-gray-900">{item.name}</h4>
+                          {item.variant && (
+                            <p className="text-xs text-gray-600">Variant: {item.variant}</p>
+                          )}
+                          <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-semibold text-sm">₹{Math.round(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="border-t pt-4">
                   <div className="space-y-2">
                     <div className="flex justify-between">
@@ -366,6 +410,27 @@ const CheckoutPage = () => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty cart message if no items
+  if (cartItems.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center bg-white rounded-lg shadow-sm p-8 max-w-md mx-4">
+          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <ShoppingBag className="w-10 h-10 text-gray-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h1>
+          <p className="text-gray-600 mb-6">Add some products to your cart before proceeding to checkout.</p>
+          <Link
+            href="/"
+            className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors inline-block"
+          >
+            Continue Shopping
+          </Link>
         </div>
       </div>
     );
@@ -712,21 +777,31 @@ const CheckoutPage = () => {
                 <div className="bg-white rounded-xl shadow-sm p-6 sticky top-6">
                   <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
 
-                  {/* Sample cart items */}
+                  {/* Real cart items */}
                   <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
-                    <div className="flex gap-3 pb-3 border-b">
-                      <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center">
-                        <div className="w-8 h-8 bg-orange-50 rounded"></div>
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-sm text-gray-900">Sample Product</p>
-                        <p className="text-xs text-gray-600">Variant: Large</p>
-                        <div className="flex justify-between mt-1">
-                          <span className="text-xs text-gray-600">Qty: 1</span>
-                          <span className="font-bold text-sm text-gray-900">₹{subtotal.toLocaleString('en-IN')}</span>
+                    {cartItems.map((item, index) => (
+                      <div key={index} className="flex gap-3 pb-3 border-b">
+                        <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-sm text-gray-900 line-clamp-1">{item.name}</p>
+                          {item.variant && (
+                            <p className="text-xs text-gray-600">Variant: {item.variant}</p>
+                          )}
+                          <div className="flex justify-between mt-1">
+                            <span className="text-xs text-gray-600">Qty: {item.quantity}</span>
+                            <span className="font-bold text-sm text-gray-900">
+                              ₹{Math.round(item.price * item.quantity).toLocaleString('en-IN')}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
 
                   <div className="space-y-2 mb-6">
