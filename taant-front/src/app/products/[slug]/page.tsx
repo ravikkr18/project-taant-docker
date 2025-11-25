@@ -198,6 +198,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const [recentPurchase, setRecentPurchase] = useState<any>(null);
   const [addToCartAnimation, setAddToCartAnimation] = useState(false);
   const [buyNowAnimation, setBuyNowAnimation] = useState(false);
+  const [successCountdown, setSuccessCountdown] = useState<number>(0);
   const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string }>({});
   const [currentProductImages, setCurrentProductImages] = useState<string[]>([]);
   const imageContainerRef = useRef<HTMLDivElement>(null);
@@ -544,13 +545,25 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const showSuccessMessageBox = (message: string) => {
     setNotificationMessage(message);
     setShowSuccessMessage(true);
+    setSuccessCountdown(5); // Start countdown
     // Scroll to top to show the success message
     window.scrollTo({
       top: 0,
       behavior: 'smooth'
     });
-    // No auto-hide - message stays until user closes it
   };
+
+  // Countdown timer for auto-hide
+  useEffect(() => {
+    if (successCountdown > 0) {
+      const timer = setTimeout(() => {
+        setSuccessCountdown(successCountdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (successCountdown === 0 && showSuccessMessage) {
+      setShowSuccessMessage(false);
+    }
+  }, [successCountdown, showSuccessMessage]);
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => {
@@ -629,25 +642,74 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
 
   return (
     <div className="w-full bg-gray-50 min-h-screen">
-      {/* Success Message Box */}
+      {/* Success Message - Fixed Position for Maximum Visibility */}
       {showSuccessMessage && (
-        <div className="bg-orange-500-light border-l-4 border-orange-500 p-4 mb-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-orange-500-light0 rounded-full p-2">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+        <div className="fixed top-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 animate-in slide-in-from-top duration-300">
+          <div className="bg-gradient-to-r from-green-500 to-green-600 border-2 border-green-400 shadow-2xl rounded-lg p-4 backdrop-blur-sm">
+            <div className="flex items-center gap-3">
+              {/* Success Icon with Animation */}
+              <div className="bg-white/20 rounded-full p-3 animate-pulse">
+                <CheckCircle className="w-6 h-6 text-white" />
+              </div>
+
+              <div className="flex-1">
+                <p className="font-bold text-white text-lg">Added to Cart!</p>
+                <p className="text-green-100 text-sm mt-1">{notificationMessage}</p>
+              </div>
+
+              {/* Cart Icon Indicator */}
+              <div className="bg-white/20 rounded-full p-2">
+                <ShoppingBag className="w-5 h-5 text-white" />
+              </div>
+
+              {/* Close Button */}
+              <button
+                onClick={() => {
+                  setShowSuccessMessage(false);
+                  setSuccessCountdown(0);
+                }}
+                className="text-white/80 hover:text-white transition-colors ml-2"
+                title="Dismiss"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <div className="flex-1">
-              <p className="font-semibold text-orange-800">Success!</p>
-              <p className="text-orange-800 text-sm">{notificationMessage}</p>
+
+            {/* Quick Actions */}
+            <div className="flex gap-2 mt-3 pt-3 border-t border-green-400/30">
+              <button
+                onClick={() => {
+                  setShowSuccessMessage(false);
+                  setSuccessCountdown(0);
+                  window.location.href = '/cart';
+                }}
+                className="flex-1 bg-white text-green-600 font-semibold py-2 px-3 rounded-lg hover:bg-green-50 transition-colors text-sm"
+              >
+                View Cart
+              </button>
+              <button
+                onClick={() => {
+                  setShowSuccessMessage(false);
+                  setSuccessCountdown(0);
+                }}
+                className="flex-1 bg-white/20 text-white font-semibold py-2 px-3 rounded-lg hover:bg-white/30 transition-colors text-sm"
+              >
+                Continue Shopping
+              </button>
             </div>
-            <button
-              onClick={() => setShowSuccessMessage(false)}
-              className="text-orange-800-muted hover:text-orange-800 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+
+            {/* Auto-hide Countdown */}
+            <div className="flex items-center justify-center mt-2">
+              <div className="text-xs text-green-100">
+                Auto-dismiss in {successCountdown}s
+              </div>
+              <div className="flex-1 h-1 bg-green-400/30 rounded-full overflow-hidden ml-2">
+                <div
+                  className="h-full bg-white/80 rounded-full transition-all duration-1000 ease-linear"
+                  style={{ width: `${(successCountdown / 5) * 100}%` }}
+                ></div>
+              </div>
+            </div>
           </div>
         </div>
       )}
