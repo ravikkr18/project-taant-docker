@@ -37,27 +37,29 @@ export class HomepageController {
           id: product.id,
           name: product.title,
           slug: product.slug,
-          description: product.description,
+          description: product.short_description || product.description,
           price: product.base_price,
           originalPrice: product.compare_price,
-          image: product.image_url || `https://picsum.photos/seed/${product.slug}/800/800.jpg`,
-          images: product.additional_images?.map((img: any) => img.url) || [],
-          category: product.category?.name || 'Unknown',
+          image: product.product_images?.find((img: any) => img.is_primary)?.url ||
+                 product.product_images?.[0]?.url ||
+                 `https://picsum.photos/seed/${product.slug}/800/800.jpg`,
+          images: product.product_images?.map((img: any) => img.url) || [],
+          category: product.categories?.name || 'Unknown',
           categoryId: product.category_id,
           rating: Math.round((product.rating || 4.0) * 10) / 10, // Round to 1 decimal place
-          reviews: product.total_reviews || Math.floor(Math.random() * 500) + 50,
+          reviews: product.total_reviews || 0,
           inStock: product.quantity > 0,
           badge: product.compare_price && product.compare_price > product.base_price
             ? Math.round(((product.compare_price - product.base_price) / product.compare_price) * 100) + '% OFF'
-            : Math.random() > 0.7 ? 'Trending' : 'Hot',
-          brand: product.manufacturer,
+            : product.is_featured ? 'Featured' : product.tags?.includes('popular') ? 'Popular' : 'Trending',
+          brand: product.suppliers?.business_name || product.manufacturer,
           sku: product.sku,
           variants: product.variants?.map((variant: any) => ({
             id: variant.id,
-            name: variant.option1_value || variant.name,
+            name: variant.title || variant.name,
             price: variant.price || product.base_price,
-            inStock: variant.quantity > 0,
-            color: variant.color_code
+            inStock: variant.inventory_quantity > 0,
+            image: variant.image_url
           })) || []
         }))
         .sort((a, b) => (b.rating || 0) - (a.rating || 0))
@@ -104,27 +106,29 @@ export class HomepageController {
           id: product.id,
           name: product.title,
           slug: product.slug,
-          description: product.description,
+          description: product.short_description || product.description,
           price: product.base_price,
           originalPrice: product.compare_price,
-          image: product.image_url || `https://picsum.photos/seed/${product.slug}/800/800.jpg`,
-          images: product.additional_images?.map((img: any) => img.url) || [],
-          category: product.category?.name || 'Unknown',
+          image: product.product_images?.find((img: any) => img.is_primary)?.url ||
+                 product.product_images?.[0]?.url ||
+                 `https://picsum.photos/seed/${product.slug}/800/800.jpg`,
+          images: product.product_images?.map((img: any) => img.url) || [],
+          category: product.categories?.name || 'Unknown',
           categoryId: product.category_id,
           rating: Math.round((product.rating || 4.0) * 10) / 10, // Round to 1 decimal place
-          reviews: product.total_reviews || Math.floor(Math.random() * 500) + 50,
+          reviews: product.total_reviews || 0,
           inStock: product.quantity > 0,
           badge: product.compare_price && product.compare_price > product.base_price
             ? Math.round(((product.compare_price - product.base_price) / product.compare_price) * 100) + '% OFF'
             : 'Deal',
-          brand: product.manufacturer,
+          brand: product.suppliers?.business_name || product.manufacturer,
           sku: product.sku,
           variants: product.variants?.map((variant: any) => ({
             id: variant.id,
-            name: variant.option1_value || variant.name,
+            name: variant.title || variant.name,
             price: variant.price || product.base_price,
-            inStock: variant.quantity > 0,
-            color: variant.color_code
+            inStock: variant.inventory_quantity > 0,
+            image: variant.image_url
           })) || []
         }))
         .filter(product => product.originalPrice && product.originalPrice > product.price)
@@ -177,27 +181,29 @@ export class HomepageController {
         id: product.id,
         name: product.title,
         slug: product.slug,
-        description: product.description,
+        description: product.short_description || product.description,
         price: product.base_price,
         originalPrice: product.compare_price,
-        image: product.image_url || `https://picsum.photos/seed/${product.slug}/800/800.jpg`,
-        images: product.additional_images?.map((img: any) => img.url) || [],
-        category: product.category?.name || 'Unknown',
+        image: product.product_images?.find((img: any) => img.is_primary)?.url ||
+               product.product_images?.[0]?.url ||
+               `https://picsum.photos/seed/${product.slug}/800/800.jpg`,
+        images: product.product_images?.map((img: any) => img.url) || [],
+        category: product.categories?.name || 'Unknown',
         categoryId: product.category_id,
         rating: Math.round((product.rating || 4.0) * 10) / 10, // Round to 1 decimal place
-        reviews: product.total_reviews || Math.floor(Math.random() * 500) + 50,
+        reviews: product.total_reviews || 0,
         inStock: product.quantity > 0,
         badge: product.compare_price && product.compare_price > product.base_price
           ? Math.round(((product.compare_price - product.base_price) / product.compare_price) * 100) + '% OFF'
-          : Math.random() > 0.7 ? 'Popular' : undefined,
-        brand: product.manufacturer,
+          : product.is_featured ? 'Featured' : product.tags?.includes('popular') ? 'Popular' : undefined,
+        brand: product.suppliers?.business_name || product.manufacturer,
         sku: product.sku,
         variants: product.variants?.map((variant: any) => ({
           id: variant.id,
-          name: variant.option1_value || variant.name,
+          name: variant.title || variant.name,
           price: variant.price || product.base_price,
-          inStock: variant.quantity > 0,
-          color: variant.color_code
+          inStock: variant.inventory_quantity > 0,
+          image: variant.image_url
         })) || []
       }));
 
@@ -251,27 +257,29 @@ export class HomepageController {
         id: product.id,
         name: product.title,
         slug: product.slug,
-        description: product.description,
+        description: product.short_description || product.description,
         price: product.base_price,
         originalPrice: product.compare_price,
-        image: product.image_url || `https://picsum.photos/seed/${product.slug}/800/800.jpg`,
-        images: product.additional_images?.map((img: any) => img.url) || [],
-        category: product.category?.name || 'Unknown',
+        image: product.product_images?.find((img: any) => img.is_primary)?.url ||
+               product.product_images?.[0]?.url ||
+               `https://picsum.photos/seed/${product.slug}/800/800.jpg`,
+        images: product.product_images?.map((img: any) => img.url) || [],
+        category: product.categories?.name || 'Unknown',
         categoryId: product.category_id,
         rating: Math.round((product.rating || 4.0) * 10) / 10, // Round to 1 decimal place
-        reviews: product.total_reviews || Math.floor(Math.random() * 500) + 50,
+        reviews: product.total_reviews || 0,
         inStock: product.quantity > 0,
         badge: product.compare_price && product.compare_price > product.base_price
           ? Math.round(((product.compare_price - product.base_price) / product.compare_price) * 100) + '% OFF'
           : 'Featured',
-        brand: product.manufacturer,
+        brand: product.suppliers?.business_name || product.manufacturer,
         sku: product.sku,
         variants: product.variants?.map((variant: any) => ({
           id: variant.id,
-          name: variant.option1_value || variant.name,
+          name: variant.title || variant.name,
           price: variant.price || product.base_price,
-          inStock: variant.quantity > 0,
-          color: variant.color_code
+          inStock: variant.inventory_quantity > 0,
+          image: variant.image_url
         })) || []
       }));
 
