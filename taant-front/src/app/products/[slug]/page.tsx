@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import ImageWithFallback from '@/components/ImageWithFallback';
 import Link from 'next/link';
-import { Star, Heart, ShoppingBag, Truck, Shield, RefreshCw, Minus, Plus, ChevronLeft, ChevronRight, Search, X, ZoomIn, Check, AlertCircle, Zap, Share2 } from 'lucide-react';
+import { Star, Heart, ShoppingBag, Truck, Shield, RefreshCw, Minus, Plus, ChevronLeft, ChevronRight, Search, X, ZoomIn, Check, CheckCircle, AlertCircle, Zap, Share2 } from 'lucide-react';
 import { Product, ProductVariant } from '@/types';
 import { getProductBySlug as getProductBySlugAPI, getRelatedProducts as getRelatedProductsAPI, transformProductForFrontend } from '@/api/products';
 import { useLocation } from '@/contexts/LocationContext';
