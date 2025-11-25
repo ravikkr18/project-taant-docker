@@ -12,7 +12,7 @@ const ElectronicsSection = () => {
   useEffect(() => {
     const fetchElectronics = async () => {
       try {
-        const electronicsProducts = await apiService.getProductsByCategory('electronics', 8);
+        const electronicsProducts = await apiService.getProductsByCategory('910cb752-442c-422d-bba6-b20dac1bd4e0', 8);
         setProducts(electronicsProducts);
       } catch (error) {
         console.error('Failed to fetch electronics:', error);

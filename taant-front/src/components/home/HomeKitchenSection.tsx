@@ -12,7 +12,7 @@ const HomeKitchenSection = () => {
   useEffect(() => {
     const fetchHomeKitchen = async () => {
       try {
-        const homeProducts = await apiService.getProductsByCategory('home-kitchen', 6);
+        const homeProducts = await apiService.getProductsByCategory('009f926c-eaef-47b0-acef-ee2d3a7e7d30', 6);
         setProducts(homeProducts);
       } catch (error) {
         console.error('Failed to fetch home & kitchen:', error);

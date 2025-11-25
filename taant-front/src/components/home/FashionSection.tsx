@@ -12,7 +12,7 @@ const FashionSection = () => {
   useEffect(() => {
     const fetchFashion = async () => {
       try {
-        const fashionProducts = await apiService.getProductsByCategory('fashion', 6);
+        const fashionProducts = await apiService.getProductsByCategory('80b389e6-4822-4063-9532-59a841d062f3', 6);
         setProducts(fashionProducts);
       } catch (error) {
         console.error('Failed to fetch fashion:', error);

@@ -97,7 +97,9 @@
       "Bash(npx next build:*)",
       "Bash(./supabase/supabase:*)",
       "Read(///**)",
-      "Bash(PORT=3001 pm2 start npm:*)"
+      "Bash(PORT=3001 pm2 start npm:*)",
+      "Bash(DB_URL=\"postgresql://postgres:jqAR0nTfRHArzkYt@db.lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres?sslmode=require\" psql:*)",
+      "Bash(SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5dGVveG5xa2pycGlscmZjaW1jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTgwNzI2NSwiZXhwIjoyMDc3MzgzMjY1fQ.TTy-fS8I4dIgCvxkfQSxCGmAldoUz2PGi59ya8bx10M supabase db dump:*)"
     ],
     "deny": [],
     "ask": []
