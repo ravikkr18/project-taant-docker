@@ -126,11 +126,11 @@ const HomeKitchenSection = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-green-600">
-                      ₹{Math.round(product.price * 83).toLocaleString('en-IN')}
+                      ₹{Math.round(product.price).toLocaleString('en-IN')}
                     </span>
                     {product.originalPrice && product.originalPrice > product.price && (
                       <span className="text-xs text-gray-400 line-through">
-                        ₹{Math.round(product.originalPrice * 83).toLocaleString('en-IN')}
+                        ₹{Math.round(product.originalPrice).toLocaleString('en-IN')}
                       </span>
                     )}
                   </div>

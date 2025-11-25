@@ -102,11 +102,11 @@ const CompactProductCard = ({ product }: { product: any }) => {
         {/* Price in INR */}
         <div className="flex items-center gap-1 sm:gap-2 mb-2">
           <span className="text-xs sm:text-sm font-bold text-gray-900">
-            ₹{Math.round(product.price * 83).toLocaleString('en-IN')}
+            ₹{Math.round(product.price).toLocaleString('en-IN')}
           </span>
           {product.originalPrice && product.originalPrice > product.price && (
             <span className="text-xs text-gray-500 line-through">
-              ₹{Math.round(product.originalPrice * 83).toLocaleString('en-IN')}
+              ₹{Math.round(product.originalPrice).toLocaleString('en-IN')}
             </span>
           )}
         </div>

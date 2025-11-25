@@ -169,11 +169,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Price */}
         <div className="flex items-center gap-3 mb-4">
           <span className="text-2xl font-bold text-gray-900">
-            ₹{Math.round(product.price * 83).toLocaleString('en-IN')}
+            ₹{Math.round(product.price).toLocaleString('en-IN')}
           </span>
           {product.originalPrice && (
             <span className="text-lg text-gray-500 line-through">
-              ₹{Math.round(product.originalPrice * 83).toLocaleString('en-IN')}
+              ₹{Math.round(product.originalPrice).toLocaleString('en-IN')}
             </span>
           )}
         </div>

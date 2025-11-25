@@ -212,10 +212,10 @@ const CartPage = () => {
                             <div className="text-right">
                               <span className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 flex items-center gap-1">
                                 <IndianRupee className="w-3 h-3 sm:w-4 sm:h-4" />
-                                {Math.round(item.price * item.quantity * 83).toLocaleString('en-IN')}
+                                {Math.round(item.price * item.quantity).toLocaleString('en-IN')}
                               </span>
                               <span className="text-xs text-gray-500 hidden sm:block">
-                                ₹{Math.round(item.price * 83).toLocaleString('en-IN')} each
+                                ₹{Math.round(item.price).toLocaleString('en-IN')} each
                               </span>
                             </div>
                           </div>
