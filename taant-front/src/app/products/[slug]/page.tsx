@@ -645,7 +645,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
       {/* Success Message - Fixed Position for Maximum Visibility */}
       {showSuccessMessage && (
         <div className="fixed top-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 animate-in slide-in-from-top duration-300">
-          <div className="bg-gradient-to-r from-green-500 to-green-600 border-2 border-green-400 shadow-2xl rounded-lg p-4 backdrop-blur-sm">
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 border-2 border-orange-400 shadow-2xl rounded-lg p-4 backdrop-blur-sm">
             <div className="flex items-center gap-3">
               {/* Success Icon with Animation */}
               <div className="bg-white/20 rounded-full p-3 animate-pulse">
@@ -654,7 +654,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
 
               <div className="flex-1">
                 <p className="font-bold text-white text-lg">Added to Cart!</p>
-                <p className="text-green-100 text-sm mt-1">{notificationMessage}</p>
+                <p className="text-orange-100 text-sm mt-1">{notificationMessage}</p>
               </div>
 
               {/* Cart Icon Indicator */}
