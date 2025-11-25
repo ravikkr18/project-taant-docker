@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, CreditCard, Truck, Shield, Lock, User, Plus, IndianRupee, Wallet, Mail, Phone, MapPin, X, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CreditCard, Truck, Shield, Lock, User, Plus, IndianRupee, Wallet, Mail, Phone, MapPin, X, CheckCircle, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthModal from '@/components/AuthModal';
 
