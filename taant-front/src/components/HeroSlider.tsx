@@ -10,23 +10,48 @@ const HeroSlider = () => {
   const slides = [
     {
       id: 1,
-      image: 'https://picsum.photos/seed/electronics-sale/1920/600.jpg',
-      alt: 'Electronics Sale'
+      image: 'https://picsum.photos/seed/big-billion-days/1920/600.jpg',
+      alt: 'Big Billion Days',
+      title: '🛍️ Big Billion Days',
+      subtitle: 'Up to 80% OFF on Electronics',
+      buttonText: 'Shop Now',
+      bgColor: 'from-purple-600 to-pink-600'
     },
     {
       id: 2,
-      image: 'https://picsum.photos/seed/fashion-collection/1920/600.jpg',
-      alt: 'Fashion Collection'
+      image: 'https://picsum.photos/seed/fashion-fiesta/1920/600.jpg',
+      alt: 'Fashion Fiesta',
+      title: '👗 Fashion Fiesta',
+      subtitle: 'Trendy Styles Starting at ₹299',
+      buttonText: 'Explore Collection',
+      bgColor: 'from-pink-500 to-orange-500'
     },
     {
       id: 3,
-      image: 'https://picsum.photos/seed/home-kitchen/1920/600.jpg',
-      alt: 'Home & Kitchen'
+      image: 'https://picsum.photos/seed/home-makeover/1920/600.jpg',
+      alt: 'Home Makeover',
+      title: '🏠 Home Makeover',
+      subtitle: 'Transform Your Space',
+      buttonText: 'Discover Deals',
+      bgColor: 'from-green-600 to-teal-600'
     },
     {
       id: 4,
-      image: 'https://picsum.photos/seed/sports-outdoors/1920/600.jpg',
-      alt: 'Sports & Outdoors'
+      image: 'https://picsum.photos/seed/gaming-zone/1920/600.jpg',
+      alt: 'Gaming Zone',
+      title: '🎮 Gaming Zone',
+      subtitle: 'Consoles & Accessories',
+      buttonText: 'Level Up Gaming',
+      bgColor: 'from-blue-600 to-indigo-600'
+    },
+    {
+      id: 5,
+      image: 'https://picsum.photos/seed/sports-sale/1920/600.jpg',
+      alt: 'Sports Sale',
+      title: '⚡ Sports Sale',
+      subtitle: 'Gear Up for Adventure',
+      buttonText: 'Shop Sports',
+      bgColor: 'from-orange-600 to-red-600'
     }
   ];
 
@@ -61,13 +86,34 @@ const HeroSlider = () => {
               index === currentSlide ? 'opacity-100' : 'opacity-0'
             }`}
           >
-            <ImageWithFallback
-              src={slide.image}
-              alt={slide.alt}
-              fill
-              className="object-cover"
-              priority={index === 0}
-            />
+            {/* Background image with gradient overlay */}
+            <div className="relative w-full h-full">
+              <ImageWithFallback
+                src={slide.image}
+                alt={slide.alt}
+                fill
+                className="object-cover"
+                priority={index === 0}
+              />
+              <div className={`absolute inset-0 bg-gradient-to-r ${slide.bgColor} opacity-40`}></div>
+            </div>
+
+            {/* Content overlay */}
+            <div className="absolute inset-0 flex items-center">
+              <div className="container px-4 sm:px-6 md:px-8">
+                <div className="max-w-xl">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2 sm:mb-3 drop-shadow-lg">
+                    {slide.title}
+                  </h1>
+                  <p className="text-base sm:text-lg md:text-xl text-white/95 mb-4 sm:mb-6 drop-shadow">
+                    {slide.subtitle}
+                  </p>
+                  <button className="bg-white text-gray-900 hover:bg-gray-100 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold text-sm sm:text-base transition-all duration-200 hover:scale-105 shadow-lg">
+                    {slide.buttonText}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         ))}
       </div>
