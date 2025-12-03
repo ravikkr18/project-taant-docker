@@ -1333,6 +1333,7 @@ export class ProductsService {
 
     if (error) {
       if (error.code === 'PGRST116') {
+
         return null; // Product not found
       }
       throw new Error(`Failed to fetch product by slug: ${error.message}`);

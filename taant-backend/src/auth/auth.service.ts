@@ -21,11 +21,41 @@ export class AuthService {
 
   async verifyToken(token: string): Promise<User | null> {
     try {
+      // First try Supabase token verification
       const { data: { user }, error } = await this.supabase.auth.getUser(token);
 
       if (error) {
-        console.error('Token verification error:', error.message);
-        return null;
+        // Try custom token verification (base64 encoded JSON)
+        try {
+          const decoded = JSON.parse(Buffer.from(token, 'base64').toString());
+
+          // Check if token has expired
+          if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
+            console.error('Custom token has expired');
+            return null;
+          }
+
+          // Create a mock user object that matches Supabase User structure
+          const customUser: User = {
+            id: decoded.id,
+            email: decoded.email || `${decoded.phone}@placeholder.com`,
+            phone: decoded.phone,
+            user_metadata: {
+              phone: decoded.phone,
+              name: decoded.name || `User${decoded.phone?.slice(-4)}`,
+              role: decoded.role,
+            },
+            app_metadata: {},
+            aud: 'authenticated',
+            created_at: new Date().toISOString(),
+            confirmed_at: new Date().toISOString(),
+          };
+
+          return customUser;
+        } catch (customError) {
+          console.error('Custom token verification error:', customError);
+          return null;
+        }
       }
 
       return user;
