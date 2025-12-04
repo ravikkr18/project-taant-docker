@@ -99,7 +99,18 @@
       "Read(///**)",
       "Bash(PORT=3001 pm2 start npm:*)",
       "Bash(DB_URL=\"postgresql://postgres:jqAR0nTfRHArzkYt@db.lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres?sslmode=require\" psql:*)",
-      "Bash(SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5dGVveG5xa2pycGlscmZjaW1jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTgwNzI2NSwiZXhwIjoyMDc3MzgzMjY1fQ.TTy-fS8I4dIgCvxkfQSxCGmAldoUz2PGi59ya8bx10M supabase db dump:*)"
+      "Bash(SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5dGVveG5xa2pycGlscmZjaW1jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTgwNzI2NSwiZXhwIjoyMDc3MzgzMjY1fQ.TTy-fS8I4dIgCvxkfQSxCGmAldoUz2PGi59ya8bx10M supabase db dump:*)",
+      "Bash(git restore:*)",
+      "Bash(SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5dGVveG5xa2pycGlscmZjaW1jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTgwNzI2NSwiZXhwIjoyMDc3MzgzMjY1fQ.TTy-fS8I4dIgCvxkfQSxCGmAldoUz2PGi59ya8bx10M psql:*)",
+      "Bash(SUPABASE_DB_URL=\"postgresql://postgres.d$z#6W&K@8pL!qR3@lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres\" psql -c \"\\d profiles\")",
+      "Bash(/dev/null)",
+      "Bash(SUPABASE_DB_ACCESS_KEY=sbp_5f6eabdb4d8eda31bd8c19b4c7736c9ecd40fdb0 psql:*)",
+      "Bash(PGPASSWORD=sbp_5f6eabdb4d8eda31bd8c19b4c7736c9ecd40fdb0 psql:*)",
+      "Bash(PGPASSWORD=jqAR0nTfRHArzkYt psql:*)",
+      "Bash(SUPABASE_DB_URL=\"postgresql://postgres:jqAR0nTfRHArzkYt@db.lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres?sslmode=require\" psql:*)",
+      "Bash(SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5dGVveG5xa2pycGlscmZjaW1jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTgwNzI2NSwiZXhwIjoyMDc3MzgzMjY1fQ.TTy-fS8I4dIgCvxkfQSxCGmAldoUz2PGi59ya8bx10M node:*)",
+      "Bash(SUPABASE_DB_URL=\"postgresql://postgres:d$z#6W&K@8pL!qR3@lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres?sslmode=require\" psql:*)",
+      "Bash(time:*)"
     ],
     "deny": [],
     "ask": []

@@ -2,15 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Smartphone, ArrowRight, CheckCircle, Clock, Shield } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (user: { phone: string; name?: string }) => void;
   mode?: 'signin' | 'signup';
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, mode = 'signin' }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode = 'signin' }) => {
+  const { login } = useAuth();
   const [step, setStep] = useState<'phone' | 'otp' | 'success'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -54,17 +55,36 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, mode 
 
     setIsLoading(true);
 
-    // Simulate API call - generate demo OTP
-    setTimeout(() => {
-      const demoOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedOtp(demoOtp);
-      setStep('otp');
-      setIsLoading(false);
-      startResendTimer();
+    try {
+      // Call real API endpoint
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://94.136.187.1:4000'}/api/users/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone: phoneNumber }),
+      });
 
-      // Show OTP in console for demo (in production, this would be sent via SMS)
-      console.log(`Demo OTP for ${phoneNumber}: ${demoOtp}`);
-    }, 1500);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send OTP');
+      }
+
+      // Store OTP if returned in development mode
+      if (data.otp) {
+        setGeneratedOtp(data.otp);
+        console.log(`Development OTP for ${phoneNumber}: ${data.otp}`);
+      }
+
+      setStep('otp');
+      startResendTimer();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to send OTP. Please try again.');
+      console.error('Send OTP error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Handle OTP verification
@@ -80,21 +100,37 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, mode 
 
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      if (enteredOtp === generatedOtp) {
-        setStep('success');
-        setTimeout(() => {
-          onSuccess({ phone: phoneNumber, name: 'User' + phoneNumber.slice(-4) });
-          closeModal();
-        }, 2000);
-      } else {
-        setError('Invalid OTP. Please try again.');
-        // Show the demo OTP in error for testing
-        setError(`Invalid OTP. Demo OTP: ${generatedOtp}`);
+    try {
+      // Call real API endpoint
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://94.136.187.1:4000'}/api/users/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone: phoneNumber, otp: enteredOtp }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Invalid OTP');
       }
+
+      // Success - user data returned
+      setStep('success');
+      setTimeout(() => {
+        login({
+          user: data.user,
+          access_token: data.access_token
+        });
+        closeModal();
+      }, 2000);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Invalid OTP. Please try again.');
+      console.error('Verify OTP error:', error);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   // Start resend timer
@@ -112,18 +148,41 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, mode 
   };
 
   // Resend OTP
-  const handleResendOtp = () => {
+  const handleResendOtp = async () => {
     if (resendTimer > 0) return;
 
     setIsLoading(true);
-    setTimeout(() => {
-      const demoOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedOtp(demoOtp);
+
+    try {
+      // Call real API endpoint
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://94.136.187.1:4000'}/api/users/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone: phoneNumber }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to resend OTP');
+      }
+
+      // Store new OTP if returned in development mode
+      if (data.otp) {
+        setGeneratedOtp(data.otp);
+        console.log(`New Development OTP for ${phoneNumber}: ${data.otp}`);
+      }
+
       setOtp(['', '', '', '', '', '']);
-      setIsLoading(false);
       startResendTimer();
-      console.log(`New Demo OTP for ${phoneNumber}: ${demoOtp}`);
-    }, 1500);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to resend OTP. Please try again.');
+      console.error('Resend OTP error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Close modal and reset state
@@ -241,10 +300,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, mode 
                   </button>
                 </form>
 
-                {/* Demo Info */}
+                {/* Development Info */}
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-xs text-blue-700">
-                    <strong>Demo Mode:</strong> OTP will be shown in browser console
+                    <strong>Development:</strong> OTP will be shown in browser console for testing
                   </p>
                 </div>
               </>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 // Backend API URL
-const BACKEND_URL = process.env.NEXT_PUBLIC_TAANT_BACKEND_URL || 'http://localhost:4000'
+const BACKEND_URL = process.env.NEXT_PUBLIC_TAANT_BACKEND_URL || 'http://94.136.187.1:4000'
 
 // Helper function to get auth token for backend requests
 function getAuthToken(request: NextRequest): string {

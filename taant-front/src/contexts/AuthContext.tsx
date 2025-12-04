@@ -3,14 +3,24 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface User {
+  id: string;
   phone: string;
   name?: string;
+  email?: string;
+  role: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AuthResponse {
+  user: User;
+  access_token: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (user: User) => void;
+  login: (authData: AuthResponse) => void;
   logout: () => void;
   showAuthModal: (mode?: 'signin' | 'signup') => void;
   hideAuthModal: () => void;
@@ -37,25 +47,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
 
-  // Load user from localStorage on mount
+  // Load user and token from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedUser = localStorage.getItem('user');
-      if (savedUser) {
+      const savedToken = localStorage.getItem('authToken');
+
+      if (savedUser && savedToken) {
         try {
           setUser(JSON.parse(savedUser));
         } catch (error) {
           console.error('Error parsing user from localStorage:', error);
           localStorage.removeItem('user');
+          localStorage.removeItem('authToken');
         }
       }
     }
   }, []);
 
-  const login = (userData: User) => {
-    setUser(userData);
+  const login = (authData: AuthResponse) => {
+    setUser(authData.user);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('user', JSON.stringify(authData.user));
+      localStorage.setItem('authToken', authData.access_token);
     }
   };
 
@@ -63,6 +77,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
     }
   };
 

@@ -41,9 +41,7 @@ const CheckoutPage = () => {
   const router = useRouter();
   const { user, isAuthenticated, login, logout, showAuthModal, hideAuthModal, isAuthModalOpen } = useAuth();
     const [showAddAddressForm, setShowAddAddressForm] = useState(false);
-  const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
-  const [orderData, setOrderData] = useState<any>(null);
-
+  
   
   // Load form data from localStorage on mount
   const [formData, setFormData] = useState<CheckoutFormData>(() => {
@@ -170,285 +168,97 @@ const CheckoutPage = () => {
     }));
   };
 
-  const placeOrder = (e: React.FormEvent) => {
+  const placeOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const order = {
-      id: `ORD${Date.now()}`,
-      orderDate: new Date().toLocaleDateString('en-IN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }),
-      addresses: formData.selectedAddressIds.map(id =>
-        formData.shippingAddresses.find(addr => addr.id === id)
-      ),
-      isReselling: formData.isReselling,
-      resellerMarginType: formData.resellerMarginType,
-      resellerMarginValue: formData.resellerMarginValue,
-      resellerProfit,
-      paymentMethod: formData.paymentMethod,
-      subtotal,
-      tax,
-      shipping,
-      total,
-      items: cartItems.map(item => ({
-        id: item.id,
-        name: item.name,
-        variant: item.variant || '',
-        variantId: item.variantId || null,
-        quantity: item.quantity,
-        price: item.price,
-        image: item.image,
-        slug: item.slug
-      }))
-    };
+    try {
+      // Check if user is authenticated
+      if (!isAuthenticated) {
+        alert('Please login to place an order');
+        showAuthModal('signin');
+        return;
+      }
 
-    setOrderData(order);
-    setShowOrderConfirmation(true);
+      // Get selected shipping address
+      const selectedAddress = formData.shippingAddresses.find(addr =>
+        formData.selectedAddressIds.includes(addr.id)
+      );
 
-    // Clear form data after successful order
-    localStorage.removeItem('checkoutFormData');
+      if (!selectedAddress) {
+        alert('Please select a shipping address');
+        return;
+      }
 
-    // Clear cart after successful order
-    localStorage.removeItem('cart');
+      // Prepare order data for API
+      const orderData = {
+        items: cartItems.map(item => ({
+          product_id: item.id,
+          variant_id: item.variantId || null,
+          quantity: item.quantity
+        })),
+        shipping_address: {
+          name: selectedAddress.name,
+          phone: selectedAddress.phone,
+          address: selectedAddress.address,
+          city: selectedAddress.city,
+          state: selectedAddress.state,
+          pincode: selectedAddress.pincode
+        },
+        billing_address: {
+          name: selectedAddress.name,
+          phone: selectedAddress.phone,
+          address: selectedAddress.address,
+          city: selectedAddress.city,
+          state: selectedAddress.state,
+          pincode: selectedAddress.pincode
+        },
+        notes: formData.isReselling
+          ? `Reseller margin: ${formData.resellerMarginType === 'percentage' ? formData.resellerMarginValue + '%' : '₹' + formData.resellerMarginValue}`
+          : null
+      };
 
-    // Trigger cart update event
-    window.dispatchEvent(new Event('cartUpdate'));
+      // Get auth token
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        alert('Authentication token not found. Please login again.');
+        return;
+      }
+
+      // Call the backend API to create order
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://94.136.187.1:4000'}/api/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to place order');
+      }
+
+      const createdOrder = await response.json();
+
+      // Clear form data after successful order
+      localStorage.removeItem('checkoutFormData');
+
+      // Clear cart after successful order
+      localStorage.removeItem('cart');
+
+      // Trigger cart update event
+      window.dispatchEvent(new Event('cartUpdate'));
+
+      // Redirect to order confirmation page with order number
+      router.push(`/order-confirmation/${createdOrder.order_number}`);
+
+    } catch (error) {
+      console.error('Error placing order:', error);
+      alert(error instanceof Error ? error.message : 'Failed to place order. Please try again.');
+    }
   };
 
-  const resetForm = () => {
-    setFormData({
-      isLoggedIn: false,
-      selectedAddressIds: [],
-      shippingAddresses: [
-        {
-          id: '1',
-          name: 'John Doe',
-          phone: '+91 9876543210',
-          address: '123 Main Street, Apt 4B',
-          city: 'Mumbai',
-          state: 'Maharashtra',
-          pincode: '400001',
-          isDefault: true
-        }
-      ],
-      newAddress: {
-        name: '',
-        phone: '',
-        address: '',
-        city: '',
-        state: '',
-        pincode: ''
-      },
-      isReselling: false,
-      resellerMarginType: 'percentage',
-      resellerMarginValue: 10,
-      paymentMethod: null,
-      saveNewAddress: false
-    });
-    setShowOrderConfirmation(false);
-    router.push('/');
-  };
-
-  // Show order confirmation page
-  if (showOrderConfirmation && orderData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-green-50 relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-orange-500 rounded-full filter blur-3xl"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-green-500 rounded-full filter blur-3xl"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px]">
-            <svg className="w-full h-full" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                  <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" strokeWidth="0.5"/>
-                </pattern>
-              </defs>
-              <rect width="100" height="100" fill="url(#grid)" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Decorative Elements */}
-        <div className="absolute top-10 left-10 text-orange-200">
-          <CheckCircle className="w-8 h-8" />
-        </div>
-        <div className="absolute top-20 right-20 text-orange-200">
-          <CheckCircle className="w-6 h-6" />
-        </div>
-        <div className="absolute bottom-20 left-20 text-orange-200">
-          <CheckCircle className="w-10 h-10" />
-        </div>
-        <div className="absolute bottom-10 right-10 text-orange-200">
-          <CheckCircle className="w-7 h-7" />
-        </div>
-
-        <div className="relative z-10 container px-4 sm:px-6 lg:px-8 py-8">
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 text-center relative overflow-hidden">
-              {/* Subtle decorative gradient overlay */}
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 via-orange-500 to-green-400"></div>
-
-              {/* Additional subtle background pattern inside card */}
-              <div className="absolute inset-0 opacity-3">
-                <div className="absolute top-4 right-4 w-32 h-32 bg-orange-200 rounded-full filter blur-2xl"></div>
-                <div className="absolute bottom-4 left-4 w-24 h-24 bg-orange-200 rounded-full filter blur-2xl"></div>
-              </div>
-
-              <div className="relative z-10">
-                <div className="w-20 h-20 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg animate-pulse">
-                  <CheckCircle className="w-10 h-10 text-green-500 animate-bounce" />
-                </div>
-
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Confirmed!</h1>
-                <p className="text-gray-600 mb-8">Thank you for your order. We've received it and will process it shortly.</p>
-
-              <div className="bg-gray-50 rounded-lg p-6 mb-8 text-left">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Order Details</h2>
-                  <span className="text-sm text-gray-500">#{orderData.id}</span>
-                </div>
-
-                <div className="space-y-3 mb-6">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Order Date:</span>
-                    <span className="font-medium">{orderData.orderDate}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Payment Method:</span>
-                    <span className="font-medium">
-                      {orderData.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Shipping Address:</span>
-                    <span className="font-medium text-right max-w-xs">
-                      {orderData.addresses[0]?.name}<br />
-                      {orderData.addresses[0]?.address}, {orderData.addresses[0]?.city}<br />
-                      {orderData.addresses[0]?.state} - {orderData.addresses[0]?.pincode}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Order Items */}
-                <div className="mb-6">
-                  <h3 className="font-semibold text-gray-900 mb-3">Order Items</h3>
-                  <div className="space-y-3">
-                    {orderData.items.map((item: any, index: number) => (
-                      <div key={index} className="flex items-center gap-3 p-3 bg-white rounded-lg">
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-12 h-12 object-cover rounded"
-                        />
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm text-gray-900">{item.name}</h4>
-                          <div className="text-xs text-gray-600 mt-1">
-                            <div className="flex flex-wrap gap-x-1 gap-y-1">
-                              {/* Display variant if exists */}
-                              {item.variant && (
-                                <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 font-medium text-xs">
-                                  {item.variant}
-                                </span>
-                              )}
-
-                              {/* Display size if exists */}
-                              {item.size && (
-                                <span className="bg-blue-100 px-1.5 py-0.5 rounded text-blue-700 font-medium text-xs">
-                                  Size: {item.size}
-                                </span>
-                              )}
-
-                              {/* Display color if exists */}
-                              {item.color && (
-                                <span className="flex items-center gap-0.5 bg-purple-100 px-1.5 py-0.5 rounded text-purple-700 font-medium text-xs">
-                                  Color:
-                                  <span
-                                    className="w-2 h-2 rounded-full border border-gray-300 inline-block"
-                                    style={{ backgroundColor: item.color }}
-                                    title={item.color}
-                                  ></span>
-                                </span>
-                              )}
-
-                              {/* Display all selected options */}
-                              {item.selectedOptions && Object.entries(item.selectedOptions).map(([optionName, optionValue]) => (
-                                <span key={optionName} className="bg-orange-100 px-1.5 py-0.5 rounded text-orange-700 font-medium text-xs">
-                                  {optionName}: {optionValue}
-                                </span>
-                              ))}
-                            </div>
-                            <div className="mt-1">
-                              Qty: {item.quantity}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-semibold text-sm">₹{Math.round(item.price * item.quantity).toLocaleString('en-IN')}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="border-t pt-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Subtotal:</span>
-                      <span>₹{orderData.subtotal.toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Tax (18%):</span>
-                      <span>₹{Math.round(orderData.tax).toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Shipping:</span>
-                      <span>{orderData.shipping === 0 ? 'FREE' : `₹${orderData.shipping.toLocaleString('en-IN')}`}</span>
-                    </div>
-                    {orderData.isReselling && orderData.resellerProfit > 0 && (
-                      <div className="flex justify-between text-orange-600">
-                        <span>Your Profit:</span>
-                        <span>₹{orderData.resellerProfit.toLocaleString('en-IN')}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t">
-                      <span>Total:</span>
-                      <span>₹{Math.round(orderData.total).toLocaleString('en-IN')}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-orange-50 border border-orange-500-muted rounded-lg p-4 mb-8">
-                <p className="text-sm text-orange-600">
-                  <strong>What's Next?</strong><br />
-                  You'll receive an order confirmation email shortly. We'll notify you when your order ships.
-                </p>
-              </div>
-
-              <div className="flex gap-4 justify-center">
-                <button
-                  onClick={resetForm}
-                  className="bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
-                >
-                  Continue Shopping
-                </button>
-                <Link
-                  href="/account/orders"
-                  className="bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-900 font-semibold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg inline-block"
-                >
-                  View Orders
-                </Link>
-              </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Show empty cart message if no items
   if (cartItems.length === 0) {

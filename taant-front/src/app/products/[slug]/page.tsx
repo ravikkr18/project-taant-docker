@@ -8,6 +8,8 @@ import { Star, Heart, ShoppingBag, Truck, Shield, RefreshCw, Minus, Plus, Chevro
 import { Product, ProductVariant } from '@/types';
 import { getProductBySlug as getProductBySlugAPI, getRelatedProducts as getRelatedProductsAPI, transformProductForFrontend } from '@/api/products';
 import { useLocation } from '@/contexts/LocationContext';
+import ReviewModal from '@/components/reviews/ReviewModal';
+import { useReviewSubmission } from '@/hooks/useReviewSubmission';
 
 
 interface Review {
@@ -203,6 +205,8 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const [currentProductImages, setCurrentProductImages] = useState<string[]>([]);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const addToCartRef = useRef<HTMLDivElement>(null);
+
+  const { submitReview, isSubmitting, error, success, clearMessages } = useReviewSubmission();
 
   // Helper function to format stock count into ranges
   const formatStockCount = (quantity: number): string => {
@@ -627,6 +631,31 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
       window.location.href = '/checkout';
     }, 1000);
   };
+
+  // Handle review submission
+  const handleReviewSubmit = async (reviewData: any) => {
+    try {
+      await submitReview(reviewData);
+      setShowReviewModal(false);
+
+      // Show success message
+      setNotificationMessage('Thank you! Your review has been submitted successfully.');
+      setShowSuccessMessage(true);
+      setSuccessCountdown(5);
+    } catch (err) {
+      // Error is already handled by the hook
+    }
+  };
+
+  // Clear success and error messages after a delay
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        clearMessages();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error, clearMessages]);
 
   const reviewStats = {
     average: product.rating,
@@ -1641,7 +1670,15 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
         {/* Customer Reviews Section with Stats */}
         <div className="bg-white rounded-lg shadow-sm mb-6">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Customer Reviews</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">Customer Reviews</h2>
+              <button
+                onClick={() => setShowReviewModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                Write a Review
+              </button>
+            </div>
 
             {/* Review Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1947,6 +1984,16 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
           </div>
         </div>
       )}
+
+      {/* Review Modal */}
+      <ReviewModal
+        isOpen={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        productId={product.id}
+        variantId={selectedVariant?.id}
+        onSubmit={handleReviewSubmit}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 };

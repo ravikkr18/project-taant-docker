@@ -788,7 +788,6 @@ const Header = () => {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={hideAuthModal}
-        onSuccess={login}
         mode={authMode}
       />
     </header>
