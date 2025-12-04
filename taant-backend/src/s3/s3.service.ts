@@ -259,4 +259,107 @@ export class S3Service {
       throw new Error(`Failed to upload variant image: ${error.message}`);
     }
   }
+
+  /**
+   * Upload review media (image/video) to S3 with proper folder structure
+   */
+  async uploadReviewMedia(
+    file: Express.Multer.File,
+    reviewId: string
+  ): Promise<string> {
+    try {
+      // Create unique filename with timestamp
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 8);
+      const fileExtension = file.originalname.split('.').pop() || 'jpg';
+      const uniqueFileName = `${timestamp}-${randomString}.${fileExtension}`;
+
+      // Upload to review-media folder with review subfolder
+      const result = await this.uploadFile(
+        file.buffer,
+        uniqueFileName,
+        file.mimetype,
+        `review-media/${reviewId}`
+      );
+
+      return result.url;
+    } catch (error) {
+      throw new Error(`Failed to upload review media: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get signed URL for direct review media upload from frontend
+   */
+  async getReviewMediaUploadSignedUrl(
+    reviewId: string,
+    fileName: string,
+    contentType: string
+  ): Promise<{ url: string; key: string; publicUrl: string }> {
+    return this.getUploadSignedUrl(fileName, contentType, `review-media/${reviewId}`);
+  }
+
+  /**
+   * Get signed URL for direct review media upload from frontend (with timestamp)
+   */
+  async getReviewMediaUploadSignedUrlWithTimestamp(
+    reviewId: string,
+    fileName: string,
+    contentType: string
+  ): Promise<{ url: string; key: string; publicUrl: string }> {
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 8);
+    const fileExtension = fileName.split('.').pop() || 'jpg';
+    const uniqueFileName = `${timestamp}-${randomString}.${fileExtension}`;
+
+    const key = `review-media/${reviewId}/${uniqueFileName}`;
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+      ContentType: contentType,
+      ACL: 'public-read',
+    });
+
+    try {
+      const signedUrl = await getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
+
+      // Construct the public URL
+      const publicUrl = `${process.env.SUPABASE_S3_ENDPOINT?.replace('/storage/v1/s3', '/storage/v1/object/public')}/${this.bucketName}/${key}`;
+
+      return {
+        url: signedUrl,
+        key,
+        publicUrl,
+      };
+    } catch (error) {
+      throw new Error(`Failed to generate review media signed URL: ${error.message}`);
+    }
+  }
+
+  /**
+   * Delete review media from S3
+   */
+  async deleteReviewMedia(reviewId: string, fileName: string): Promise<void> {
+    const key = `review-media/${reviewId}/${fileName}`;
+    return this.deleteFile(key);
+  }
+
+  /**
+   * Delete all media for a specific review
+   */
+  async deleteAllReviewMedia(reviewId: string): Promise<string[]> {
+    try {
+      // List all files in the review media folder
+      const files = await this.listS3Files(`review-media/${reviewId}/`);
+
+      if (files.length === 0) return [];
+
+      // Delete all files
+      const keys = files.map(file => file.key);
+      return this.deleteMultipleFiles(keys);
+    } catch (error) {
+      throw new Error(`Failed to delete review media: ${error.message}`);
+    }
+  }
 }

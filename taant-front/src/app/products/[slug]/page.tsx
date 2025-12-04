@@ -10,19 +10,7 @@ import { getProductBySlug as getProductBySlugAPI, getRelatedProducts as getRelat
 import { useLocation } from '@/contexts/LocationContext';
 import ReviewModal from '@/components/reviews/ReviewModal';
 import { useReviewSubmission } from '@/hooks/useReviewSubmission';
-
-
-interface Review {
-  id: string;
-  customer: string;
-  rating: number;
-  title: string;
-  content: string;
-  date: string;
-  verified: boolean;
-  images: string[];
-  helpful: number;
-}
+import { useReviews } from '@/hooks/useReviews';
 
 interface BrowsingHistoryItem {
   id: string;
@@ -186,6 +174,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
   const [selectedReviewImages, setSelectedReviewImages] = useState<string[]>([]);
   const [selectedReviewImageIndex, setSelectedReviewImageIndex] = useState(0);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set()); // No sections expanded by default
@@ -207,6 +196,9 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const addToCartRef = useRef<HTMLDivElement>(null);
   const { submitReview, isSubmitting, error, success, clearMessages } = useReviewSubmission();
   const { pincode, city } = useLocation();
+
+  // Fetch real reviews for this product
+  const { data: reviewsData, isLoading: reviewsLoading, error: reviewsError } = useReviews(product?.id || null, { limit: 50 });
 
   // Clear success and error messages after a delay
   useEffect(() => {
@@ -459,47 +451,6 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
 
   const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
-  const reviews: Review[] = [
-    {
-      id: '1',
-      customer: 'Rahul Sharma',
-      rating: 5,
-      title: 'Absolutely Incredible Sound Quality!',
-      content: 'I\'ve been using these headphones for 3 weeks now and I\'m completely blown away. The noise cancellation is incredible - I can\'t hear anything when they\'re on. The sound quality is crystal clear with deep bass and crisp highs. Highly recommend!',
-      date: '2024-10-15',
-      verified: true,
-      images: [
-        'https://picsum.photos/seed/review-headphones-1/400/400.jpg',
-        'https://picsum.photos/seed/review-headphones-2/400/400.jpg'
-      ],
-      helpful: 45
-    },
-    {
-      id: '2',
-      customer: 'Priya Patel',
-      rating: 4,
-      title: 'Great headphones, but a bit expensive',
-      content: 'The sound quality is amazing and they\'re very comfortable for long listening sessions. The battery life is excellent - I get about 30 hours of playback. My only complaint is the price, but you get what you pay for.',
-      date: '2024-10-12',
-      verified: true,
-      images: [
-        'https://picsum.photos/seed/review-headphones-3/400/400.jpg'
-      ],
-      helpful: 23
-    },
-    {
-      id: '3',
-      customer: 'Amit Kumar',
-      rating: 5,
-      title: 'Perfect for my daily commute',
-      content: 'These headphones have transformed my daily train commute. The noise cancellation blocks out all the train noise and the comfort is unmatched. I can wear them for hours without any discomfort.',
-      date: '2024-10-10',
-      verified: true,
-      images: [],
-      helpful: 18
-    }
-  ];
-
   
   const browsingHistory: BrowsingHistoryItem[] = [
     {
@@ -552,7 +503,7 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const openReviewImages = (images: string[], index: number = 0) => {
     setSelectedReviewImages(images);
     setSelectedReviewImageIndex(index);
-    setShowReviewModal(true);
+    setShowImageViewer(true);
   };
 
   const nextReviewImage = () => {
@@ -656,17 +607,21 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
     }
   };
 
-  const reviewStats = {
-    average: product.rating,
-    total: product.reviews,
+  // Use real review data when available, otherwise fallback to product data
+  const reviewStats = reviewsData?.stats || {
+    averageRating: product.rating || 0,
+    totalReviews: product.reviews || 0,
     distribution: [
-      { stars: 5, count: 623, percentage: 50 },
-      { stars: 4, count: 374, percentage: 30 },
-      { stars: 3, count: 187, percentage: 15 },
-      { stars: 2, count: 50, percentage: 4 },
-      { stars: 1, count: 13, percentage: 1 },
+      { stars: 5, count: 0, percentage: 0 },
+      { stars: 4, count: 0, percentage: 0 },
+      { stars: 3, count: 0, percentage: 0 },
+      { stars: 2, count: 0, percentage: 0 },
+      { stars: 1, count: 0, percentage: 0 },
     ]
   };
+
+  // Use real reviews data when available, otherwise show empty array
+  const reviews = reviewsData?.reviews || [];
 
   return (
     <div className="w-full bg-gray-50 min-h-screen">
@@ -1682,20 +1637,20 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
             {/* Review Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="text-center">
-                <div className="text-4xl font-bold text-gray-900 mb-2">{product.rating}</div>
+                <div className="text-4xl font-bold text-gray-900 mb-2">{reviewStats.averageRating?.toFixed(1) || '0.0'}</div>
                 <div className="flex items-center justify-center mb-2">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
                       className={`w-6 h-6 ${
-                        i < Math.floor(product.rating!)
+                        i < Math.floor(reviewStats.averageRating || 0)
                           ? 'fill-yellow-400 text-yellow-400'
                           : 'text-gray-300'
                       }`}
                     />
                   ))}
                 </div>
-                <p className="text-gray-600">{product.reviews.toLocaleString()} verified ratings</p>
+                <p className="text-gray-600">{reviewStats.totalReviews?.toLocaleString() || '0'} verified ratings</p>
               </div>
 
               <div className="space-y-2">
@@ -1717,7 +1672,16 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
 
           <div className="p-6">
             <div className="space-y-6">
-              {reviews.map((review) => (
+              {reviewsLoading ? (
+                <div className="text-center py-8">
+                  <div className="text-gray-600">Loading reviews...</div>
+                </div>
+              ) : reviews.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-gray-600">No reviews yet. Be the first to review this product!</div>
+                </div>
+              ) : (
+                reviews.map((review) => (
                 <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
                   <div className="flex items-start justify-between mb-3">
                     <div>
@@ -1747,6 +1711,43 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                       </div>
                       <h4 className="font-semibold text-gray-900 mb-2">{review.title}</h4>
                       <p className="text-gray-700 mb-3">{review.content}</p>
+
+                      {/* Review Pros & Cons */}
+                      {(review.pros && review.pros.length > 0) && (
+                        <div className="mb-3">
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <h5 className="text-sm font-semibold text-green-800 mb-2 flex items-center gap-1">
+                              <span>✓</span> Pros
+                            </h5>
+                            <ul className="text-sm text-green-700 space-y-1">
+                              {review.pros.map((pro, index) => (
+                                <li key={index} className="flex items-start gap-2">
+                                  <span className="text-green-500 mt-0.5">•</span>
+                                  <span>{pro}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+
+                      {(review.cons && review.cons.length > 0) && (
+                        <div className="mb-3">
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                            <h5 className="text-sm font-semibold text-red-800 mb-2 flex items-center gap-1">
+                              <span>✗</span> Cons
+                            </h5>
+                            <ul className="text-sm text-red-700 space-y-1">
+                              {review.cons.map((con, index) => (
+                                <li key={index} className="flex items-start gap-2">
+                                  <span className="text-red-500 mt-0.5">•</span>
+                                  <span>{con}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Review Images */}
                       {review.images && review.images.length > 0 && (
@@ -1787,73 +1788,15 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
                     </div>
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Review Image Modal */}
-      {showReviewModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
-          <div className="relative max-w-4xl w-full">
-            <button
-              onClick={() => setShowReviewModal(false)}
-              className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
-            >
-              <X className="w-8 h-8" />
-            </button>
-
-            {/* Main Modal Image */}
-            <div className="relative">
-              <img
-                src={selectedReviewImages[selectedReviewImageIndex]}
-                alt={`Review image ${selectedReviewImageIndex + 1}`}
-                className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
-              />
-
-              {/* Navigation Arrows */}
-              {selectedReviewImageIndex > 0 && (
-                <button
-                  onClick={prevReviewImage}
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-colors"
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
-              )}
-              {selectedReviewImageIndex < selectedReviewImages.length - 1 && (
-                <button
-                  onClick={nextReviewImage}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-colors"
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
-              )}
-            </div>
-
-            {/* Thumbnail Navigation */}
-            <div className="flex gap-2 mt-4 overflow-x-auto justify-center">
-              {selectedReviewImages.map((image: string, index: number) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedReviewImageIndex(index)}
-                  className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                    index === selectedReviewImageIndex
-                      ? 'border-orange-500 ring-2 ring-orange-200'
-                      : 'border-white/30 hover:border-white/50'
-                  }`}
-                >
-                  <img
-                    src={image}
-                    alt={`Review image ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-
-        {/* Related Products Section */}
+      {/* Related Products Section */}
+      {relatedProducts.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm mb-6 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Related Products</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -1901,7 +1844,6 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
               </div>
             ))}
           </div>
-        </div>
         </div>
       )}
 
@@ -1993,6 +1935,77 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
         onSubmit={handleReviewSubmit}
         isSubmitting={isSubmitting}
       />
+
+      {/* Review Image Viewer */}
+      {showImageViewer && selectedReviewImages.length > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
+          <div className="relative max-w-6xl max-h-full w-full h-full flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 text-white">
+              <div className="text-sm font-medium">
+                {selectedReviewImageIndex + 1} / {selectedReviewImages.length}
+              </div>
+              <button
+                onClick={() => setShowImageViewer(false)}
+                className="p-2 hover:bg-white hover:bg-opacity-20 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Main Image */}
+            <div className="flex-1 flex items-center justify-center">
+              <img
+                src={selectedReviewImages[selectedReviewImageIndex]}
+                alt={`Review image ${selectedReviewImageIndex + 1}`}
+                className="max-w-full max-h-full object-contain"
+              />
+            </div>
+
+            {/* Navigation */}
+            {selectedReviewImages.length > 1 && (
+              <div className="flex items-center justify-between p-4">
+                <button
+                  onClick={prevReviewImage}
+                  disabled={selectedReviewImageIndex === 0}
+                  className="p-3 bg-white bg-opacity-20 hover:bg-opacity-30 disabled:opacity-50 disabled:cursor-not-allowed rounded-full transition-all text-white"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+
+                {/* Thumbnails */}
+                <div className="flex gap-2 overflow-x-auto max-w-md mx-4">
+                  {selectedReviewImages.map((image, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedReviewImageIndex(index)}
+                      className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                        index === selectedReviewImageIndex
+                          ? 'border-white'
+                          : 'border-transparent opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <img
+                        src={image}
+                        alt={`Thumbnail ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={nextReviewImage}
+                  disabled={selectedReviewImageIndex === selectedReviewImages.length - 1}
+                  className="p-3 bg-white bg-opacity-20 hover:bg-opacity-30 disabled:opacity-50 disabled:cursor-not-allowed rounded-full transition-all text-white"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

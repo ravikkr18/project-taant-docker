@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { Star, Plus, X, CheckCircle } from 'lucide-react';
+import MediaUpload from './MediaUpload';
+import { useMediaUpload } from '@/hooks/useMediaUpload';
 
 interface ReviewFormProps {
   productId: string;
@@ -15,6 +17,19 @@ interface ReviewFormProps {
     pros?: string[];
     cons?: string[];
     order_id?: string;
+    media?: Array<{
+      id: string;
+      media_url: string;
+      media_type: 'image' | 'video';
+      file_name: string;
+      file_size?: number;
+      mime_type?: string;
+      width?: number;
+      height?: number;
+      duration?: number;
+      position?: number;
+      is_primary?: boolean;
+    }>;
   }) => Promise<void>;
   onCancel: () => void;
   isSubmitting?: boolean;
@@ -36,6 +51,8 @@ export default function ReviewForm({
   const [cons, setCons] = useState<string[]>([]);
   const [conInput, setConInput] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [media, setMedia] = useState<any[]>([]);
+  const { uploadMedia, isUploading, uploadProgress, errors: uploadErrors } = useMediaUpload();
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -71,6 +88,18 @@ export default function ReviewForm({
       return;
     }
 
+    let uploadedMedia = [];
+
+    // Upload media if any files were selected
+    if (media.length > 0) {
+      try {
+        uploadedMedia = await uploadMedia(media);
+      } catch (error) {
+        // Upload failed, don't submit the review
+        return;
+      }
+    }
+
     const reviewData = {
       product_id: productId,
       variant_id: variantId,
@@ -79,6 +108,7 @@ export default function ReviewForm({
       content: content.trim() || undefined,
       pros: pros.length > 0 ? pros : undefined,
       cons: cons.length > 0 ? cons : undefined,
+      media: uploadedMedia.length > 0 ? uploadedMedia : undefined,
     };
 
     await onSubmit(reviewData);
@@ -318,6 +348,47 @@ export default function ReviewForm({
           )}
         </div>
 
+        {/* Media Upload */}
+        <MediaUpload
+          onMediaChange={setMedia}
+          maxFiles={5}
+          maxFileSize={50 * 1024 * 1024} // 50MB
+          className="mb-6"
+        />
+
+        {/* Upload Progress */}
+        {isUploading && (
+          <div className="space-y-2 mb-6">
+            <p className="text-sm font-medium text-gray-700">Uploading media...</p>
+            {Object.entries(uploadProgress).map(([mediaId, progress]) => (
+              <div key={mediaId} className="space-y-1">
+                <div className="flex justify-between text-xs text-gray-600">
+                  <span>Media {mediaId}</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Upload Errors */}
+        {uploadErrors.length > 0 && (
+          <div className="mb-6 space-y-2">
+            <p className="text-sm font-medium text-red-600">Upload Errors:</p>
+            {uploadErrors.map((error, index) => (
+              <div key={index} className="text-sm text-red-600">
+                {error}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Form Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
           <button
@@ -330,10 +401,10 @@ export default function ReviewForm({
           </button>
           <button
             type="submit"
-            disabled={isSubmitting || rating === 0}
+            disabled={isSubmitting || isUploading || rating === 0}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Review'}
+            {isUploading ? 'Uploading Media...' : isSubmitting ? 'Submitting...' : 'Submit Review'}
           </button>
         </div>
       </form>

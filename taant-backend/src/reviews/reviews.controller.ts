@@ -14,6 +14,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ReviewsService } from './reviews.service';
+import { S3Service } from '../s3/s3.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CreateProductReviewRequest,
@@ -24,19 +25,25 @@ import {
 } from './review.entity';
 
 @Controller('api/reviews')
-@UseGuards(SupabaseAuthGuard)
 export class ReviewsController {
-  constructor(private readonly reviewsService: ReviewsService) {}
+  constructor(
+    private readonly reviewsService: ReviewsService,
+    private readonly s3Service: S3Service,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createReview(
-    @Request() req,
-    @Body() createReviewData: CreateProductReviewRequest,
+    @Body() createReviewData: CreateProductReviewRequest & {
+      customer_id?: string;
+      customer_name?: string;
+      customer_email?: string;
+    },
   ) {
-    const customerId = req.user.id;
-    const customerName = req.user.user_metadata?.name || req.user.email || 'Anonymous';
-    const customerEmail = req.user.email || '';
+    // Use provided customer info or fall back to placeholders
+    const customerId = createReviewData.customer_id || 'temp-customer-id';
+    const customerName = createReviewData.customer_name || 'Anonymous User';
+    const customerEmail = createReviewData.customer_email || 'anonymous@example.com';
 
     return this.reviewsService.createReview(
       customerId,
@@ -55,6 +62,7 @@ export class ReviewsController {
   }
 
   @Get('customer')
+  @UseGuards(SupabaseAuthGuard)
   async getCustomerReviews(
     @Request() req,
     @Query('page') page: number = 1,
@@ -74,6 +82,7 @@ export class ReviewsController {
   }
 
   @Put(':id')
+  @UseGuards(SupabaseAuthGuard)
   @HttpCode(HttpStatus.OK)
   async updateReview(
     @Param('id') id: string,
@@ -85,6 +94,7 @@ export class ReviewsController {
   }
 
   @Delete(':id')
+  @UseGuards(SupabaseAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteReview(@Param('id') id: string, @Request() req) {
     const customerId = req.user.id;
@@ -92,6 +102,7 @@ export class ReviewsController {
   }
 
   @Post(':id/respond')
+  @UseGuards(SupabaseAuthGuard)
   @HttpCode(HttpStatus.OK)
   async addReviewResponse(
     @Param('id') id: string,
@@ -101,6 +112,7 @@ export class ReviewsController {
   }
 
   @Post(':id/vote-helpful')
+  @UseGuards(SupabaseAuthGuard)
   @HttpCode(HttpStatus.OK)
   async voteReviewHelpful(
     @Param('id') id: string,
@@ -110,5 +122,21 @@ export class ReviewsController {
     const customerId = req.user.id;
     await this.reviewsService.voteReviewHelpful(id, customerId, voteData.is_helpful);
     return { message: 'Vote recorded successfully' };
+  }
+
+  @Post('media/upload-url')
+  @HttpCode(HttpStatus.OK)
+  async getMediaUploadUrl(
+    @Body() uploadData: {
+      reviewId: string;
+      fileName: string;
+      contentType: string;
+    },
+  ) {
+    return this.s3Service.getReviewMediaUploadSignedUrlWithTimestamp(
+      uploadData.reviewId,
+      uploadData.fileName,
+      uploadData.contentType,
+    );
   }
 }

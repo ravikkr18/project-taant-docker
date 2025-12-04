@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { S3Service } from '../s3/s3.service';
 import {
   ProductReview,
   CreateProductReviewRequest,
@@ -9,13 +10,14 @@ import {
   ReviewWithProduct,
   ReviewSummary,
   ReviewFilters,
+  CreateReviewMediaRequest,
 } from './review.entity';
 
 @Injectable()
 export class ReviewsService {
   private supabase: SupabaseClient;
 
-  constructor() {
+  constructor(private readonly s3Service: S3Service) {
     this.supabase = createClient(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -71,7 +73,7 @@ export class ReviewsService {
       throw new BadRequestException('You have already reviewed this product');
     }
 
-    // Create the review
+    // Create the review first (without media)
     const { data: review, error } = await this.supabase
       .from('product_reviews')
       .insert([{
@@ -98,7 +100,41 @@ export class ReviewsService {
       throw new BadRequestException('Failed to create review');
     }
 
+    // Process media if provided
+    if (reviewData.media && reviewData.media.length > 0) {
+      await this.processReviewMedia(review.id, reviewData.media);
+    }
+
     return review;
+  }
+
+  /**
+   * Process review media uploads
+   */
+  private async processReviewMedia(reviewId: string, mediaRequests: CreateReviewMediaRequest[]): Promise<void> {
+    const mediaInserts = mediaRequests.map((media, index) => ({
+      review_id: reviewId,
+      media_url: media.media_url,
+      media_type: media.media_type,
+      file_name: media.file_name,
+      file_size: media.file_size,
+      mime_type: media.mime_type,
+      width: media.width,
+      height: media.height,
+      duration: media.duration,
+      position: media.position || index,
+      is_primary: media.is_primary || (index === 0), // First media is primary if not specified
+    }));
+
+    const { error } = await this.supabase
+      .from('review_media')
+      .insert(mediaInserts);
+
+    if (error) {
+      console.error('Failed to save review media:', error);
+      // Don't throw error here, as the review was created successfully
+      // Just log the error for debugging
+    }
   }
 
   async getProductReviews(productId: string, filters: ReviewFilters = {}): Promise<{
@@ -123,7 +159,20 @@ export class ReviewsService {
       .select(`
         *,
         product:products(id, title, images),
-        variant:product_variants(id, title, price, sku)
+        variant:product_variants(id, title, price, sku),
+        media:review_media(
+          id,
+          media_url,
+          media_type,
+          file_name,
+          file_size,
+          mime_type,
+          width,
+          height,
+          duration,
+          position,
+          is_primary
+        )
       `, { count: 'exact' })
       .eq('product_id', productId)
       .eq('is_approved', true);
@@ -182,7 +231,20 @@ export class ReviewsService {
       .select(`
         *,
         product:products(id, title, images),
-        variant:product_variants(id, title, price, sku)
+        variant:product_variants(id, title, price, sku),
+        media:review_media(
+          id,
+          media_url,
+          media_type,
+          file_name,
+          file_size,
+          mime_type,
+          width,
+          height,
+          duration,
+          position,
+          is_primary
+        )
       `)
       .eq('id', reviewId)
       .single();
@@ -356,7 +418,20 @@ export class ReviewsService {
       .select(`
         *,
         product:products(id, title, images),
-        variant:product_variants(id, title, price, sku)
+        variant:product_variants(id, title, price, sku),
+        media:review_media(
+          id,
+          media_url,
+          media_type,
+          file_name,
+          file_size,
+          mime_type,
+          width,
+          height,
+          duration,
+          position,
+          is_primary
+        )
       `, { count: 'exact' })
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false })

@@ -20,6 +20,24 @@ export interface ProductReview {
   responded_at?: Date;
   created_at: Date;
   updated_at: Date;
+  media?: ReviewMedia[];
+}
+
+export interface ReviewMedia {
+  id: string;
+  review_id: string;
+  media_url: string;
+  media_type: 'image' | 'video';
+  file_name: string;
+  file_size?: number;
+  mime_type?: string;
+  width?: number;
+  height?: number;
+  duration?: number; // For videos in seconds
+  position: number;
+  is_primary: boolean;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface CreateProductReviewRequest {
@@ -31,6 +49,24 @@ export interface CreateProductReviewRequest {
   content?: string;
   pros?: string[];
   cons?: string[];
+  media?: CreateReviewMediaRequest[];
+  // Optional customer info for non-authenticated submissions
+  customer_id?: string;
+  customer_name?: string;
+  customer_email?: string;
+}
+
+export interface CreateReviewMediaRequest {
+  media_url: string;
+  media_type: 'image' | 'video';
+  file_name: string;
+  file_size?: number;
+  mime_type?: string;
+  width?: number;
+  height?: number;
+  duration?: number; // For videos in seconds
+  position?: number;
+  is_primary?: boolean;
 }
 
 export interface UpdateProductReviewRequest {

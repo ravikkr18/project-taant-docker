@@ -19,25 +19,41 @@ export function useReviewSubmission() {
   const { user } = useAuth();
 
   const submitReview = async (reviewData: ReviewSubmissionData): Promise<void> => {
-    if (!user) {
-      setError('You must be logged in to submit a review');
-      throw new Error('Authentication required');
-    }
-
     setIsSubmitting(true);
     setError(null);
     setSuccess(null);
 
     try {
-      const token = await user.getIdToken();
+      // Add customer info from user context or use placeholders for non-authenticated users
+      const reviewDataWithCustomer = {
+        ...reviewData,
+        customer_id: user?.id || 'temp-customer-id',
+        customer_name: user?.name || 'Anonymous User',
+        customer_email: user?.email || 'anonymous@example.com',
+      };
+
+      // Get auth token if user is authenticated
+      const getAuthToken = () => {
+        if (typeof window !== 'undefined') {
+          return localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+        }
+        return null;
+      };
+
+      const token = getAuthToken();
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add Authorization header if token is available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
       const response = await fetch('/api/reviews', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(reviewData),
+        headers,
+        body: JSON.stringify(reviewDataWithCustomer),
       });
 
       const data = await response.json();

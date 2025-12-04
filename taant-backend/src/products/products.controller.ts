@@ -184,6 +184,23 @@ export class ProductsController {
     }
   }
 
+  @Get('slug/:slug')
+  async getProductBySlug(@Param('slug') slug: string) {
+    try {
+      const product = await this.productsService.getProductsBySlug(slug);
+      return {
+        success: true,
+        data: product,
+        message: 'Product retrieved successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to fetch product',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   @Get(':id')
   async getProductById(@Param('id') id: string, @Request() req?: any) {
     try {
