@@ -4,6 +4,7 @@ import {
   Order,
   OrderItem,
   OrderWithItems,
+  EnrichedOrderWithItems,
   CreateOrderRequest,
   UpdateOrderStatusRequest,
   OrderSummary
@@ -48,6 +49,7 @@ export class OrdersService {
 
       let price = 0;
       if (item.variant_id) {
+        // Use specific variant price
         const { data: variant, error: variantError } = await this.supabase
           .from('product_variants')
           .select('price')
@@ -59,7 +61,7 @@ export class OrdersService {
         }
         price = variant.price;
       } else {
-        // Get first variant price if no variant specified
+        // Try to get first variant price, fallback to product base_price
         const { data: variant, error: variantError } = await this.supabase
           .from('product_variants')
           .select('price')
@@ -68,9 +70,26 @@ export class OrdersService {
           .single();
 
         if (variantError || !variant) {
-          throw new NotFoundException(`No variants found for product ${item.product_id}`);
+          // No variants found, use product's base_price
+          const { data: product, error: productError } = await this.supabase
+            .from('products')
+            .select('base_price, title')
+            .eq('id', item.product_id)
+            .single();
+
+          if (productError || !product) {
+            throw new NotFoundException(`Product with ID ${item.product_id} not found`);
+          }
+
+          if (!product.base_price || product.base_price <= 0) {
+            throw new BadRequestException(`Product ${item.product_id} has no price configured`);
+          }
+
+          price = product.base_price;
+          console.log(`Using base price for product ${product.title}: ₹${price}`);
+        } else {
+          price = variant.price;
         }
-        price = variant.price;
       }
 
       const itemTotal = price * item.quantity;
@@ -133,12 +152,12 @@ export class OrdersService {
     }
 
     // Get order items with product details
-    const { data: items, error: itemsError } = await this.supabase
+    const { data: items, error: itemsFetchError } = await this.supabase
       .from('order_items')
       .select('*')
       .eq('order_id', order.id);
 
-    if (itemsError) {
+    if (itemsFetchError) {
       throw new BadRequestException('Failed to fetch order items');
     }
 
@@ -185,12 +204,31 @@ export class OrdersService {
     } as OrderWithItems;
   }
 
-  async getOrdersByCustomer(customerId: string, page = 1, limit = 10): Promise<{ orders: Order[]; total: number }> {
+  async getOrdersByCustomer(customerId: string, page = 1, limit = 10): Promise<{ orders: EnrichedOrderWithItems[]; total: number }> {
     const offset = (page - 1) * limit;
 
+    // Fetch orders with essential fields only
     const { data: orders, error, count } = await this.supabase
       .from('orders')
-      .select('*', { count: 'exact' })
+      .select(`
+        id,
+        customer_id,
+        order_number,
+        status,
+        currency,
+        subtotal,
+        tax_amount,
+        shipping_amount,
+        total_amount,
+        shipping_address,
+        billing_address,
+        notes,
+        internal_notes,
+        shipped_at,
+        delivered_at,
+        created_at,
+        updated_at
+      `, { count: 'exact' })
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -199,16 +237,88 @@ export class OrdersService {
       throw new BadRequestException('Failed to fetch orders');
     }
 
+    if (!orders || orders.length === 0) {
+      return {
+        orders: [],
+        total: count || 0,
+      };
+    }
+
+    // Fetch all order items for these orders
+    const orderIds = orders.map(order => order.id);
+    const { data: orderItems, error: itemsError } = await this.supabase
+      .from('order_items')
+      .select('*')
+      .in('order_id', orderIds);
+
+    if (itemsError) {
+      throw new BadRequestException('Failed to fetch order items');
+    }
+
+    // Get unique product and variant IDs
+    const productIds = [...new Set(orderItems?.map(item => item.product_id) || [])];
+    const variantIds = [...new Set(orderItems?.filter(item => item.variant_id).map(item => item.variant_id) || [])];
+
+    // Fetch products and variants in parallel
+    const [productsResult, variantsResult] = await Promise.all([
+      productIds.length > 0
+        ? this.supabase.from('products').select('id, title, images').in('id', productIds)
+        : Promise.resolve({ data: [], error: null }),
+      variantIds.length > 0
+        ? this.supabase.from('product_variants').select('id, title, price, sku').in('id', variantIds)
+        : Promise.resolve({ data: [], error: null })
+    ]);
+
+    const { data: products } = productsResult;
+    const { data: variants } = variantsResult;
+
+    // Combine all data
+    const enrichedOrders: EnrichedOrderWithItems[] = orders.map(order => {
+      const items = orderItems?.filter(item => item.order_id === order.id) || [];
+
+      const enrichedItems = items.map(item => ({
+        ...item,
+        product: products?.find(p => p.id === item.product_id) || null,
+        variant: variants?.find(v => v.id === item.variant_id) || null
+      }));
+
+      return {
+        ...order,
+        items: enrichedItems
+      };
+    });
+
+    console.log(`Loaded ${enrichedOrders.length} orders with ${orderItems?.length || 0} total items`);
+
     return {
-      orders: orders || [],
+      orders: enrichedOrders,
       total: count || 0,
     };
   }
 
   async getOrderById(orderId: string): Promise<OrderWithItems | null> {
+    // Fetch only essential order fields for better performance
     const { data: order, error: orderError } = await this.supabase
       .from('orders')
-      .select('*')
+      .select(`
+        id,
+        customer_id,
+        order_number,
+        status,
+        currency,
+        subtotal,
+        tax_amount,
+        shipping_amount,
+        total_amount,
+        shipping_address,
+        billing_address,
+        notes,
+        internal_notes,
+        shipped_at,
+        delivered_at,
+        created_at,
+        updated_at
+      `)
       .eq('id', orderId)
       .single();
 
@@ -217,45 +327,38 @@ export class OrdersService {
       throw new BadRequestException('Failed to fetch order');
     }
 
-    // Get order items with product details - use separate queries to avoid JOIN issues
-    const { data: items, error: itemsError } = await this.supabase
+    // Get order items with basic details first
+    const { data: items, error: itemsFetchError } = await this.supabase
       .from('order_items')
       .select('*')
       .eq('order_id', orderId);
 
-    if (itemsError) {
+    if (itemsFetchError) {
+      console.error('Failed to fetch order items:', itemsFetchError);
       throw new BadRequestException('Failed to fetch order items');
     }
 
-    // If we have items, fetch product details separately
+    // If we have items, fetch product and variant details in parallel
     let itemsWithDetails = [];
     if (items && items.length > 0) {
-      // Get product details for all unique products
+      // Get unique product and variant IDs
       const productIds = [...new Set(items.map(item => item.product_id))];
-      const { data: products, error: productsError } = await this.supabase
-        .from('products')
-        .select('id, title, images')
-        .in('id', productIds);
-
-      if (productsError) {
-        console.error('Failed to fetch product details:', productsError);
-      }
-
-      // Get variant details for all unique variants
       const variantIds = [...new Set(items.filter(item => item.variant_id).map(item => item.variant_id))];
-      let variants = [];
-      if (variantIds.length > 0) {
-        const { data: variantData, error: variantsError } = await this.supabase
-          .from('product_variants')
-          .select('id, title, price, sku')
-          .in('id', variantIds);
 
-        if (!variantsError && variantData) {
-          variants = variantData;
-        }
-      }
+      // Fetch products and variants in parallel
+      const [productsResult, variantsResult] = await Promise.all([
+        productIds.length > 0
+          ? this.supabase.from('products').select('id, title, images').in('id', productIds)
+          : Promise.resolve({ data: [], error: null }),
+        variantIds.length > 0
+          ? this.supabase.from('product_variants').select('id, title, price, sku').in('id', variantIds)
+          : Promise.resolve({ data: [], error: null })
+      ]);
 
-      // Combine the data
+      const { data: products } = productsResult;
+      const { data: variants } = variantsResult;
+
+      // Combine the data efficiently
       itemsWithDetails = items.map(item => ({
         ...item,
         product: products?.find(p => p.id === item.product_id) || null,
@@ -263,9 +366,11 @@ export class OrdersService {
       }));
     }
 
+    console.log(`Order ${orderId} loaded with ${itemsWithDetails.length} items`);
+
     return {
       ...order,
-      items: itemsWithDetails || [],
+      items: itemsWithDetails,
     };
   }
 
@@ -298,6 +403,125 @@ export class OrdersService {
     }
 
     return order;
+  }
+
+  async cancelOrder(orderId: string, reason?: string): Promise<Order> {
+    // First, check if the order exists and can be cancelled
+    const { data: order, error: fetchError } = await this.supabase
+      .from('orders')
+      .select('id, status, customer_id')
+      .eq('id', orderId)
+      .single();
+
+    if (fetchError || !order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // Check if order can be cancelled (only pending, confirmed, or processing orders can be cancelled)
+    if (!['pending', 'confirmed', 'processing'].includes(order.status)) {
+      throw new BadRequestException(`Cannot cancel order with status: ${order.status}`);
+    }
+
+    // Update order status to cancelled
+    const updateFields: any = {
+      status: 'cancelled',
+      updated_at: new Date().toISOString(),
+    };
+
+    if (reason) {
+      updateFields.internal_notes = `Cancelled: ${reason}`;
+    }
+
+    const { data: cancelledOrder, error: updateError } = await this.supabase
+      .from('orders')
+      .update(updateFields)
+      .eq('id', orderId)
+      .select()
+      .single();
+
+    if (updateError || !cancelledOrder) {
+      throw new BadRequestException('Failed to cancel order');
+    }
+
+    console.log(`Order ${orderId} cancelled successfully`);
+    return cancelledOrder;
+  }
+
+  async getOrderByOrderNumber(orderNumber: string): Promise<OrderWithItems | null> {
+    // Fetch only essential order fields for better performance
+    const { data: order, error: orderError } = await this.supabase
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        status,
+        currency,
+        subtotal,
+        tax_amount,
+        shipping_amount,
+        total_amount,
+        shipping_address,
+        billing_address,
+        notes,
+        internal_notes,
+        shipped_at,
+        delivered_at,
+        created_at,
+        updated_at
+      `)
+      .eq('order_number', orderNumber)
+      .single();
+
+    if (orderError) {
+      if (orderError.code === 'PGRST116') return null; // Not found
+      throw new BadRequestException('Failed to fetch order');
+    }
+
+    // Get order items with basic details first
+    const { data: items, error: itemsFetchError } = await this.supabase
+      .from('order_items')
+      .select('*')
+      .eq('order_id', order.id);
+
+    if (itemsFetchError) {
+      console.error('Failed to fetch order items:', itemsFetchError);
+      throw new BadRequestException('Failed to fetch order items');
+    }
+
+    // If we have items, fetch product and variant details in parallel
+    let itemsWithDetails = [];
+    if (items && items.length > 0) {
+      // Get unique product and variant IDs
+      const productIds = [...new Set(items.map(item => item.product_id))];
+      const variantIds = [...new Set(items.filter(item => item.variant_id).map(item => item.variant_id))];
+
+      // Fetch products and variants in parallel
+      const [productsResult, variantsResult] = await Promise.all([
+        productIds.length > 0
+          ? this.supabase.from('products').select('id, title, images').in('id', productIds)
+          : Promise.resolve({ data: [], error: null }),
+        variantIds.length > 0
+          ? this.supabase.from('product_variants').select('id, title, price, sku').in('id', variantIds)
+          : Promise.resolve({ data: [], error: null })
+      ]);
+
+      const { data: products } = productsResult;
+      const { data: variants } = variantsResult;
+
+      // Combine the data efficiently
+      itemsWithDetails = items.map(item => ({
+        ...item,
+        product: products?.find(p => p.id === item.product_id) || null,
+        variant: variants?.find(v => v.id === item.variant_id) || null
+      }));
+    }
+
+    console.log(`Order ${orderNumber} loaded with ${itemsWithDetails.length} items`);
+
+    return {
+      ...order,
+      items: itemsWithDetails,
+    } as OrderWithItems;
   }
 
   async getOrderSummary(customerId?: string): Promise<OrderSummary> {
@@ -338,6 +562,50 @@ export class OrdersService {
     });
 
     return summary;
+  }
+
+  async refundOrder(orderId: string, refundData: { reason: string; refund_amount?: number; refund_method?: string }): Promise<Order> {
+    // First, check if the order exists and can be refunded
+    const { data: order, error: fetchError } = await this.supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single();
+
+    if (fetchError || !order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // Check if order can be refunded (only delivered orders can be refunded)
+    if (order.status !== 'delivered') {
+      throw new BadRequestException(`Cannot refund order with status: ${order.status}. Only delivered orders can be refunded.`);
+    }
+
+    // Validate refund amount
+    const refundAmount = refundData.refund_amount || order.total_amount;
+    if (refundAmount <= 0 || refundAmount > order.total_amount) {
+      throw new BadRequestException('Invalid refund amount');
+    }
+
+    // Update order status to refunded
+    const { data: refundedOrder, error: updateError } = await this.supabase
+      .from('orders')
+      .update({
+        status: 'refunded',
+        internal_notes: order.internal_notes
+          ? `${order.internal_notes}\nRefunded: ${refundData.reason}. Amount: ₹${refundAmount}. Method: ${refundData.refund_method || 'original'}`
+          : `Refunded: ${refundData.reason}. Amount: ₹${refundAmount}. Method: ${refundData.refund_method || 'original'}`,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', orderId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw new BadRequestException('Failed to refund order');
+    }
+
+    return refundedOrder;
   }
 
   private generateOrderNumber(): string {

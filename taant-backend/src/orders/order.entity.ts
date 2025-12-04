@@ -29,8 +29,35 @@ export interface OrderItem {
   created_at: Date;
 }
 
+export interface ProductDetails {
+  id: string;
+  title: string;
+  images: Array<{
+    url: string;
+    alt_text: string;
+    position: number;
+    is_primary: boolean;
+  }>;
+}
+
+export interface VariantDetails {
+  id: string;
+  title: string;
+  price: number;
+  sku: string;
+}
+
+export interface EnrichedOrderItem extends OrderItem {
+  product: ProductDetails | null;
+  variant: VariantDetails | null;
+}
+
 export interface OrderWithItems extends Order {
   items: OrderItem[];
+}
+
+export interface EnrichedOrderWithItems extends Order {
+  items: EnrichedOrderItem[];
 }
 
 export interface CreateOrderRequest {
@@ -49,6 +76,16 @@ export interface UpdateOrderStatusRequest {
   status: Order['status'];
   internal_notes?: string;
   tracking_number?: string;
+}
+
+export interface CancelOrderRequest {
+  reason?: string;
+}
+
+export interface RefundOrderRequest {
+  reason: string;
+  refund_amount?: number; // Optional: if not provided, refund full amount
+  refund_method?: 'original' | 'bank_transfer' | 'wallet'; // How to process the refund
 }
 
 export interface OrderSummary {

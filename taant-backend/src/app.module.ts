@@ -6,9 +6,10 @@ import { SuppliersModule } from './suppliers/suppliers.module';
 import { PublicModule } from './public/public.module';
 import { UsersModule } from './users/users.module';
 import { OrdersModule } from './orders/orders.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
-  imports: [AuthModule, ProductsModule, SuppliersModule, PublicModule, UsersModule, OrdersModule],
+  imports: [AuthModule, ProductsModule, SuppliersModule, PublicModule, UsersModule, OrdersModule, ReviewsModule],
   controllers: [AppController],
   providers: [],
 })

@@ -17,6 +17,8 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CreateOrderRequest,
   UpdateOrderStatusRequest,
+  CancelOrderRequest,
+  RefundOrderRequest,
   OrderWithItems,
 } from './order.entity';
 
@@ -64,5 +66,49 @@ export class OrdersController {
     @Body() updateData: UpdateOrderStatusRequest,
   ) {
     return this.ordersService.updateOrderStatus(id, updateData);
+  }
+
+  @Post(':id/cancel')
+  @HttpCode(HttpStatus.OK)
+  async cancelOrder(
+    @Param('id') id: string,
+    @Body() cancelData: CancelOrderRequest,
+    @Request() req,
+  ) {
+    const customerId = req.user.id;
+
+    // First verify the order belongs to the authenticated user
+    const order = await this.ordersService.getOrderById(id);
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.customer_id !== customerId) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return this.ordersService.cancelOrder(id, cancelData.reason);
+  }
+
+  @Post(':id/refund')
+  @HttpCode(HttpStatus.OK)
+  async refundOrder(
+    @Param('id') id: string,
+    @Body() refundData: RefundOrderRequest,
+    @Request() req,
+  ) {
+    const customerId = req.user.id;
+
+    // First verify the order belongs to the authenticated user
+    const order = await this.ordersService.getOrderById(id);
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.customer_id !== customerId) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return this.ordersService.refundOrder(id, refundData);
   }
 }
