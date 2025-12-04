@@ -205,8 +205,8 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const [currentProductImages, setCurrentProductImages] = useState<string[]>([]);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const addToCartRef = useRef<HTMLDivElement>(null);
-
   const { submitReview, isSubmitting, error, success, clearMessages } = useReviewSubmission();
+  const { pincode, city } = useLocation();
 
   // Helper function to format stock count into ranges
   const formatStockCount = (quantity: number): string => {
@@ -222,7 +222,6 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
       return '100+ in stock';
     }
   };
-  const { pincode, city } = useLocation();
 
   // Unwrap params promise and load product data
   useEffect(() => {
