@@ -208,6 +208,16 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
   const { submitReview, isSubmitting, error, success, clearMessages } = useReviewSubmission();
   const { pincode, city } = useLocation();
 
+  // Clear success and error messages after a delay
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        clearMessages();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error, clearMessages]);
+
   // Helper function to format stock count into ranges
   const formatStockCount = (quantity: number): string => {
     if (quantity < 10) {
@@ -645,16 +655,6 @@ const ProductDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) =
       // Error is already handled by the hook
     }
   };
-
-  // Clear success and error messages after a delay
-  useEffect(() => {
-    if (success || error) {
-      const timer = setTimeout(() => {
-        clearMessages();
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [success, error, clearMessages]);
 
   const reviewStats = {
     average: product.rating,
