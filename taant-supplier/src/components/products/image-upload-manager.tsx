@@ -213,24 +213,47 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
         console.log('📋 Image positions from database:', response.map(img => `${img.file_name}: position=${img.position}, primary=${img.is_primary}`))
         console.log('📋 Current productImages in state before update:', images.length)
 
-        // Convert database images to the expected format and ensure sequential positions
-        const formattedImages = response.map((img, index) => ({
-          ...img,
-          file: undefined, // No file for existing images
-          needsSave: false,
-          position: index // Ensure sequential positions starting from 0
-        }))
+        // Check if positions are actually broken before renumbering
+        const positionsAreSequential = response.every((img, index) => img.position === index)
+        const hasDuplicatePositions = new Set(response.map(img => img.position)).size !== response.length
+        const hasNegativePositions = response.some(img => img.position < 0)
+        const hasGapsInPositions = response.some((img, index) => img.position > index + 1)
 
-        console.log('📋 Renumbered images for display:', formattedImages.map(img => `${img.file_name}: position=${img.position}`))
+        // Only renumber if positions are actually problematic
+        const needsRenumbering = !positionsAreSequential || hasDuplicatePositions || hasNegativePositions || hasGapsInPositions
 
-        // Update positions in database if they were not sequential
-        const hasIncorrectPositions = response.some((img, index) => img.position !== index)
-        if (hasIncorrectPositions && productId) {
-          console.log('🔧 Database had incorrect positions, updating them...')
+        let formattedImages
+        if (needsRenumbering) {
+          console.log('🔧 Database has problematic positions, renumbering:')
+          console.log(`   - Sequential: ${positionsAreSequential}`)
+          console.log(`   - Duplicates: ${hasDuplicatePositions}`)
+          console.log(`   - Negative: ${hasNegativePositions}`)
+          console.log(`   - Gaps: ${hasGapsInPositions}`)
+
+          // Convert database images to the expected format and ensure sequential positions
+          formattedImages = response.map((img, index) => ({
+            ...img,
+            file: undefined, // No file for existing images
+            needsSave: false,
+            position: index // Ensure sequential positions starting from 0
+          }))
+
+          console.log('📋 Renumbered images for display:', formattedImages.map(img => `${img.file_name}: position=${img.position}`))
+
           // Update positions in database asynchronously (don't wait for it)
-          updatePositionsInDatabase(formattedImages).catch(error => {
-            console.error('❌ Failed to update positions in database:', error)
-          })
+          if (productId) {
+            updatePositionsInDatabase(formattedImages).catch(error => {
+              console.error('❌ Failed to update positions in database:', error)
+            })
+          }
+        } else {
+          console.log('✅ Database positions are valid, using as-is')
+          // Convert database images to the expected format without changing positions
+          formattedImages = response.map(img => ({
+            ...img,
+            file: undefined, // No file for existing images
+            needsSave: false
+          }))
         }
 
         onChange(formattedImages)
@@ -244,38 +267,43 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
     loadProductImages()
   }, [productId, shouldReloadAfterUpload]) // Add shouldReloadAfterUpload to trigger reload after uploads
 
-  // Renumber positions when all uploads are complete to maintain fileAddOrder
+  // Renumber positions when all uploads complete to maintain fileAddOrder (only for fresh uploads)
   React.useEffect(() => {
     if (processingFiles.size === 0 && images.length > 0 && fileAddOrder.length > 0) {
-      // Sort images by their fileAddOrder to maintain original selection order
-      const sortedByUploadOrder = [...images].sort((a, b) => {
-        const aKey = a.file ? `${a.file.name}-${a.file.size}-${a.file.lastModified}` : `${a.file_name}-${a.file_size}`
-        const bKey = b.file ? `${b.file.name}-${b.file.size}-${b.file.lastModified}` : `${b.file_name}-${b.file_size}`
-        const aIndex = fileAddOrder.indexOf(aKey)
-        const bIndex = fileAddOrder.indexOf(bKey)
+      // Only apply this logic if we have newly uploaded files (check if any image has a file attached)
+      const hasNewlyUploadedFiles = images.some(img => img.file)
 
-        // If we can't find the file in fileAddOrder, use position as fallback
-        const aPos = aIndex >= 0 ? aIndex : a.position
-        const bPos = bIndex >= 0 ? bIndex : b.position
+      if (hasNewlyUploadedFiles) {
+        // Sort images by their fileAddOrder to maintain original selection order
+        const sortedByUploadOrder = [...images].sort((a, b) => {
+          const aKey = a.file ? `${a.file.name}-${a.file.size}-${a.file.lastModified}` : `${a.file_name}-${a.file_size}`
+          const bKey = b.file ? `${b.file.name}-${b.file.size}-${b.file.lastModified}` : `${b.file_name}-${b.file_size}`
+          const aIndex = fileAddOrder.indexOf(aKey)
+          const bIndex = fileAddOrder.indexOf(bKey)
 
-        return aPos - bPos
-      })
+          // If we can't find the file in fileAddOrder, use current position as fallback
+          const aPos = aIndex >= 0 ? aIndex : a.position
+          const bPos = bIndex >= 0 ? bIndex : b.position
 
-      // Renumber positions based on upload order
-      const renumberedImages = sortedByUploadOrder.map((img, index) => ({
-        ...img,
-        position: index
-      }))
+          return aPos - bPos
+        })
 
-      // Check if positions actually changed
-      const positionsChanged = renumberedImages.some((img, index) => img.position !== images[index]?.position)
-      if (positionsChanged) {
-        console.log('🔄 Renumbering images by upload order:', renumberedImages.map(img => `${img.file_name}: ${img.position}`))
-        onChange(renumberedImages)
+        // Renumber positions based on upload order only for new images
+        const renumberedImages = sortedByUploadOrder.map((img, index) => ({
+          ...img,
+          position: index
+        }))
 
-        // If this is an existing product, save the updated positions to database
-        if (productId) {
-          updatePositionsInDatabase(renumberedImages)
+        // Check if positions actually changed
+        const positionsChanged = renumberedImages.some((img, index) => img.position !== images[index]?.position)
+        if (positionsChanged) {
+          console.log('🔄 Renumbering new images by upload order:', renumberedImages.map(img => `${img.file_name}: ${img.position}`))
+          onChange(renumberedImages)
+
+          // If this is an existing product, save the updated positions to database
+          if (productId) {
+            updatePositionsInDatabase(renumberedImages)
+          }
         }
       }
     }
@@ -557,8 +585,20 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
       position: index
     }))
 
+    console.log('🔄 Drag and drop reordering:', repositionedImages.map(img => `${img.file_name}: position=${img.position}`))
+
+    // Update local state immediately for responsive UI
     onChange(repositionedImages)
-  }, [images, onChange])
+
+    // If this is an existing product, save the new positions to database
+    if (productId) {
+      // Update positions in database asynchronously (don't wait for it)
+      updatePositionsInDatabase(repositionedImages).catch(error => {
+        console.error('❌ Failed to save drag-and-drop positions:', error)
+        message.error('Failed to save new image order')
+      })
+    }
+  }, [images, onChange, productId])
 
   // Preview image
   const handlePreview = (imageUrl: string) => {
