@@ -1107,17 +1107,24 @@ export class ProductsService {
     }
 
     // Update each image position
-    const updatePromises = positions.map(({ id, position }) =>
-      supabase
+    console.log('🔄 Updating product image positions:', { productId, positions });
+    const updatePromises = positions.map(({ id, position }) => {
+      console.log(`Updating image ${id} to position ${position}`);
+      return supabase
         .from('product_images')
         .update({ position, updated_at: new Date().toISOString() })
         .eq('id', id)
-        .eq('product_id', productId)
-    );
+        .eq('product_id', productId);
+    });
 
-    await Promise.all(updatePromises);
-
-    return { success: true, message: 'Product image positions updated successfully' };
+    try {
+      const results = await Promise.all(updatePromises);
+      console.log('✅ Position updates completed:', results);
+      return { success: true, message: 'Product image positions updated successfully' };
+    } catch (error) {
+      console.error('❌ Error updating positions:', error);
+      throw error;
+    }
   }
 
   async updateProductImage(productId: string, imageId: string, imageData: any, userId: string) {
