@@ -210,6 +210,7 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
         console.log('🔍 ImageUploadManager - Fetching images with timestamp:', timestamp)
         const response = await apiClient.getProductImages(productId)
         console.log('✅ ImageUploadManager - Product images loaded from DB:', response.length, response)
+        console.log('📋 Image positions from database:', response.map(img => `${img.file_name}: position=${img.position}, primary=${img.is_primary}`))
         console.log('📋 Current productImages in state before update:', images.length)
 
         // Convert database images to the expected format

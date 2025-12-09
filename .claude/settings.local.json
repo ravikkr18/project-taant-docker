@@ -110,7 +110,8 @@
       "Bash(SUPABASE_DB_URL=\"postgresql://postgres:jqAR0nTfRHArzkYt@db.lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres?sslmode=require\" psql:*)",
       "Bash(SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5dGVveG5xa2pycGlscmZjaW1jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTgwNzI2NSwiZXhwIjoyMDc3MzgzMjY1fQ.TTy-fS8I4dIgCvxkfQSxCGmAldoUz2PGi59ya8bx10M node:*)",
       "Bash(SUPABASE_DB_URL=\"postgresql://postgres:d$z#6W&K@8pL!qR3@lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres?sslmode=require\" psql:*)",
-      "Bash(time:*)"
+      "Bash(time:*)",
+      "Bash(SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5dGVveG5xa2pycGlscmZjaW1jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTgwNzI2NSwiZXhwIjoyMDc3MzgzMjY1fQ.TTy-fS8I4dIgCvxkfQSxCGmAldoUz2PGi59ya8bx10M SUPABASE_DB_URL=\"postgresql://postgres.d$z#6W&K@8pL!qR3@lyteoxnqkjrpilrfcimc.supabase.co:5432/postgres\" psql -c \"SELECT id, file_name, position, is_primary FROM product_images WHERE product_id = ''be95cad2-a72a-446e-af1f-9d00d6d090a2'' ORDER BY position;\")"
     ],
     "deny": [],
     "ask": []
