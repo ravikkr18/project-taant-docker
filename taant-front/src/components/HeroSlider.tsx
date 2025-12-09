@@ -100,7 +100,7 @@ const HeroSlider = () => {
 
             {/* Content overlay */}
             <div className="absolute inset-0 flex items-center">
-              <div className="container px-4 sm:px-6 md:px-8">
+              <div className="container">
                 <div className="max-w-xl">
                   <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2 sm:mb-3 drop-shadow-lg">
                     {slide.title}

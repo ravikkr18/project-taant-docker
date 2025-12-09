@@ -76,7 +76,7 @@ const ProductSlider = ({ title, products }: ProductSliderProps) => {
   
   return (
     <div className="bg-white py-4">
-      <div className="container px-2 sm:px-3 md:px-4">
+      <div className="container">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg sm:text-xl font-bold text-gray-900">{title}</h2>
           <div className="flex gap-2">
