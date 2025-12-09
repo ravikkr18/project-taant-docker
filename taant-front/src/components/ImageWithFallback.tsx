@@ -93,6 +93,10 @@ const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
     },
   };
 
+  // Provide default dimensions if not supplied and not using fill
+  const imageWidth = width || 400;
+  const imageHeight = height || 400;
+
   if (fill) {
     return (
       <div className={`relative ${className}`}>
@@ -132,8 +136,8 @@ const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
             opacity: 0.7,
-            width: width,
-            height: height,
+            width: imageWidth,
+            height: imageHeight,
             ...style
           }}
         >
@@ -145,7 +149,7 @@ const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
           </div>
         </div>
       )}
-      <Image {...imageProps} width={width} height={height} />
+      <Image {...imageProps} width={imageWidth} height={imageHeight} />
     </div>
   );
 };
