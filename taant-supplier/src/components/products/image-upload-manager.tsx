@@ -213,12 +213,25 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
         console.log('📋 Image positions from database:', response.map(img => `${img.file_name}: position=${img.position}, primary=${img.is_primary}`))
         console.log('📋 Current productImages in state before update:', images.length)
 
-        // Convert database images to the expected format
-        const formattedImages = response.map(img => ({
+        // Convert database images to the expected format and ensure sequential positions
+        const formattedImages = response.map((img, index) => ({
           ...img,
           file: undefined, // No file for existing images
-          needsSave: false
+          needsSave: false,
+          position: index // Ensure sequential positions starting from 0
         }))
+
+        console.log('📋 Renumbered images for display:', formattedImages.map(img => `${img.file_name}: position=${img.position}`))
+
+        // Update positions in database if they were not sequential
+        const hasIncorrectPositions = response.some((img, index) => img.position !== index)
+        if (hasIncorrectPositions && productId) {
+          console.log('🔧 Database had incorrect positions, updating them...')
+          // Update positions in database asynchronously (don't wait for it)
+          updatePositionsInDatabase(formattedImages).catch(error => {
+            console.error('❌ Failed to update positions in database:', error)
+          })
+        }
 
         onChange(formattedImages)
       } catch (error) {
