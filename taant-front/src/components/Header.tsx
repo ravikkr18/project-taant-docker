@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ShoppingBag, User, Menu, X, ChevronDown, MapPin } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useLocation } from '@/contexts/LocationContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -315,8 +316,14 @@ const Header = () => {
             <div className="flex items-center justify-between">
               {/* Logo */}
               <Link href="/" className="flex items-center gap-2 group">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center text-white font-bold text-sm sm:text-xl shadow-md group-hover:shadow-lg transition-shadow">
-                  MH
+                <div className="relative w-8 h-8 sm:w-10 sm:h-10 group-hover:scale-105 transition-transform">
+                  <Image
+                    src="/logo.svg"
+                    alt="MarketHub Logo"
+                    fill
+                    className="object-contain"
+                    priority
+                  />
                 </div>
                 <span className="text-lg sm:text-2xl font-bold text-gray-900">MarketHub</span>
               </Link>
@@ -513,8 +520,14 @@ const Header = () => {
           <div className="hidden lg:flex items-center gap-6 lg:gap-8">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:shadow-lg transition-shadow">
-                MH
+              <div className="relative w-10 h-10 group-hover:scale-105 transition-transform">
+                <Image
+                  src="/logo.svg"
+                  alt="MarketHub Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
               </div>
               <span className="text-2xl font-bold text-gray-900">MarketHub</span>
             </Link>

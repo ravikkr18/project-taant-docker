@@ -226,7 +226,7 @@ export default function OrderConfirmationPage() {
                   {orderData.items.map((item: OrderItem, index: number) => (
                     <div key={index} className="flex items-center gap-3 p-3 bg-white rounded-lg">
                       <img
-                        src={item.product?.images?.[0]?.url || '/placeholder-product.jpg'}
+                        src={item.product?.images?.[0]?.url || '/placeholder-product.svg'}
                         alt={item.product?.title || 'Product'}
                         className="w-12 h-12 object-cover rounded"
                       />

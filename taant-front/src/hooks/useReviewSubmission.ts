@@ -35,7 +35,7 @@ export function useReviewSubmission() {
       // Get auth token if user is authenticated
       const getAuthToken = () => {
         if (typeof window !== 'undefined') {
-          return localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+          return localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
         }
         return null;
       };

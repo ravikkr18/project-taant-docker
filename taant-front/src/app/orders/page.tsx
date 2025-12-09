@@ -671,12 +671,12 @@ const OrdersPage: React.FC = () => {
                           src={
                             item.product?.images?.find(img => img.is_primary)?.url ||
                             item.product?.images?.[0]?.url ||
-                            '/placeholder-product.jpg'
+                            '/placeholder-product.svg'
                           }
                           alt={item.product?.title || 'Product'}
                           className="w-20 h-20 object-cover rounded-lg"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/placeholder-product.jpg';
+                            (e.target as HTMLImageElement).src = '/placeholder-product.svg';
                           }}
                         />
                         <div className="flex-1">

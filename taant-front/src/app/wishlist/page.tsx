@@ -124,11 +124,11 @@ export default function WishlistPage() {
                           src={
                             item.product.product_images && item.product.product_images.length > 0
                               ? item.product.product_images[0].url
-                              : '/placeholder-product.png'
+                              : '/placeholder-product.svg'
                           }
                           alt={item.product.title}
                           className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                          fallback="/placeholder-product.png"
+                          fallback="/placeholder-product.svg"
                         />
                       </div>
                     </Link>
