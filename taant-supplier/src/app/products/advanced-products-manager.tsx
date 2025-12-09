@@ -2039,24 +2039,37 @@ const AdvancedProductManager: React.FC = () => {
           const imagesToSave = productImages.filter(img => img.needsSave !== false)
           console.log('💾 Images to save to database:', imagesToSave.length)
 
-          for (const image of imagesToSave) {
-            try {
-              console.log('💾 Saving image to database:', image.file_name)
-              const imageData = {
-                url: image.url,
-                alt_text: image.alt_text,
-                file_name: image.file_name,
-                file_size: image.file_size,
-                file_type: image.file_type,
-                position: image.position,
-                is_primary: image.is_primary,
-              }
+          if (imagesToSave.length > 0) {
+            // Sort images by their current position and renumber them sequentially
+            const sortedImages = imagesToSave
+              .sort((a, b) => a.position - b.position)
+              .map((image, index) => ({
+                ...image,
+                position: index // Renumber sequentially starting from 0
+              }))
 
-              await apiClient.createProductImage(newProductId, imageData)
-              console.log('✅ Image saved to database successfully')
-            } catch (error) {
-              console.error('❌ Failed to save image to database:', error)
-              message.warning(`Image "${image.file_name}" failed to save to database`)
+            console.log('📋 Sorted and renumbered images:', sortedImages.map(img => `${img.file_name}: ${img.position}`))
+
+            // Save images in order to ensure positions are correct
+            for (const image of sortedImages) {
+              try {
+                console.log(`💾 Saving image "${image.file_name}" to database with position ${image.position}`)
+                const imageData = {
+                  url: image.url,
+                  alt_text: image.alt_text,
+                  file_name: image.file_name,
+                  file_size: image.file_size,
+                  file_type: image.file_type,
+                  position: image.position,
+                  is_primary: image.is_primary,
+                }
+
+                await apiClient.createProductImage(newProductId, imageData)
+                console.log('✅ Image saved to database successfully')
+              } catch (error) {
+                console.error('❌ Failed to save image to database:', error)
+                message.warning(`Image "${image.file_name}" failed to save to database`)
+              }
             }
           }
 

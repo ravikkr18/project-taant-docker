@@ -232,24 +232,49 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
   // Renumber positions when all uploads are complete and processingFiles is empty
   React.useEffect(() => {
     if (processingFiles.size === 0 && images.length > 0) {
-      // Only renumber if there might be position gaps from concurrent uploads
-      const needsRenumering = images.some((img, index) => img.position !== index)
+      // Sort by current position first, then check if renumbering is needed
+      const sortedImages = [...images].sort((a, b) => a.position - b.position)
+      const needsRenumbering = sortedImages.some((img, index) => img.position !== index)
 
-      if (needsRenumering) {
+      if (needsRenumbering) {
         console.log('🔄 Renumbering image positions after concurrent uploads')
-        const renumberedImages = images.map((img, index) => ({
+        const renumberedImages = sortedImages.map((img, index) => ({
           ...img,
           position: index
         }))
 
         // Only update if positions actually changed
-        const positionsChanged = renumberedImages.some((img, index) => img.position !== images[index].position)
+        const positionsChanged = renumberedImages.some((img, index) => img.position !== images[index]?.position)
         if (positionsChanged) {
+          console.log('📋 Updating image positions in state:', renumberedImages.map(img => `${img.file_name}: ${img.position}`))
           onChange(renumberedImages)
+
+          // If this is an existing product, save the updated positions to database
+          if (productId) {
+            updatePositionsInDatabase(renumberedImages)
+          }
         }
       }
     }
   }, [processingFiles.size, images.length]) // Check when processing completes or images change
+
+  // Function to update positions in database for existing products
+  const updatePositionsInDatabase = async (renumberedImages: ProductImage[]) => {
+    try {
+      const positionUpdates = renumberedImages
+        .filter(img => !img.id.startsWith('temp-')) // Only update images that are already in database
+        .map(img => ({ id: img.id, position: img.position }))
+
+      if (positionUpdates.length > 0) {
+        console.log('💾 Updating image positions in database:', positionUpdates)
+        await apiClient.updateProductImagePositions(productId!, positionUpdates)
+        console.log('✅ Image positions updated in database successfully')
+      }
+    } catch (error) {
+      console.error('❌ Failed to update image positions in database:', error)
+      // Don't show error message to user as this is not critical
+    }
+  }
 
   
   // S3 upload function
@@ -276,9 +301,9 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
   }
 
   // Process a single file upload
-  const processSingleFile = async (file: File, currentImagesLength: number, isPrimary: boolean): Promise<ProductImage | null> => {
+  const processSingleFile = async (file: File, positionIndex: number, isPrimary: boolean): Promise<ProductImage | null> => {
     try {
-      console.log(`🚀 Processing single file: ${file.name} (primary: ${isPrimary})`)
+      console.log(`🚀 Processing single file: ${file.name} (primary: ${isPrimary}, position: ${positionIndex})`)
       const s3Url = await uploadToS3(file)
       console.log(`✅ S3 upload complete for: ${file.name}`)
 
@@ -286,7 +311,7 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
         id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         url: s3Url,
         alt_text: file.name.split('.')[0],
-        position: currentImagesLength,
+        position: positionIndex,
         is_primary: isPrimary,
         file_name: file.name,
         file_size: file.size,
@@ -346,16 +371,27 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
 
       setIsUploading(true)
 
-      // Get current images length and add offset for concurrent uploads
-      const currentImagesLength = images.length + processingFiles.size
+      // Calculate position based on current images and existing processing files
+      // This ensures each file gets a unique sequential position
+      const basePosition = images.length
+      const existingProcessingPositions = Array.from(processingFiles)
+        .map(fileKey => {
+          // Extract position from the fileKey if it contains position info
+          // Since fileKey is format: "filename-size-timestamp", we can't extract position
+          // So we'll use a simple counter approach
+          return 0 // This will be replaced by the counter below
+        })
+
+      // Use uploadCounter to ensure unique positions for concurrent uploads
+      const calculatedPosition = basePosition + currentUploadCounter
 
       // Determine if this should be the primary image
       // Only set as primary if there's no existing primary image in the gallery
       const hasExistingPrimary = images.some(img => img.is_primary)
       const shouldThisBePrimary = !hasExistingPrimary && processingFiles.size === 0 && currentUploadCounter === 0
 
-      // Process this single file with explicit primary status
-      const uploadedImage = await processSingleFile(file, currentImagesLength, shouldThisBePrimary)
+      // Process this single file with calculated position
+      const uploadedImage = await processSingleFile(file, calculatedPosition, shouldThisBePrimary)
 
       if (uploadedImage) {
         console.log(`📝 Processing image: ${uploadedImage.file_name} - S3 complete`)
