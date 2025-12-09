@@ -383,7 +383,7 @@ const OrdersPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-orange-50">
-      <div className="container px-4 py-8 max-w-7xl mx-auto">
+      <div className="container py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">

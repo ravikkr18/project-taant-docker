@@ -8,7 +8,7 @@ const Footer = () => {
     <footer className="bg-gray-100">
       {/* Back to Top */}
       <div className="bg-white py-4 border-b border-gray-200">
-        <div className="container px-4">
+        <div className="container">
           <div className="flex items-center justify-center">
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -22,7 +22,7 @@ const Footer = () => {
 
       {/* Main Footer */}
       <div className="bg-white py-8 border-b border-gray-200">
-        <div className="container px-4">
+        <div className="container">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Get to Know Us */}
             <div>
@@ -172,7 +172,7 @@ const Footer = () => {
 
       {/* Second Footer Row */}
       <div className="bg-gray-100 py-8">
-        <div className="container px-4">
+        <div className="container">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Categories */}
             <div>
@@ -307,7 +307,7 @@ const Footer = () => {
 
       {/* Bottom Bar */}
       <div className="bg-gray-100 py-6 border-t border-gray-200">
-        <div className="container px-4">
+        <div className="container">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-sm text-gray-600">
               © 1996-2024, MarketHub.com, Inc. or its affiliates

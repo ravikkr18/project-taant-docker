@@ -278,7 +278,7 @@ const Header = () => {
     <header className="bg-white shadow-sm border-b border-gray-200">
       {/* Top Bar */}
       <div className="bg-gray-50 py-1 border-b border-gray-200">
-        <div className="container px-2 sm:px-3 md:px-4">
+        <div className="container">
           <div className="flex justify-between items-center text-xs text-gray-600">
             <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
               <MapPin className="w-3 h-3 flex-shrink-0" />
@@ -309,7 +309,7 @@ const Header = () => {
 
       {/* Main Header */}
       <div className="bg-white py-2">
-        <div className="container px-2 sm:px-3 md:px-4">
+        <div className="container">
           {/* Mobile Layout - Stacked */}
           <div className="flex lg:hidden flex-col gap-3">
             {/* Top Row: Logo + Actions */}
@@ -713,7 +713,7 @@ const Header = () => {
 
       {/* Category Navigation Bar */}
       <div className="bg-white border-t border-gray-200">
-        <div className="container px-2 sm:px-3 md:px-4">
+        <div className="container">
           <nav className="flex items-center gap-3 sm:gap-4 md:gap-6 lg:gap-8 py-1 overflow-x-auto scrollbar-hide">
             {mainCategories.map((category) => (
               <Link
