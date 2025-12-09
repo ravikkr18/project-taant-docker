@@ -45,11 +45,11 @@ const config: Config = {
   container: {
     center: true,
     padding: {
-      DEFAULT: '1rem',
-      sm: '2rem',
-      lg: '4rem',
-      xl: '5rem',
-      '2xl': '6rem',
+      DEFAULT: '1rem',      // 16px - similar to original px-4
+      sm: '1rem',           // 16px - similar to original sm:px-4
+      lg: '1.5rem',         // 24px - similar to original lg:px-6
+      xl: '2rem',           // 32px - good for large screens
+      '2xl': '2rem',        // 32px - not too much on ultra-wide screens
     },
   },
   plugins: [],
