@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo, useRef } from 'react'
 import {
   Button,
   Input,
@@ -68,16 +68,33 @@ const COMMON_OPTIONS = [
 export default function ProductOptionsManager({ value = [], onChange }: ProductOptionsManagerProps) {
   const [options, setOptions] = useState<ProductOption[]>(value)
 
-  // Sync with parent value
+  // Use a ref to track if we're updating to prevent loops
+  const isUpdatingFromParent = useRef(false)
+
+  // Sync with parent value when value prop changes
   React.useEffect(() => {
-    setOptions(value)
-  }, [value])
+    // Only update if the value has actually changed and we're not in the middle of a parent update
+    if (!isUpdatingFromParent.current) {
+      const hasChanged = value.length !== options.length ||
+        value.some((val, index) =>
+          val.id !== options[index]?.id ||
+          val.name !== options[index]?.name ||
+          val.value !== options[index]?.value
+        )
+
+      if (hasChanged) {
+        setOptions(value)
+      }
+    }
+    isUpdatingFromParent.current = false
+  }, [value, options.length])
 
   const updateOption = (optionId: string, field: 'name' | 'value', newValue: string) => {
     const updatedOptions = options.map(option =>
       option.id === optionId ? { ...option, [field]: newValue } : option
     )
     setOptions(updatedOptions)
+    isUpdatingFromParent.current = true
     onChange?.(updatedOptions)
   }
 
@@ -92,6 +109,7 @@ export default function ProductOptionsManager({ value = [], onChange }: ProductO
 
     const updatedOptions = [...options, newOption]
     setOptions(updatedOptions)
+    isUpdatingFromParent.current = true
     onChange?.(updatedOptions)
   }
 
@@ -100,6 +118,7 @@ export default function ProductOptionsManager({ value = [], onChange }: ProductO
 
     const updatedOptions = options.filter(option => option.id !== optionId)
     setOptions(updatedOptions)
+    isUpdatingFromParent.current = true
     onChange?.(updatedOptions)
     message.success('Option removed')
   }
