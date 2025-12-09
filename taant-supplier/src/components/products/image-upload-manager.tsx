@@ -189,6 +189,8 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [processingFiles, setProcessingFiles] = useState<Set<string>>(new Set())
   const [shouldReloadAfterUpload, setShouldReloadAfterUpload] = useState(false)
+  // Track the order files were added to maintain consistent positioning
+  const [fileAddOrder, setFileAddOrder] = useState<string[]>([])
 
   // Load product images from database on component mount or productId change
   React.useEffect(() => {
@@ -228,34 +230,42 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
     loadProductImages()
   }, [productId, shouldReloadAfterUpload]) // Add shouldReloadAfterUpload to trigger reload after uploads
 
-  // Renumber positions when all uploads are complete and processingFiles is empty
+  // Renumber positions when all uploads are complete to maintain fileAddOrder
   React.useEffect(() => {
-    if (processingFiles.size === 0 && images.length > 0) {
-      // Sort by current position first, then check if renumbering is needed
-      const sortedImages = [...images].sort((a, b) => a.position - b.position)
-      const needsRenumbering = sortedImages.some((img, index) => img.position !== index)
+    if (processingFiles.size === 0 && images.length > 0 && fileAddOrder.length > 0) {
+      // Sort images by their fileAddOrder to maintain original selection order
+      const sortedByUploadOrder = [...images].sort((a, b) => {
+        const aKey = a.file ? `${a.file.name}-${a.file.size}-${a.file.lastModified}` : `${a.file_name}-${a.file_size}`
+        const bKey = b.file ? `${b.file.name}-${b.file.size}-${b.file.lastModified}` : `${b.file_name}-${b.file_size}`
+        const aIndex = fileAddOrder.indexOf(aKey)
+        const bIndex = fileAddOrder.indexOf(bKey)
 
-      if (needsRenumbering) {
-        console.log('🔄 Renumbering image positions after concurrent uploads')
-        const renumberedImages = sortedImages.map((img, index) => ({
-          ...img,
-          position: index
-        }))
+        // If we can't find the file in fileAddOrder, use position as fallback
+        const aPos = aIndex >= 0 ? aIndex : a.position
+        const bPos = bIndex >= 0 ? bIndex : b.position
 
-        // Only update if positions actually changed
-        const positionsChanged = renumberedImages.some((img, index) => img.position !== images[index]?.position)
-        if (positionsChanged) {
-          console.log('📋 Updating image positions in state:', renumberedImages.map(img => `${img.file_name}: ${img.position}`))
-          onChange(renumberedImages)
+        return aPos - bPos
+      })
 
-          // If this is an existing product, save the updated positions to database
-          if (productId) {
-            updatePositionsInDatabase(renumberedImages)
-          }
+      // Renumber positions based on upload order
+      const renumberedImages = sortedByUploadOrder.map((img, index) => ({
+        ...img,
+        position: index
+      }))
+
+      // Check if positions actually changed
+      const positionsChanged = renumberedImages.some((img, index) => img.position !== images[index]?.position)
+      if (positionsChanged) {
+        console.log('🔄 Renumbering images by upload order:', renumberedImages.map(img => `${img.file_name}: ${img.position}`))
+        onChange(renumberedImages)
+
+        // If this is an existing product, save the updated positions to database
+        if (productId) {
+          updatePositionsInDatabase(renumberedImages)
         }
       }
     }
-  }, [processingFiles.size, images.length]) // Check when processing completes or images change
+  }, [processingFiles.size, images.length, fileAddOrder])
 
   // Function to update positions in database for existing products
   const updatePositionsInDatabase = async (renumberedImages: ProductImage[]) => {
@@ -325,71 +335,57 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
     }
   }
 
-  // Handle file upload
+  // Simple upload handler - track file order and process sequentially
   const handleUpload: UploadProps['beforeUpload'] = async (file, fileList) => {
-    // Create a unique identifier for this file based on name, size, and last modified time
     const fileKey = `${file.name}-${file.size}-${file.lastModified}`
 
-    // Check if this file is already being processed
-    if (processingFiles.has(fileKey)) {
-      console.log(`⏭️ File ${file.name} is already being processed, skipping...`)
+    // Track the order files are being processed
+    if (!fileAddOrder.includes(fileKey)) {
+      setFileAddOrder(prev => [...prev, fileKey])
+    }
+
+    // Basic validation
+    const isImage = file.type.startsWith('image/')
+    const isLt5M = file.size / 1024 / 1024 < 5
+    const isDuplicate = images.some(img =>
+      img.file && img.file.name === file.name && img.file.size === file.size
+    )
+
+    if (!isImage) {
+      message.error(`${file.name} is not an image file!`)
+      return false
+    }
+    if (!isLt5M) {
+      message.error(`${file.name} must be smaller than 5MB!`)
+      return false
+    }
+    if (isDuplicate) {
+      message.error(`${file.name} has already been uploaded!`)
       return false
     }
 
-    // Mark this file as being processed
-    setProcessingFiles(prev => new Set(Array.from(prev).concat([fileKey])))
+    // Don't start upload if already processing
+    if (processingFiles.has(fileKey)) {
+      return false
+    }
 
-    // Calculate position based on the file's index in the original fileList
-    // This preserves the original order the user selected
-    const fileIndex = fileList.findIndex(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified)
-    const calculatedPosition = images.length + fileIndex
-
-    console.log(`📁 File "${file.name}" - Index in fileList: ${fileIndex}, Calculated position: ${calculatedPosition}`)
+    setProcessingFiles(prev => new Set(prev).add(fileKey))
+    setIsUploading(true)
 
     try {
-      const remainingSlots = maxImages - images.length
-      if (remainingSlots <= 0) {
-        message.error(`Maximum ${maxImages} images allowed!`)
-        return false
-      }
+      // Get position based on the file's order in the selection
+      const positionInSelection = fileAddOrder.indexOf(fileKey)
+      console.log(`📁 Processing "${file.name}" - Position in selection: ${positionInSelection}`)
 
-      // Validate this single file
-      const isImage = file.type.startsWith('image/')
-      const isLt5M = file.size / 1024 / 1024 < 5
-      const isDuplicate = images.some(img =>
-        img.file && img.file.name === file.name && img.file.size === file.size
-      )
-
-      if (!isImage) {
-        message.error(`${file.name} is not an image file!`)
-        return false
-      }
-      if (!isLt5M) {
-        message.error(`${file.name} must be smaller than 5MB!`)
-        return false
-      }
-      if (isDuplicate) {
-        message.error(`${file.name} has already been uploaded!`)
-        return false
-      }
-
-      setIsUploading(true)
-
-      // Determine if this should be the primary image
-      // Only set as primary if there's no existing primary image in the gallery and this is the first file
       const hasExistingPrimary = images.some(img => img.is_primary)
-      const shouldThisBePrimary = !hasExistingPrimary && fileIndex === 0
+      const shouldThisBePrimary = !hasExistingPrimary && positionInSelection === 0
 
-      // Process this single file with calculated position
-      const uploadedImage = await processSingleFile(file, calculatedPosition, shouldThisBePrimary)
+      const uploadedImage = await processSingleFile(file, positionInSelection, shouldThisBePrimary)
 
       if (uploadedImage) {
-        console.log(`📝 Processing image: ${uploadedImage.file_name} - S3 complete`)
+        console.log(`✅ Upload complete: ${uploadedImage.file_name} - Position: ${uploadedImage.position}`)
 
-        // Check if this is a new product (no productId) or existing product
         if (productId) {
-          // Existing product - save directly to database
-          console.log(`💾 Saving image to database for existing product: ${productId}`)
           try {
             const imageData = {
               url: uploadedImage.url,
@@ -403,59 +399,33 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
 
             const response = await apiClient.createProductImage(productId, imageData)
             if (response) {
-              console.log(`✅ Image saved to database: ${response.id} (replacing temp ID: ${uploadedImage.id})`)
-
-              // Use functional update to ensure we get the latest state
               const finalImage = { ...response, file: uploadedImage.file, needsSave: false }
-
-              // Insert the image at the correct position to maintain order
-              const updatedImages = [...images]
-              const insertIndex = Math.min(uploadedImage.position, updatedImages.length)
-              updatedImages.splice(insertIndex, 0, finalImage)
-              onChange(updatedImages)
-
+              onChange(prev => [...prev, finalImage])
               message.success(`Image "${uploadedImage.file_name}" uploaded and saved`)
-            } else {
-              throw new Error('No response from database')
             }
           } catch (error) {
-            console.error(`❌ Failed to save image to database: ${uploadedImage.id}`, error)
-            // If database save fails, still add the uploaded image to state at correct position
-            const updatedImages = [...images]
-            const insertIndex = Math.min(uploadedImage.position, updatedImages.length)
-            updatedImages.splice(insertIndex, 0, uploadedImage)
-            onChange(updatedImages)
-
+            console.error('❌ Database save failed:', error)
+            onChange(prev => [...prev, uploadedImage])
             message.warning(`Image uploaded to S3 but failed to save to database`)
           }
         } else {
-          // New product - just add to state at correct position, don't save to database yet
-          console.log(`📦 New product - adding image to state at position ${uploadedImage.position}: ${uploadedImage.file_name}`)
-          const updatedImages = [...images]
-          const insertIndex = Math.min(uploadedImage.position, updatedImages.length)
-          updatedImages.splice(insertIndex, 0, uploadedImage)
-          onChange(updatedImages)
+          onChange(prev => [...prev, uploadedImage])
           message.success(`Image "${uploadedImage.file_name}" uploaded successfully`)
         }
       }
-
-      setIsUploading(false)
     } catch (error) {
-      console.error('File upload failed:', error)
+      console.error('Upload failed:', error)
       message.error('Upload failed. Please try again.')
-      setIsUploading(false)
     } finally {
-      // Remove the file from processing set after a delay to prevent immediate reprocessing
       setTimeout(() => {
         setProcessingFiles(prev => {
           const newSet = new Set(prev)
           newSet.delete(fileKey)
-
-          // When all uploads are complete, trigger reload to get fresh data from database
           if (newSet.size === 0) {
-            setShouldReloadAfterUpload(prev => !prev) // Toggle to trigger useEffect
+            setIsUploading(false)
+            setShouldReloadAfterUpload(prev => !prev)
+            setFileAddOrder([]) // Reset for next batch of uploads
           }
-
           return newSet
         })
       }, 100)
