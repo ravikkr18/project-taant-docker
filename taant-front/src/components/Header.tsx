@@ -315,7 +315,7 @@ const Header = () => {
             {/* Top Row: Logo + Actions */}
             <div className="flex items-center justify-between">
               {/* Logo */}
-              <Link href="/" className="flex items-center gap-2 group">
+              <Link href="/" className="flex items-center group">
                 <div className="relative w-8 h-8 sm:w-10 sm:h-10 group-hover:scale-105 transition-transform">
                   <Image
                     src="/logo.svg"
@@ -325,7 +325,6 @@ const Header = () => {
                     priority
                   />
                 </div>
-                <span className="text-lg sm:text-2xl font-bold text-gray-900">MarketHub</span>
               </Link>
 
               {/* Right Actions */}
@@ -519,7 +518,7 @@ const Header = () => {
           {/* Desktop Layout - Horizontal */}
           <div className="hidden lg:flex items-center gap-6 lg:gap-8">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
+            <Link href="/" className="flex items-center group flex-shrink-0">
               <div className="relative w-10 h-10 group-hover:scale-105 transition-transform">
                 <Image
                   src="/logo.svg"
@@ -529,7 +528,6 @@ const Header = () => {
                   priority
                 />
               </div>
-              <span className="text-2xl font-bold text-gray-900">MarketHub</span>
             </Link>
 
             {/* Search Bar with Category Dropdown - Desktop */}
