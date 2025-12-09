@@ -344,6 +344,8 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
     const fileIndex = fileList.findIndex(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified)
     const calculatedPosition = images.length + fileIndex
 
+    console.log(`📁 File "${file.name}" - Index in fileList: ${fileIndex}, Calculated position: ${calculatedPosition}`)
+
     try {
       const remainingSlots = maxImages - images.length
       if (remainingSlots <= 0) {
