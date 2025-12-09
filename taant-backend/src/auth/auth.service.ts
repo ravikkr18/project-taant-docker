@@ -66,7 +66,20 @@ export class AuthService {
   }
 
   createServiceClient(): SupabaseClient {
-    return this.supabase;
+    // Create a fresh client to avoid schema caching issues
+    return createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+        db: {
+          schema: 'public',
+        },
+      }
+    );
   }
 
   async getUserProfile(userId: string): Promise<{ id: string; email: string; role: string } | null> {
