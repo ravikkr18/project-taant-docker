@@ -188,7 +188,6 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
   const [isUploading, setIsUploading] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [processingFiles, setProcessingFiles] = useState<Set<string>>(new Set())
-  const [uploadCounter, setUploadCounter] = useState(0)
   const [shouldReloadAfterUpload, setShouldReloadAfterUpload] = useState(false)
 
   // Load product images from database on component mount or productId change
@@ -337,10 +336,13 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
       return false
     }
 
-    // Mark this file as being processed and increment upload counter
-    const currentUploadCounter = uploadCounter
+    // Mark this file as being processed
     setProcessingFiles(prev => new Set(Array.from(prev).concat([fileKey])))
-    setUploadCounter(prev => prev + 1)
+
+    // Calculate position based on the file's index in the original fileList
+    // This preserves the original order the user selected
+    const fileIndex = fileList.findIndex(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified)
+    const calculatedPosition = images.length + fileIndex
 
     try {
       const remainingSlots = maxImages - images.length
@@ -371,24 +373,10 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
 
       setIsUploading(true)
 
-      // Calculate position based on current images and existing processing files
-      // This ensures each file gets a unique sequential position
-      const basePosition = images.length
-      const existingProcessingPositions = Array.from(processingFiles)
-        .map(fileKey => {
-          // Extract position from the fileKey if it contains position info
-          // Since fileKey is format: "filename-size-timestamp", we can't extract position
-          // So we'll use a simple counter approach
-          return 0 // This will be replaced by the counter below
-        })
-
-      // Use uploadCounter to ensure unique positions for concurrent uploads
-      const calculatedPosition = basePosition + currentUploadCounter
-
       // Determine if this should be the primary image
-      // Only set as primary if there's no existing primary image in the gallery
+      // Only set as primary if there's no existing primary image in the gallery and this is the first file
       const hasExistingPrimary = images.some(img => img.is_primary)
-      const shouldThisBePrimary = !hasExistingPrimary && processingFiles.size === 0 && currentUploadCounter === 0
+      const shouldThisBePrimary = !hasExistingPrimary && fileIndex === 0
 
       // Process this single file with calculated position
       const uploadedImage = await processSingleFile(file, calculatedPosition, shouldThisBePrimary)
@@ -418,8 +406,11 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
               // Use functional update to ensure we get the latest state
               const finalImage = { ...response, file: uploadedImage.file, needsSave: false }
 
-              // Simple approach - just add the image to existing array
-              onChange([...images, finalImage])
+              // Insert the image at the correct position to maintain order
+              const updatedImages = [...images]
+              const insertIndex = Math.min(uploadedImage.position, updatedImages.length)
+              updatedImages.splice(insertIndex, 0, finalImage)
+              onChange(updatedImages)
 
               message.success(`Image "${uploadedImage.file_name}" uploaded and saved`)
             } else {
@@ -427,15 +418,21 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
             }
           } catch (error) {
             console.error(`❌ Failed to save image to database: ${uploadedImage.id}`, error)
-            // If database save fails, still add the uploaded image to state
-            onChange([...images, uploadedImage])
+            // If database save fails, still add the uploaded image to state at correct position
+            const updatedImages = [...images]
+            const insertIndex = Math.min(uploadedImage.position, updatedImages.length)
+            updatedImages.splice(insertIndex, 0, uploadedImage)
+            onChange(updatedImages)
 
             message.warning(`Image uploaded to S3 but failed to save to database`)
           }
         } else {
-          // New product - just add to state, don't save to database yet
-          console.log(`📦 New product - adding image to state only: ${uploadedImage.file_name}`)
-          onChange([...images, uploadedImage])
+          // New product - just add to state at correct position, don't save to database yet
+          console.log(`📦 New product - adding image to state at position ${uploadedImage.position}: ${uploadedImage.file_name}`)
+          const updatedImages = [...images]
+          const insertIndex = Math.min(uploadedImage.position, updatedImages.length)
+          updatedImages.splice(insertIndex, 0, uploadedImage)
+          onChange(updatedImages)
           message.success(`Image "${uploadedImage.file_name}" uploaded successfully`)
         }
       }
@@ -452,10 +449,8 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
           const newSet = new Set(prev)
           newSet.delete(fileKey)
 
-          // Reset upload counter when all uploads are complete
+          // When all uploads are complete, trigger reload to get fresh data from database
           if (newSet.size === 0) {
-            setUploadCounter(0)
-            // Trigger reload to get fresh data from database after all uploads complete
             setShouldReloadAfterUpload(prev => !prev) // Toggle to trigger useEffect
           }
 
