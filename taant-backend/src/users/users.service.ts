@@ -81,36 +81,16 @@ export class UsersService {
     // Clear OTP after successful verification
     this.otpStore.delete(phone);
 
-    // Check if user exists
+    // Find existing user in profiles first (by phone)
     let user = await this.getUserByPhone(phone);
 
     if (!user) {
-      // Create new user
-      user = await this.createUser({
-        phone,
-        name: `User${phone.slice(-4)}`, // Default name
-      });
+      // User doesn't have a profile, this means they're a new user
+      // Create new auth user and profile
+      user = await this.createNewUserWithAuth(phone);
     }
 
-    // Create Supabase session for the user
-    const { data: authData, error: authError } = await this.supabase.auth.admin.createUser({
-      email: `${phone}@taant.user`, // Use dummy email for Supabase auth
-      phone: `+91${phone}`,
-      phone_confirm: true,
-      user_metadata: {
-        phone,
-        name: user.name,
-        role: user.role,
-      },
-    });
-
-    if (authError && !authError.message.includes('duplicate') && authError.code !== 'phone_exists') {
-      console.error('Supabase auth error:', authError);
-      throw new ConflictException('Failed to create user session');
-    }
-
-    // For now, always create a custom token to avoid Supabase auth complexity
-    // TODO: Implement proper Supabase session management later
+    // Generate custom token for the user
     const token = this.generateCustomToken(user);
     return {
       user,
@@ -142,15 +122,30 @@ export class UsersService {
     if (authError) {
       console.error('Error creating auth user:', authError);
 
-      // Fallback: Try direct insert without foreign key constraint
-      const { data, error } = await this.supabase
+      // User likely exists in auth, check for existing profile
+      const existingProfile = await this.getUserByPhone(phone);
+      if (existingProfile) {
+        console.log('Found existing profile for user:', existingProfile.id);
+        return existingProfile;
+      }
+
+      // If auth user exists but no profile, create a real profile
+      console.log('Creating real profile for existing auth user');
+
+      // Since we can't easily get the existing auth user ID without creating conflict,
+      // let's create a unique profile without foreign key constraint
+      // Use a deterministic ID based on phone number
+      const deterministicId = `profile-${phone}`;
+
+      // Create a proper user profile record (without foreign key constraint)
+      const { data: newProfile, error: profileError } = await this.supabase
         .from('profiles')
         .insert([
           {
-            id: authData.user?.id || crypto.randomUUID(),
+            id: deterministicId,
             phone,
             full_name: name,
-            email,
+            email: email || `${phone}@taant.user`,
             role: 'supplier',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -159,15 +154,14 @@ export class UsersService {
         .select()
         .single();
 
-      if (error) {
-        console.error('Error creating user profile:', error);
-        throw new ConflictException('Failed to create user');
+      if (profileError) {
+        console.error('Error creating user profile for existing auth user:', profileError);
+        throw new ConflictException('Failed to create user profile');
       }
 
-      // Map database result to interface (full_name -> name)
       return {
-        ...data,
-        name: data.full_name,
+        ...newProfile,
+        name: newProfile.full_name,
       };
     }
 
@@ -269,6 +263,58 @@ export class UsersService {
       console.error('Error deleting user:', error);
       throw new NotFoundException('Failed to delete user');
     }
+  }
+
+  private async createProfileForAuthUser(authUserId: string, phone: string): Promise<UserProfile> {
+    const { data: newProfile, error: profileError } = await this.supabase
+      .from('profiles')
+      .insert([
+        {
+          id: authUserId,
+          phone,
+          full_name: `User${phone.slice(-4)}`,
+          email: `${phone}@taant.user`,
+          role: 'supplier',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ])
+      .select()
+      .single();
+
+    if (profileError) {
+      console.error('Error creating profile for auth user:', profileError);
+      throw new ConflictException('Failed to create user profile');
+    }
+
+    return {
+      ...newProfile,
+      name: newProfile.full_name,
+    };
+  }
+
+  private async createNewUserWithAuth(phone: string): Promise<UserProfile> {
+    const defaultName = `User${phone.slice(-4)}`;
+    const defaultEmail = `${phone}@taant.user`;
+
+    // Create auth user first
+    const { data: authData, error: authError } = await this.supabase.auth.admin.createUser({
+      email: defaultEmail,
+      phone: `+91${phone}`,
+      phone_confirm: true,
+      user_metadata: {
+        full_name: defaultName,
+        role: 'supplier'
+      }
+    });
+
+    if (authError) {
+      console.error('Error creating auth user:', authError);
+      throw new ConflictException('Failed to create user account');
+    }
+
+    // Then create profile with the same ID
+    return await this.createProfileForAuthUser(authData.user.id, phone);
   }
 
   private generateCustomToken(user: UserProfile): string {

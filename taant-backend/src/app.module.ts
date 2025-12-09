@@ -7,9 +7,10 @@ import { PublicModule } from './public/public.module';
 import { UsersModule } from './users/users.module';
 import { OrdersModule } from './orders/orders.module';
 import { ReviewsModule } from './reviews/reviews.module';
+import { WishlistsModule } from './wishlists/wishlists.module';
 
 @Module({
-  imports: [AuthModule, ProductsModule, SuppliersModule, PublicModule, UsersModule, OrdersModule, ReviewsModule],
+  imports: [AuthModule, ProductsModule, SuppliersModule, PublicModule, UsersModule, OrdersModule, ReviewsModule, WishlistsModule],
   controllers: [AppController],
   providers: [],
 })

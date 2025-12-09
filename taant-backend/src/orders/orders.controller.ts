@@ -30,7 +30,8 @@ export class OrdersController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createOrder(@Request() req, @Body() createOrderData: CreateOrderRequest): Promise<OrderWithItems> {
-    const customerId = req.user.id;
+    // Handle both custom tokens (req.user.id) and Supabase tokens (req.user.sub)
+    const customerId = req.user?.id || req.user?.sub;
     return this.ordersService.createOrder(customerId, createOrderData);
   }
 
@@ -40,7 +41,8 @@ export class OrdersController {
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
   ) {
-    const customerId = req.user.id;
+    // Handle both custom tokens (req.user.id) and Supabase tokens (req.user.sub)
+    const customerId = req.user?.id || req.user?.sub;
     return this.ordersService.getOrdersByCustomer(customerId, page, limit);
   }
 
