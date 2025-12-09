@@ -358,39 +358,49 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
       const uploadedImage = await processSingleFile(file, currentImagesLength, shouldThisBePrimary)
 
       if (uploadedImage) {
-        console.log(`📝 Processing image: ${uploadedImage.file_name} - S3 complete, now saving to database`)
+        console.log(`📝 Processing image: ${uploadedImage.file_name} - S3 complete`)
 
-        try {
-          const imageData = {
-            url: uploadedImage.url,
-            alt_text: uploadedImage.alt_text,
-            file_name: uploadedImage.file_name,
-            file_size: uploadedImage.file_size,
-            file_type: uploadedImage.file_type,
-            position: uploadedImage.position,
-            is_primary: uploadedImage.is_primary,
+        // Check if this is a new product (no productId) or existing product
+        if (productId) {
+          // Existing product - save directly to database
+          console.log(`💾 Saving image to database for existing product: ${productId}`)
+          try {
+            const imageData = {
+              url: uploadedImage.url,
+              alt_text: uploadedImage.alt_text,
+              file_name: uploadedImage.file_name,
+              file_size: uploadedImage.file_size,
+              file_type: uploadedImage.file_type,
+              position: uploadedImage.position,
+              is_primary: uploadedImage.is_primary,
+            }
+
+            const response = await apiClient.createProductImage(productId, imageData)
+            if (response) {
+              console.log(`✅ Image saved to database: ${response.id} (replacing temp ID: ${uploadedImage.id})`)
+
+              // Use functional update to ensure we get the latest state
+              const finalImage = { ...response, file: uploadedImage.file, needsSave: false }
+
+              // Simple approach - just add the image to existing array
+              onChange([...images, finalImage])
+
+              message.success(`Image "${uploadedImage.file_name}" uploaded and saved`)
+            } else {
+              throw new Error('No response from database')
+            }
+          } catch (error) {
+            console.error(`❌ Failed to save image to database: ${uploadedImage.id}`, error)
+            // If database save fails, still add the uploaded image to state
+            onChange([...images, uploadedImage])
+
+            message.warning(`Image uploaded to S3 but failed to save to database`)
           }
-
-          const response = await apiClient.createProductImage(productId!, imageData)
-          if (response) {
-            console.log(`✅ Image saved to database: ${response.id} (replacing temp ID: ${uploadedImage.id})`)
-
-            // Use functional update to ensure we get the latest state
-            const finalImage = { ...response, file: uploadedImage.file, needsSave: false }
-
-            // Simple approach - just add the image to existing array
-            onChange([...images, finalImage])
-
-            message.success(`Image "${uploadedImage.file_name}" uploaded and saved`)
-          } else {
-            throw new Error('No response from database')
-          }
-        } catch (error) {
-          console.error(`❌ Failed to save image to database: ${uploadedImage.id}`, error)
-          // If database save fails, still add the uploaded image to state
+        } else {
+          // New product - just add to state, don't save to database yet
+          console.log(`📦 New product - adding image to state only: ${uploadedImage.file_name}`)
           onChange([...images, uploadedImage])
-
-          message.warning(`Image uploaded to S3 but failed to save to database`)
+          message.success(`Image "${uploadedImage.file_name}" uploaded successfully`)
         }
       }
 
@@ -427,13 +437,13 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
     if (!imageToRemove) return
 
     try {
-      // If image has a real database ID (not temp), delete from database
+      // If image has a real database ID (not temp) and productId exists, delete from database
       if (!imageId.startsWith('temp-') && productId) {
         console.log('🗑️ Deleting image from database:', imageId)
         await apiClient.deleteProductImage(productId, imageId)
         message.success(`Image "${imageToRemove.file_name || 'image'}" deleted from database`)
       } else {
-        console.log('🗑️ Removing temp image from state:', imageId)
+        console.log('🗑️ Removing temp/new product image from state:', imageId)
         message.success(`Image "${imageToRemove.file_name || 'image'}" removed`)
       }
 
@@ -454,7 +464,11 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
       onChange(repositionedImages)
     } catch (error) {
       console.error('❌ Failed to delete image:', error)
-      message.error('Failed to delete image from database')
+      if (productId) {
+        message.error('Failed to delete image from database')
+      } else {
+        message.error('Failed to remove image')
+      }
     }
   }, [images, onChange, productId])
 
@@ -467,7 +481,7 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
       }))
       onChange(updatedImages)
 
-      // Update primary image in database for non-temp images
+      // Update primary image in database for non-temp images and when productId exists
       if (!imageId.startsWith('temp-') && productId) {
         await apiClient.updateProductImage(productId, imageId, {
           is_primary: true
@@ -478,7 +492,11 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
       }
     } catch (error) {
       console.error('❌ Failed to update primary image:', error)
-      message.error('Failed to update primary image')
+      if (productId) {
+        message.error('Failed to update primary image')
+      } else {
+        message.error('Failed to update primary image')
+      }
     }
   }, [images, onChange, productId])
 
@@ -490,7 +508,7 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
       )
       onChange(updatedImages)
 
-      // Update alt text in database for non-temp images
+      // Update alt text in database for non-temp images and when productId exists
       if (!imageId.startsWith('temp-') && productId) {
         await apiClient.updateProductImage(productId, imageId, {
           alt_text: altText
@@ -501,7 +519,11 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
       }
     } catch (error) {
       console.error('❌ Failed to update alt text:', error)
-      message.error('Failed to update alt text')
+      if (productId) {
+        message.error('Failed to update alt text')
+      } else {
+        message.error('Failed to update alt text')
+      }
     }
   }, [images, onChange, productId])
 

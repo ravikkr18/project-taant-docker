@@ -2027,8 +2027,44 @@ const AdvancedProductManager: React.FC = () => {
         message.success('Product updated successfully')
       } else {
         // Create new product
-        await apiClient.createProduct(productData)
-        message.success('Product created successfully')
+        console.log('🆕 Creating new product with images...')
+        const response = await apiClient.createProduct(productData)
+        console.log('✅ Product created successfully:', response)
+
+        if (response && response.data && response.data.id) {
+          const newProductId = response.data.id
+          console.log('🎯 New product ID obtained:', newProductId)
+
+          // Now save the uploaded images to the database with the new product ID
+          const imagesToSave = productImages.filter(img => img.needsSave !== false)
+          console.log('💾 Images to save to database:', imagesToSave.length)
+
+          for (const image of imagesToSave) {
+            try {
+              console.log('💾 Saving image to database:', image.file_name)
+              const imageData = {
+                url: image.url,
+                alt_text: image.alt_text,
+                file_name: image.file_name,
+                file_size: image.file_size,
+                file_type: image.file_type,
+                position: image.position,
+                is_primary: image.is_primary,
+              }
+
+              await apiClient.createProductImage(newProductId, imageData)
+              console.log('✅ Image saved to database successfully')
+            } catch (error) {
+              console.error('❌ Failed to save image to database:', error)
+              message.warning(`Image "${image.file_name}" failed to save to database`)
+            }
+          }
+
+          message.success('Product and images created successfully')
+        } else {
+          console.error('❌ Failed to get new product ID from response')
+          message.error('Product created but failed to save images')
+        }
       }
 
       // Reset form and close modal
