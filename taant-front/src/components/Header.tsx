@@ -316,7 +316,7 @@ const Header = () => {
             <div className="flex items-center justify-between">
               {/* Logo */}
               <Link href="/" className="flex items-center group">
-                <div className="relative w-16 h-16 sm:w-20 sm:h-20 group-hover:scale-105 transition-transform">
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 group-hover:scale-105 transition-transform">
                   <Image
                     src="/logo.svg"
                     alt="MarketHub Logo"
@@ -328,7 +328,27 @@ const Header = () => {
               </Link>
 
               {/* Right Actions */}
-              <div className="flex items-center gap-3 sm:gap-6">
+              <div className="flex items-center gap-3 sm:gap-6 ml-auto">
+                {/* Mobile Menu Button */}
+                <button
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  className="p-2 text-gray-700 hover:text-orange-600 transition-colors"
+                >
+                  {isMobileMenuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
+                </button>
+
+                <Link href="/cart" className="flex flex-col items-center text-gray-700 hover:text-orange-600 transition-colors group relative">
+                  <div className="relative user-dropdown">
+                    <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform" />
+                    {cartCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center font-bold">
+                        {cartCount > 99 ? '99+' : cartCount}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs mt-1 hidden sm:block">Cart</span>
+                </Link>
+
                 <div className="relative user-dropdown">
                   <button
                     onClick={() => isAuthenticated ? setIsUserDropdownOpen(!isUserDropdownOpen) : showAuthModal('signin')}
@@ -389,25 +409,6 @@ const Header = () => {
                     </div>
                   )}
                 </div>
-                <Link href="/cart" className="flex flex-col items-center text-gray-700 hover:text-orange-600 transition-colors group relative">
-                  <div className="relative user-dropdown">
-                    <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform" />
-                    {cartCount > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center font-bold">
-                        {cartCount > 99 ? '99+' : cartCount}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-xs mt-1 hidden sm:block">Cart</span>
-                </Link>
-
-                {/* Mobile Menu Button */}
-                <button
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="p-2 text-gray-700 hover:text-orange-600 transition-colors"
-                >
-                  {isMobileMenuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
-                </button>
               </div>
             </div>
 
@@ -519,7 +520,7 @@ const Header = () => {
           <div className="hidden lg:flex items-center gap-6 lg:gap-8">
             {/* Logo */}
             <Link href="/" className="flex items-center group flex-shrink-0">
-              <div className="relative w-20 h-20 group-hover:scale-105 transition-transform">
+              <div className="relative w-24 h-24 group-hover:scale-105 transition-transform">
                 <Image
                   src="/logo.svg"
                   alt="MarketHub Logo"
@@ -634,7 +635,7 @@ const Header = () => {
             </div>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-6 flex-shrink-0">
+            <div className="flex items-center gap-6 flex-shrink-0 ml-auto">
               <div className="relative user-dropdown">
                 <button
                   onClick={() => isAuthenticated ? setIsUserDropdownOpen(!isUserDropdownOpen) : showAuthModal('signin')}

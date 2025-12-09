@@ -43,6 +43,7 @@
 
   @media (min-width: 1536px) {
     .container {
+      max-width: 2000px;
       padding-left: 6rem;
       padding-right: 6rem;
     }
@@ -50,6 +51,7 @@
 
   @media (min-width: 1920px) {
     .container {
+      max-width: 2000px;
       padding-left: 8rem;
       padding-right: 8rem;
     }
