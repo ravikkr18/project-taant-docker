@@ -316,7 +316,7 @@ const Header = () => {
             <div className="flex items-center justify-between">
               {/* Logo */}
               <Link href="/" className="flex items-center group">
-                <div className="relative w-12 h-12 sm:w-14 sm:h-14 group-hover:scale-105 transition-transform">
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 group-hover:scale-105 transition-transform">
                   <Image
                     src="/logo.svg"
                     alt="MarketHub Logo"
@@ -519,7 +519,7 @@ const Header = () => {
           <div className="hidden lg:flex items-center gap-6 lg:gap-8">
             {/* Logo */}
             <Link href="/" className="flex items-center group flex-shrink-0">
-              <div className="relative w-14 h-14 group-hover:scale-105 transition-transform">
+              <div className="relative w-20 h-20 group-hover:scale-105 transition-transform">
                 <Image
                   src="/logo.svg"
                   alt="MarketHub Logo"
