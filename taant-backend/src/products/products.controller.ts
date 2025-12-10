@@ -782,14 +782,25 @@ export class ProductsController {
     @Request() req?: any
   ) {
     try {
+      console.log('🔧 CONTROLLER: updateProductImagePositions called', { productId, positionsData });
       const user = req.user;
+
+      if (!positionsData || !positionsData.positions) {
+        console.error('❌ CONTROLLER: Invalid positions data:', positionsData);
+        throw new HttpException('Invalid positions data', HttpStatus.BAD_REQUEST);
+      }
+
+      console.log('🔧 CONTROLLER: Calling service with positions:', positionsData.positions);
       const result = await this.productsService.updateProductImagePositions(productId, positionsData.positions, user.id);
+
+      console.log('✅ CONTROLLER: Service call successful:', result);
       return {
         success: true,
         data: result,
         message: 'Product image positions updated successfully'
       };
     } catch (error) {
+      console.error('❌ CONTROLLER: Error in updateProductImagePositions:', error);
       throw new HttpException(
         error.message || 'Failed to update product image positions',
         HttpStatus.INTERNAL_SERVER_ERROR
