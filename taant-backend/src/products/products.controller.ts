@@ -357,15 +357,15 @@ export class ProductsController {
   }
 
   @Delete(':id')
-  async deleteProduct(@Param('id') id: string, @Body() body: { supplier_id: string }) {
+  async deleteProduct(@Param('id') id: string, @Request() req?: any) {
     try {
-      const { supplier_id: supplierId } = body;
+      const user = req.user;
 
-      if (!supplierId) {
-        throw new HttpException('Supplier ID is required in request body', HttpStatus.BAD_REQUEST);
+      if (!user || !user.id) {
+        throw new HttpException('User not authenticated', HttpStatus.UNAUTHORIZED);
       }
 
-      const result = await this.productsService.deleteProduct(id, supplierId);
+      const result = await this.productsService.deleteProduct(id, user.id);
       return {
         success: true,
         data: result,

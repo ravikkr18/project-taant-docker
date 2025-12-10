@@ -1,0 +1,86 @@
+          {/* Mobile Search Bar */}
+            <form onSubmit={handleSearch} className="relative">
+              <div className="flex items-center border border-gray-300 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                {/* Category Dropdown - Mobile */}
+                <div className="relative">
+                  <button
+                    onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 sm:py-3 bg-gray-50 border-r border-gray-300 hover:bg-gray-100 transition-colors rounded-l-lg min-w-[80px] sm:min-w-[130px]"
+                  >
+                    <span className="text-gray-700 font-medium text-sm sm:text-base">
+                      {categories.find(c => c.id === selectedCategory)?.icon || '🛍️'}
+                    </span>
+                    <span className="text-xs sm:text-sm text-gray-600 hidden xs:block">
+                      {categories.find(c => c.id === selectedCategory)?.name || 'All'}
+                    </span>
+                    <ChevronDown className={`w-3 h-3 sm:w-4 sm:h-4 text-gray-500 transition-transform ${isCategoryDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Category Dropdown Menu */}
+                  {isCategoryDropdownOpen && (
+                    <div className="absolute top-full left-0 w-48 sm:w-56 bg-white border border-gray-200 rounded-lg shadow-xl z-50 mt-1">
+                      <div className="py-2 max-h-60 overflow-y-auto">
+                        {categories.map((category) => (
+                          <button
+                            key={category.id}
+                            onClick={() => {
+                              setSelectedCategory(category.id);
+                              setIsCategoryDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 hover:bg-gray-50 transition-colors text-left"
+                          >
+                            <span className="text-base sm:text-lg">{category.icon}</span>
+                            <span className="text-xs sm:text-sm text-gray-700">{category.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Search Input - Mobile */}
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsCategoryDropdownOpen(false)}
+                  placeholder="Search products..."
+                  className="flex-1 px-3 sm:px-5 py-2 sm:py-3 text-gray-700 placeholder-gray-500 focus:outline-none text-sm sm:text-base"
+                />
+
+                {/* Search Button - Mobile */}
+                <button type="submit" className="px-3 sm:px-7 py-2 sm:py-3 bg-orange-500 hover:bg-orange-600 text-white font-medium transition-all duration-200 rounded-r-lg">
+                  <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              </div>
+
+              {/* Search Suggestions */}
+              {searchQuery && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-40">
+                  <div className="p-3 sm:p-4">
+                    <div className="text-sm text-gray-500 mb-2">Popular suggestions</div>
+                    <div className="space-y-2">
+                      <div
+                        onClick={() => handleSuggestionClick('iPhone 15 Pro Max')}
+                        className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer"
+                      >
+                        iPhone 15 Pro Max
+                      </div>
+                      <div
+                        onClick={() => handleSuggestionClick('Nike Air Max')}
+                        className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer"
+                      >
+                        Nike Air Max
+                      </div>
+                      <div
+                        onClick={() => handleSuggestionClick('Sony Headphones')}
+                        className="text-sm text-gray-700 hover:text-orange-600 cursor-pointer"
+                      >
+                        Sony Headphones
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </form>
+          </div>

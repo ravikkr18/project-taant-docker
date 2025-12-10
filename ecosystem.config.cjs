@@ -71,6 +71,24 @@ module.exports = {
       out_file: '/root/.pm2/logs/taant-supplier-out.log',
       error_file: '/root/.pm2/logs/taant-supplier-error.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+    {
+      name: 'taant-store',
+      cwd: '/www/ravi/project-taant-docker/taant-store',
+      script: 'npm',
+      args: 'run dev',
+      env: {
+        NODE_ENV: 'development',
+        PORT: 3008
+      },
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      log_file: '/root/.pm2/logs/taant-store.log',
+      out_file: '/root/.pm2/logs/taant-store-out.log',
+      error_file: '/root/.pm2/logs/taant-store-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     }
   ]
 };

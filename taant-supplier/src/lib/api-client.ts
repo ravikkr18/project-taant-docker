@@ -206,12 +206,9 @@ class ApiClient {
     return response.data;
   }
 
-  async deleteProduct(id: string, supplierId: string): Promise<{ success: boolean; message: string }> {
+  async deleteProduct(id: string): Promise<{ success: boolean; message: string }> {
     const response = await this.request<{ success: boolean; message: string }>(`/api/products/${id}`, {
       method: 'DELETE',
-      body: JSON.stringify({
-        supplier_id: supplierId
-      }),
     });
     return response.data;
   }

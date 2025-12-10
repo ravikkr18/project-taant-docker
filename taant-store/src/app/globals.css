@@ -1,0 +1,76 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  body {
+    @apply bg-gray-50 text-gray-900;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .container {
+    @apply mx-auto;
+    max-width: 100%;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  @media (min-width: 768px) {
+    .container {
+      padding-left: 3rem;
+      padding-right: 3rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 4rem;
+      padding-right: 4rem;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .container {
+      padding-left: 5rem;
+      padding-right: 5rem;
+    }
+  }
+
+  @media (min-width: 1536px) {
+    .container {
+      max-width: 2000px;
+      padding-left: 6rem;
+      padding-right: 6rem;
+    }
+  }
+
+  @media (min-width: 1920px) {
+    .container {
+      max-width: 2000px;
+      padding-left: 8rem;
+      padding-right: 8rem;
+    }
+  }
+
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 px-6 rounded-lg transition-colors duration-200;
+  }
+
+  /* Hide scrollbar utility */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Safari and Chrome */
+  }
+}

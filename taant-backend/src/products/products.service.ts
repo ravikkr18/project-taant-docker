@@ -318,11 +318,11 @@ export class ProductsService {
     return data;
   }
 
-  async deleteProduct(id: string, supplierId: string) {
+  async deleteProduct(id: string, userId: string) {
     const supabase = await this.createServiceClient();
 
-    // First verify the product belongs to the supplier
-    const { data: existingProduct, error: fetchError } = await supabase
+    // First verify the product exists and get supplier info
+    const { data: product, error: fetchError } = await supabase
       .from('products')
       .select('supplier_id')
       .eq('id', id)
@@ -332,8 +332,10 @@ export class ProductsService {
       throw new Error(`Failed to fetch product: ${fetchError.message}`);
     }
 
-    if (existingProduct.supplier_id !== supplierId) {
-      throw new Error('Unauthorized: Product does not belong to this supplier');
+    // Check if user can access this supplier's data
+    const canAccess = await this.authService.canAccessSupplierData(userId, product.supplier_id);
+    if (!canAccess) {
+      throw new Error('Unauthorized: You can only delete your own products');
     }
 
     const { error } = await supabase
