@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { createClient } from '@supabase/supabase-js';
 import { AuthService } from '../auth/auth.service';
 import { validateOptionsCount, transformVariantsArray, transformVariantData, VariantOption } from '../utils/variant-helper';
 
