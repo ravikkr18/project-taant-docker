@@ -781,6 +781,7 @@ export class ProductsController {
     @Body() positionsData: { positions: { id: string; position: number }[] },
     @Request() req?: any
   ) {
+    console.log('🔧 DEBUG: Request received at positions endpoint', { productId, positionsData });
     try {
       console.log('🔧 CONTROLLER: updateProductImagePositions called', { productId, positionsData });
       const user = req.user;
