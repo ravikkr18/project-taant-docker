@@ -1106,24 +1106,57 @@ export class ProductsService {
       throw new Error('Unauthorized: You cannot modify this product\'s images');
     }
 
-    // Update each image position
+    // Update each image position with fallback to raw SQL if needed
     console.log('🔄 Updating product image positions:', { productId, positions });
-    const updatePromises = positions.map(({ id, position }) => {
-      console.log(`Updating image ${id} to position ${position}`);
-      return supabase
-        .from('product_images')
-        .update({ position, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('product_id', productId);
-    });
 
     try {
+      // Try the standard Supabase client approach first
+      const updatePromises = positions.map(({ id, position }) => {
+        console.log(`Updating image ${id} to position ${position}`);
+        return supabase
+          .from('product_images')
+          .update({ position, updated_at: new Date().toISOString() })
+          .eq('id', id)
+          .eq('product_id', productId);
+      });
+
       const results = await Promise.all(updatePromises);
-      console.log('✅ Position updates completed:', results);
+      console.log('✅ Position updates completed (Supabase client):', results);
       return { success: true, message: 'Product image positions updated successfully' };
-    } catch (error) {
-      console.error('❌ Error updating positions:', error);
-      throw error;
+    } catch (supabaseError) {
+      console.warn('⚠️ Supabase client failed, trying raw SQL approach:', supabaseError.message);
+
+      // Fallback to raw SQL if Supabase client has schema issues
+      try {
+        // Create a direct client for raw SQL
+        const rawClient = await this.createServiceClient();
+
+        for (const { id, position } of positions) {
+          console.log(`🔄 Raw SQL: Updating image ${id} to position ${position}`);
+
+          const { error } = await rawClient
+            .rpc('sql', {
+              sql: `
+                UPDATE product_images
+                SET position = $1, updated_at = NOW()
+                WHERE id = $2 AND product_id = $3
+              `,
+              params: [position, id, productId]
+            });
+
+          if (error) {
+            console.error(`❌ Raw SQL failed for image ${id}:`, error);
+            throw error;
+          }
+        }
+
+        console.log('✅ Position updates completed (Raw SQL)');
+        return { success: true, message: 'Product image positions updated successfully (raw SQL)' };
+
+      } catch (rawSqlError) {
+        console.error('❌ Both approaches failed:', rawSqlError);
+        throw new Error(`Failed to update positions. Supabase error: ${supabaseError.message}. Raw SQL error: ${rawSqlError.message}`);
+      }
     }
   }
 
