@@ -1107,7 +1107,7 @@ export class ProductsService {
       throw new Error('Unauthorized: You cannot modify this product\'s images');
     }
 
-    // Update each image position with fallback to raw SQL if needed
+    // Use direct Supabase client with proper column references
     console.log('🔄 DEBUG: Starting product image position update:', {
       productId,
       positionUpdates,
@@ -1117,83 +1117,37 @@ export class ProductsService {
     });
 
     try {
-      // Try the standard Supabase client approach first
-      const updatePromises = positionUpdates.map(({ id, position }) => {
+      const supabase = await this.createServiceClient();
+
+      // Update each image position individually
+      for (const { id, position } of positionUpdates) {
         console.log(`🔄 DEBUG: Updating image ${id} to position ${position}`);
-        return supabase
+
+        const { data, error } = await supabase
           .from('product_images')
-          .update({ position, updated_at: new Date().toISOString() })
+          .update({
+            position: position,
+            updated_at: new Date().toISOString()
+          })
           .eq('id', id)
-          .eq('product_id', productId);
-      });
+          .eq('product_id', productId)
+          .select('id, position')
+          .single();
 
-      const results = await Promise.all(updatePromises);
-      console.log('✅ DEBUG: Position updates completed (Supabase client):', results);
-      return { success: true, message: 'Product image positions updated successfully' };
-    } catch (supabaseError) {
-      console.error('❌ DEBUG: Supabase client failed with detailed error:', {
-        error: supabaseError,
-        message: supabaseError.message,
-        details: supabaseError.details,
-        code: supabaseError.code,
-        hint: supabaseError.hint
-      });
-      console.warn('⚠️ Supabase client failed, trying raw SQL approach:', supabaseError.message);
-
-      // Fallback: bypass Supabase client schema cache and force direct query
-      try {
-        // Create a fresh client to bypass schema cache
-        const freshClient = createClient(
-          process.env.SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY!,
-          {
-            auth: {
-              autoRefreshToken: false,
-              persistSession: false,
-            },
-            db: {
-              schema: 'public',
-            },
-            global: {
-              headers: {
-                'Cache-Control': 'no-cache',
-              },
-            },
-          }
-        );
-
-        console.log('🔄 DEBUG: Created fresh client to bypass schema cache');
-
-        for (const { id, position } of positionUpdates) {
-          console.log(`🔄 DEBUG: Fresh client - Updating image ${id} to position ${position}`);
-
-          // Use .select() after update to force schema refresh
-          const { data, error } = await freshClient
-            .from('product_images')
-            .update({
-              position: position,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', id)
-            .eq('product_id', productId)
-            .select('id, position')
-            .single();
-
-          if (error) {
-            console.error(`❌ Fresh client failed for image ${id}:`, error);
-            throw error;
-          }
-
-          console.log(`✅ Fresh client success: Image ${id} now has position ${data.position}`);
+        if (error) {
+          console.error(`❌ Update failed for image ${id}:`, error);
+          throw error;
         }
 
-        console.log('✅ Position updates completed (Fresh client)');
-        return { success: true, message: 'Product image positions updated successfully (fresh client)' };
-
-      } catch (freshClientError) {
-        console.error('❌ Both approaches failed:', freshClientError);
-        throw new Error(`Failed to update positions. Supabase error: ${supabaseError.message}. Fresh client error: ${freshClientError.message}`);
+        console.log(`✅ Update success: Image ${id} now has position ${data.position}`);
       }
+
+      console.log('✅ Position updates completed successfully');
+      return { success: true, message: 'Product image positions updated successfully' };
+
+    } catch (error) {
+      console.error('❌ DEBUG: Position update failed:', error);
+      throw new Error(`Failed to update positions: ${error.message}`);
     }
   }
 

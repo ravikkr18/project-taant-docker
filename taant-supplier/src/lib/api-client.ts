@@ -321,7 +321,7 @@ class ApiClient {
   }
 
   async updateAPlusContentImagePositions(productId: string, positions: { id: string; position: number }[]): Promise<{ success: boolean; message: string }> {
-    const response = await this.request<{ success: boolean; message: string }>(`/api/products/${productId}/content-images/positions`, {
+    const response = await this.request<{ success: boolean; message: string }>(`/api/products/${productId}/content-images/update-order`, {
       method: 'PUT',
       body: JSON.stringify({ positions }),
     });
@@ -352,7 +352,7 @@ class ApiClient {
   }
 
   async updateProductImagePositions(productId: string, positions: { id: string; position: number }[]): Promise<{ success: boolean; message: string }> {
-    const response = await this.request<{ success: boolean; message: string }>(`/api/products/${productId}/images/positions`, {
+    const response = await this.request<{ success: boolean; message: string }>(`/api/products/${productId}/images/update-order`, {
       method: 'PUT',
       body: JSON.stringify({ positions }),
     });

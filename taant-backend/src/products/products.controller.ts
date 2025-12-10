@@ -543,7 +543,7 @@ export class ProductsController {
     }
   }
 
-  @Put(':id/content-images/positions')
+  @Put(':id/content-images/update-order')
   async updateAPlusContentImagePositions(
     @Param('id') productId: string,
     @Body() positionsData: { positions: { id: string; position: number }[] },
@@ -752,30 +752,7 @@ export class ProductsController {
     }
   }
 
-  @Put(':id/images/:imageId')
-  async updateProductImage(
-    @Param('id') productId: string,
-    @Param('imageId') imageId: string,
-    @Body() imageData: any,
-    @Request() req?: any
-  ) {
-    try {
-      const user = req.user;
-      const updatedImage = await this.productsService.updateProductImage(productId, imageId, imageData, user.id);
-      return {
-        success: true,
-        data: updatedImage,
-        message: 'Product image updated successfully'
-      };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to update product image',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
-
-  @Put(':id/images/positions')
+  @Put(':id/images/update-order')
   async updateProductImagePositions(
     @Param('id') productId: string,
     @Body() positionsData: { positions: { id: string; position: number }[] },
@@ -809,6 +786,30 @@ export class ProductsController {
     }
   }
 
+  @Put(':id/images/:imageId')
+  async updateProductImage(
+    @Param('id') productId: string,
+    @Param('imageId') imageId: string,
+    @Body() imageData: any,
+    @Request() req?: any
+  ) {
+    try {
+      const user = req.user;
+      const updatedImage = await this.productsService.updateProductImage(productId, imageId, imageData, user.id);
+      return {
+        success: true,
+        data: updatedImage,
+        message: 'Product image updated successfully'
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to update product image',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  
   @Delete(':id/images/:imageId')
   async deleteProductImage(
     @Param('id') productId: string,
@@ -941,7 +942,7 @@ export class ProductsController {
     }
   }
 
-  @Put('variants/:variantId/images/positions')
+  @Put('variants/:variantId/images/update-order')
   async updateVariantImagePositions(
     @Param('variantId') variantId: string,
     @Body() positionsData: { positions: { id: string; position: number }[] },
