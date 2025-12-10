@@ -774,7 +774,7 @@ export class ProductsService {
     return data;
   }
 
-  async updateAPlusContentImagePositions(productId: string, positions: { id: string; position: number }[], userId: string) {
+  async updateAPlusContentImagePositions(productId: string, positionUpdates: { id: string; position: number }[], userId: string) {
     const supabase = await this.createServiceClient();
 
     // Verify user can access this product
@@ -794,7 +794,7 @@ export class ProductsService {
     }
 
     // Update each image position
-    const updatePromises = positions.map(({ id, position }) =>
+    const updatePromises = positionUpdates.map(({ id, position }) =>
       supabase
         .from('a_plus_content_images')
         .update({ position, updated_at: new Date().toISOString() })
@@ -1087,7 +1087,7 @@ export class ProductsService {
     return data;
   }
 
-  async updateProductImagePositions(productId: string, positions: { id: string; position: number }[], userId: string) {
+  async updateProductImagePositions(productId: string, positionUpdates: { id: string; position: number }[], userId: string) {
     const supabase = await this.createServiceClient();
 
     // Verify user can access this product
@@ -1107,11 +1107,11 @@ export class ProductsService {
     }
 
     // Update each image position with fallback to raw SQL if needed
-    console.log('🔄 Updating product image positions:', { productId, positions });
+    console.log('🔄 Updating product image positions:', { productId, positionUpdates });
 
     try {
       // Try the standard Supabase client approach first
-      const updatePromises = positions.map(({ id, position }) => {
+      const updatePromises = positionUpdates.map(({ id, position }) => {
         console.log(`Updating image ${id} to position ${position}`);
         return supabase
           .from('product_images')
@@ -1131,17 +1131,16 @@ export class ProductsService {
         // Create a direct client for raw SQL
         const rawClient = await this.createServiceClient();
 
-        for (const { id, position } of positions) {
+        for (const { id, position } of positionUpdates) {
           console.log(`🔄 Raw SQL: Updating image ${id} to position ${position}`);
 
           const { error } = await rawClient
-            .rpc('sql', {
+            .rpc('exec_sql', {
               sql: `
                 UPDATE product_images
-                SET position = $1, updated_at = NOW()
-                WHERE id = $2 AND product_id = $3
-              `,
-              params: [position, id, productId]
+                SET position = ${position}, updated_at = NOW()
+                WHERE id = '${id}' AND product_id = '${productId}'
+              `
             });
 
           if (error) {
@@ -1603,7 +1602,7 @@ export class ProductsService {
     return data;
   }
 
-  async updateVariantImagePositions(variantId: string, positions: { id: string; position: number }[], userId: string) {
+  async updateVariantImagePositions(variantId: string, positionUpdates: { id: string; position: number }[], userId: string) {
     const supabase = await this.createServiceClient();
 
     // Verify user can access this variant
@@ -1634,7 +1633,7 @@ export class ProductsService {
     }
 
     // Update each image position
-    const updatePromises = positions.map(({ id, position }) =>
+    const updatePromises = positionUpdates.map(({ id, position }) =>
       supabase
         .from('variant_images')
         .update({ position, updated_at: new Date().toISOString() })
